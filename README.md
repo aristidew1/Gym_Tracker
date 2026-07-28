@@ -4,7 +4,11 @@ Muscu Tracker is a web-based strength-training tracker packaged for Android with
 
 ## Independent, AI-Assisted Development
 
-This project was built as an autonomous personal effort. I defined the goals, made the product and technical decisions, implemented and tested the application, and used AI as an assistant to research, review ideas, solve implementation problems, and improve the codebase. AI supported the process; the direction, validation, and ownership of the work remain mine.
+This project was coded entirely by AI under my direction. I set the product vision, requirements, priorities, and technical constraints; the AI translated those instructions into implementation work across the web application and its Android integration.
+
+I also designed a workflow that makes the AI's work independently verifiable. The AI can run the automated checks, synchronize and build the Android project, launch an Android emulator, and test the application in a real mobile runtime. It uses the results of those checks to identify issues, correct its own implementation, and repeat the validation cycle until the expected behavior is reached.
+
+My role is to direct the AI, validate the outcomes, and retain ownership of the project. The code is AI-generated; the intent, decisions, evaluation framework, and final acceptance are mine.
 
 ## Requirements
 
