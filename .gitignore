@@ -1,0 +1,14 @@
+# JavaScript dependencies
+node_modules/
+
+# Android and Capacitor generated files
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/
+android/app/src/main/res/xml/config.xml
+
+# Operating-system metadata
+.DS_Store
