@@ -1,0 +1,11 @@
+{
+  "appId": "com.muscu.tracker",
+  "appName": "Muscu Tracker",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#07070d"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

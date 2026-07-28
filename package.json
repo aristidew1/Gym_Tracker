@@ -1,0 +1,23 @@
+{
+  "name": "muscu_app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "sync:web": "node scripts/sync-web.js",
+    "sync:android": "npm run sync:web && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/share": "^8.0.1"
+  }
+}
