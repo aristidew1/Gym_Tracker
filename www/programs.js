@@ -8,13 +8,22 @@ import {
   saveProgram,
   setActiveProgram,
 } from './services/program-storage.js';
+import {
+  createBuilderDisclosureState,
+  formatBlockSummary,
+  formatPrescriptionSummary,
+  toggleDisclosure,
+} from './services/program-builder-view.js';
 
 const SESSION_COLORS = ['#4d7cff', '#ff8a3d', '#ff4d6a', '#3ddc84', '#e7c65c', '#45c4d9'];
 const PARAMETER_LABELS = {
   restBetweenExercisesSeconds: 'restBetweenExercises', drops: 'drops', loadReductionPercent: 'loadReduction', target: 'target', pauses: 'pauses', pauseSeconds: 'pauseDuration', activationReps: 'activationReps',
   miniSetReps: 'miniSetReps', restSeconds: 'techniqueRest', clusterSize: 'clusterReps', intraSetRestSeconds: 'intraSetRest', exercises: 'exerciseCount', durationMinutes: 'duration', tempo: 'tempo', partialReps: 'partialReps',
 };
-const ui = { screen: 'list', editing: null, editorSessionId: null, editorQuery: '', editorCategory: 'back', history: [], future: [] };
+const ui = {
+  screen: 'list', editing: null, editorSessionId: null, editorQuery: '', editorCategory: 'back',
+  history: [], future: [], disclosure: null,
+};
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function makeId(prefix) { return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`; }
@@ -116,7 +125,7 @@ function renderProgramCard(program, activeId) {
   </article>`;
 }
 
-function openEditor(program) {
+function openEditor(program, { isNew = false } = {}) {
   const draft = clone(program);
   if (draft.builtIn) localizeBuiltInDraft(draft);
   delete draft.builtIn;
@@ -126,9 +135,25 @@ function openEditor(program) {
   ui.editorCategory = 'back';
   ui.history = [];
   ui.future = [];
+  ui.disclosure = createBuilderDisclosureState(draft, { isNew });
   ui.screen = 'editor';
   renderEditor();
   resetDocumentScroll();
+}
+
+function disclosureHeader(action, title, summary, open, dataAttributes = '') {
+  const stateLabel = open ? t('collapse') : t('expand');
+  return `<button type="button" class="builder-disclosure" data-action="${action}" ${dataAttributes} aria-expanded="${open}" title="${escapeHtml(stateLabel)}">
+    <span class="builder-disclosure-copy"><strong>${escapeHtml(title)}</strong>${summary ? `<span>${escapeHtml(summary)}</span>` : ''}</span>
+    <span class="builder-disclosure-chevron" aria-hidden="true">${open ? '⌃' : '⌄'}</span>
+  </button>`;
+}
+
+function programSummary(program) {
+  const goal = t(program.goal || 'custom');
+  const level = t(program.experienceLevel || 'intermediate');
+  const duration = program.sessionDurationMinutes ? ` · ${program.sessionDurationMinutes} ${t('minutes')}` : '';
+  return `${localizeText(program.name)} · ${goal} · ${level}${duration}`;
 }
 
 function renderEditor() {
@@ -137,15 +162,20 @@ function renderEditor() {
   document.body.classList.add('program-editor-active');
   const session = program.sessions[ui.editorSessionId] || program.sessions[program.sessionOrder[0]] || null;
   if (session && session.id !== ui.editorSessionId) ui.editorSessionId = session.id;
+  ui.disclosure ||= createBuilderDisclosureState(program);
+  const programInfoOpen = ui.disclosure.programInfoOpen;
   getContainer().innerHTML = `<div class="program-workspace editor-workspace">
-    <div class="workspace-header"><button class="icon-button" data-action="programs-back" title="${t('back')}">←</button><div><h1>${t('builder')}</h1><p>${t('everythingEditable')}</p></div><div class="editor-history-actions"><button class="secondary-command compact" data-action="editor-undo" ${ui.history.length ? '' : 'disabled'} title="${t('undo')}">↶ ${t('undo')}</button><button class="secondary-command compact" data-action="editor-redo" ${ui.future.length ? '' : 'disabled'} title="${t('redo')}">↷ ${t('redo')}</button></div><button class="primary-command compact" data-action="editor-save">${t('save')}</button></div>
-    <div class="editor-meta editor-program-meta">
+    <div class="workspace-header"><button class="icon-button" data-action="programs-back" title="${t('back')}">←</button><div><h1>${t('builder')}</h1><p>${t('everythingEditable')}</p></div><div class="editor-history-actions"><button class="secondary-command compact" data-action="editor-undo" ${ui.history.length ? '' : 'disabled'} title="${t('undo')}">↶ ${t('undo')}</button><button class="secondary-command compact" data-action="editor-redo" ${ui.future.length ? '' : 'disabled'} title="${t('redo')}">↷ ${t('redo')}</button></div></div>
+    <section class="builder-section program-information-section">
+      ${disclosureHeader('editor-toggle-program-meta', t('programInformation'), programSummary(program), programInfoOpen)}
+      ${programInfoOpen ? `<div class="editor-meta editor-program-meta builder-section-body">
       <label>${t('name')}<input id="editor-program-name" value="${escapeHtml(program.name)}" /></label>
       <label>${t('programDescription')}<input id="editor-program-description" value="${escapeHtml(program.description || '')}" /></label>
       <label>${t('goal')}<select id="editor-program-goal">${['custom','strength','hypertrophy','endurance','mixed'].map((goal) => `<option value="${goal}" ${program.goal === goal ? 'selected' : ''}>${t(goal)}</option>`).join('')}</select></label>
-      <label>${t('level')}<select id="editor-program-level">${['beginner','intermediate','advanced'].map((level) => `<option value="${level}" ${program.experienceLevel === level ? 'selected' : ''}>${t(level)}</option>`).join('')}</select></label>
+      <label>${t('level')}<select id="editor-program-level">${['beginner','intermediate','advanced'].map((level) => `<option value="${level}" ${(program.experienceLevel || 'intermediate') === level ? 'selected' : ''}>${t(level)}</option>`).join('')}</select></label>
       <label>${t('duration')}<input id="editor-program-duration" type="number" min="0" step="5" value="${program.sessionDurationMinutes ?? ''}" placeholder="${t('minutes')}" /></label>
-    </div>
+      </div>` : ''}
+    </section>
     <div class="session-tabs">${program.sessionOrder.map((sessionId) => `<button class="session-tab ${session && sessionId === session.id ? 'active' : ''}" data-action="editor-session" data-session-id="${escapeHtml(sessionId)}">${escapeHtml(localizeText(program.sessions[sessionId].name))}</button>`).join('')}<button class="icon-button" data-action="editor-add-session" title="${t('addWorkout')}">＋</button></div>
     ${session ? renderSessionEditor(session) : `<div class="editor-empty"><strong>${t('noWorkout')}</strong><p>${t('addWorkoutHelp')}</p><button class="add-row-button" data-action="editor-add-session">＋ ${t('addWorkout')}</button></div>`}
     <div class="workspace-footer"><button class="secondary-command" data-action="programs-back">${t('cancel')}</button><button class="primary-command" data-action="editor-save">${t('saveActivate')}</button></div>
@@ -153,17 +183,32 @@ function renderEditor() {
 }
 
 function renderSessionEditor(session) {
+  const settingsOpen = ui.disclosure.sessionSettingsOpen.has(session.id);
+  const blockCount = session.blocks.length;
+  const sessionSummary = `${session.icon || '🏋️'} ${localizeText(session.subtitle) || `${blockCount} ${t('block').toLowerCase()}${blockCount === 1 ? '' : 's'}`}`;
   return `<section class="editor-session" data-session-id="${escapeHtml(session.id)}">
-    <div class="editor-session-header advanced-session-header"><input class="editor-title-input" data-session-field="name" value="${escapeHtml(session.name)}" /><input class="editor-subtitle-input" data-session-field="subtitle" value="${escapeHtml(session.subtitle || '')}" placeholder="${t('workoutGoal')}" /><label class="icon-field">${t('icon')}<input data-session-field="icon" value="${escapeHtml(session.icon || '🏋️')}" /></label><label class="color-field">${t('color')}<input type="color" data-session-field="color" value="${escapeHtml(session.color || '#4d7cff')}" /></label><div class="mini-actions"><button class="icon-button" data-action="editor-session-left" title="${t('moveLeft')}">←</button><button class="icon-button" data-action="editor-session-right" title="${t('moveRight')}">→</button><button class="danger-command" data-action="editor-delete-session">${t('deleteWorkout')}</button></div></div>
+    <div class="builder-section session-settings-section">
+      ${disclosureHeader('editor-toggle-session-settings', t('sessionSettings'), sessionSummary, settingsOpen, `data-session-id="${escapeHtml(session.id)}"`)}
+      ${settingsOpen ? `<div class="editor-session-header advanced-session-header builder-section-body"><input class="editor-title-input" data-session-field="name" value="${escapeHtml(session.name)}" /><input class="editor-subtitle-input" data-session-field="subtitle" value="${escapeHtml(session.subtitle || '')}" placeholder="${t('workoutGoal')}" /><label class="icon-field">${t('icon')}<input data-session-field="icon" value="${escapeHtml(session.icon || '🏋️')}" /></label><label class="color-field">${t('color')}<input type="color" data-session-field="color" value="${escapeHtml(session.color || '#4d7cff')}" /></label><div class="mini-actions"><button class="icon-button" data-action="editor-session-left" title="${t('moveLeft')}">←</button><button class="icon-button" data-action="editor-session-right" title="${t('moveRight')}">→</button><button class="danger-command" data-action="editor-delete-session">${t('deleteWorkout')}</button></div></div>` : ''}
+    </div>
     <div class="editor-blocks">${session.blocks.length ? session.blocks.map(renderEditorBlock).join('') : `<div class="editor-empty compact-empty"><strong>${t('noBlock')}</strong><p>${t('addFirstBlock')}</p></div>`}</div><button class="add-row-button" data-action="editor-add-block">＋ ${t('addBlock')}</button>
   </section>`;
 }
 
 function renderEditorBlock(block) {
-  return `<section class="editor-block" data-block-id="${escapeHtml(block.id)}">
-    <div class="editor-block-head advanced-block-head"><input data-block-field="name" value="${escapeHtml(block.name)}" /><select data-block-field="executionMode"><option value="sequential" ${block.executionMode === 'sequential' ? 'selected' : ''}>${t('sequential')}</option><option value="superset" ${block.executionMode === 'superset' ? 'selected' : ''}>Superset</option><option value="circuit" ${block.executionMode === 'circuit' ? 'selected' : ''}>${t('circuit')}</option></select><label>${t('rounds')}<input type="number" min="1" max="20" data-block-field="rounds" value="${block.rounds || 1}" /></label><label>${t('exerciseRest')}<input type="number" min="0" step="5" data-block-field="exerciseRest" value="${block.restBetweenExercisesSeconds || 0}" /></label><label>${t('roundRest')}<input type="number" min="0" step="5" data-block-field="roundRest" value="${block.restBetweenRoundsSeconds || 0}" /></label><div class="mini-actions"><button class="icon-button" data-action="editor-block-up" title="${t('moveUp')}">↑</button><button class="icon-button" data-action="editor-block-down" title="${t('moveDown')}">↓</button><button class="danger-command" data-action="editor-delete-block">${t('deleteBlock')}</button></div></div>
-    <div class="editor-items">${block.items.length ? block.items.map(renderEditorItem).join('') : `<div class="editor-empty compact-empty"><strong>${t('noExercise')}</strong><p>${t('searchAddExercise')}</p></div>`}</div>
-    <div class="editor-add-exercise"><select data-editor-category aria-label="${t('muscleCategory')}">${renderCategoryOptions(ui.editorCategory)}</select><input data-editor-query value="${escapeHtml(ui.editorQuery)}" placeholder="${escapeHtml(t('filterIn', { category: categoryName(ui.editorCategory) }))}" /><select data-editor-add-exercise aria-label="${t('exercise')}">${filteredExercises().map((exercise) => `<option value="${exercise.id}">${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}</select><button class="secondary-command" data-action="editor-add-item">${t('add')}</button></div>
+  const open = ui.disclosure.openBlocks.has(block.id);
+  return `<section class="editor-block ${open ? 'expanded' : ''}" data-block-id="${escapeHtml(block.id)}" data-block-expanded="${open}">
+    ${disclosureHeader('editor-toggle-block', localizeText(block.name), formatBlockSummary(block), open, `data-block-id="${escapeHtml(block.id)}"`)}
+    ${open ? `<div class="editor-block-body">
+      <div class="editor-block-head advanced-block-head"><input data-block-field="name" value="${escapeHtml(block.name)}" /><select data-block-field="executionMode"><option value="sequential" ${block.executionMode === 'sequential' ? 'selected' : ''}>${t('sequential')}</option><option value="superset" ${block.executionMode === 'superset' ? 'selected' : ''}>Superset</option><option value="circuit" ${block.executionMode === 'circuit' ? 'selected' : ''}>${t('circuit')}</option></select><label>${t('rounds')}<input type="number" min="1" max="20" data-block-field="rounds" value="${block.rounds || 1}" /></label><label>${t('exerciseRest')}<input type="number" min="0" step="5" data-block-field="exerciseRest" value="${block.restBetweenExercisesSeconds || 0}" /></label><label>${t('roundRest')}<input type="number" min="0" step="5" data-block-field="roundRest" value="${block.restBetweenRoundsSeconds || 0}" /></label><div class="mini-actions"><button class="icon-button" data-action="editor-block-up" title="${t('moveUp')}">↑</button><button class="icon-button" data-action="editor-block-down" title="${t('moveDown')}">↓</button><button class="danger-command" data-action="editor-delete-block">${t('deleteBlock')}</button></div></div>
+      <div class="editor-items">${block.items.length ? block.items.map(renderEditorItem).join('') : `<div class="editor-empty compact-empty"><strong>${t('noExercise')}</strong><p>${t('searchAddExercise')}</p></div>`}</div>
+      <div class="editor-add-exercise">
+        <label><span>${t('muscleCategory')}</span><select data-editor-category>${renderCategoryOptions(ui.editorCategory)}</select></label>
+        <label><span>${t('filterIn', { category: categoryName(ui.editorCategory) })}</span><input data-editor-query value="${escapeHtml(ui.editorQuery)}" placeholder="${escapeHtml(t('filterIn', { category: categoryName(ui.editorCategory) }))}" /></label>
+        <label class="editor-add-exercise-choice"><span>${t('exercise')}</span><select data-editor-add-exercise>${filteredExercises().map((exercise) => `<option value="${exercise.id}">${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}</select></label>
+        <button class="secondary-command" data-action="editor-add-item">＋ ${t('add')}</button>
+      </div>
+    </div>` : ''}
   </section>`;
 }
 
@@ -173,11 +218,21 @@ function renderEditorItem(item) {
   const selectedExerciseId = item.exerciseId || item.selection?.options?.[0]?.id || EXERCISES[0].id;
   const muscleCategory = getExerciseMuscleCategory(selectedExerciseId);
   const categoryExercises = getExercisesByMuscleCategory(muscleCategory);
-  return `<div class="editor-item advanced-editor-item" data-item-id="${escapeHtml(item.id)}">
-    <div class="exercise-selector-pair"><label>${t('muscleCategory')}<select data-item-field="muscleCategory">${renderCategoryOptions(muscleCategory)}</select></label><label>${t('exercise')}<select data-item-field="exerciseId">${categoryExercises.map((exercise) => `<option value="${exercise.id}" ${exercise.id === selectedExerciseId ? 'selected' : ''}>${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}</select></label></div>
-    <div class="editor-item-settings prescription-grid"><label>${t('sets')}<input type="number" min="1" max="30" data-item-field="sets" value="${p.setCount}" /></label><label>${t('minReps')}<input type="number" min="0" data-item-field="min" value="${p.repetitionRange.min}" /></label><label>${t('maxReps')}<input type="number" min="0" data-item-field="max" value="${p.repetitionRange.max}" /></label><label>${t('rest')} (s)<input type="number" min="0" step="5" data-item-field="rest" value="${p.restSeconds || 0}" /></label><label>${t('rir')}<input type="number" min="0" max="10" data-item-field="rir" value="${p.targetRir ?? ''}" /></label><label>${t('rpe')}<input type="number" min="1" max="10" step="0.5" data-item-field="rpe" value="${p.targetRpe ?? ''}" /></label><label>${t('tempo')}<input data-item-field="tempo" value="${escapeHtml(p.tempo || '')}" placeholder="3-1-1-0" /></label><label>${t('progression')}<select data-item-field="progression"><option value="" ${!p.progressionRuleId ? 'selected' : ''}>${t('none')}</option><option value="double_progression" ${p.progressionRuleId === 'double_progression' ? 'selected' : ''}>${t('doubleProgression')}</option></select></label><label class="wide-field">${t('note')}<input data-item-field="note" value="${escapeHtml(item.note || '')}" placeholder="${t('personalInstructions')}" /></label></div>
-    <div class="technique-editor"><label>${t('technique')}<select data-item-field="technique">${INTENSITY_TECHNIQUES.map((entry) => `<option value="${entry.id}" ${entry.id === technique.type ? 'selected' : ''}>${escapeHtml(getIntensityTechnique(entry.id).name)}</option>`).join('')}</select></label><div class="technique-parameters">${renderTechniqueParameters(technique)}</div></div>
-    <div class="mini-actions"><button class="icon-button" data-action="editor-item-up" title="${t('moveUp')}">↑</button><button class="icon-button" data-action="editor-item-down" title="${t('moveDown')}">↓</button><button class="danger-command" data-action="editor-delete-item">${t('removeExercise')}</button></div>
+  const open = ui.disclosure.openItems.has(item.id);
+  const advancedOpen = ui.disclosure.openAdvancedItems.has(item.id);
+  const exerciseName = getLocalizedExerciseName(selectedExerciseId, localizeText(item.name) || t('unknownExercise'));
+  return `<div class="editor-item advanced-editor-item ${open ? 'expanded' : ''}" data-item-id="${escapeHtml(item.id)}" data-item-expanded="${open}">
+    ${disclosureHeader('editor-toggle-item', exerciseName, formatPrescriptionSummary(item), open, `data-item-id="${escapeHtml(item.id)}"`)}
+    ${open ? `<div class="editor-item-body">
+      <div class="exercise-selector-pair"><label>${t('muscleCategory')}<select data-item-field="muscleCategory">${renderCategoryOptions(muscleCategory)}</select></label><label>${t('exercise')}<select data-item-field="exerciseId">${categoryExercises.map((exercise) => `<option value="${exercise.id}" ${exercise.id === selectedExerciseId ? 'selected' : ''}>${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}</select></label></div>
+      <div class="editor-item-settings prescription-grid basic-prescription-grid"><label>${t('sets')}<input type="number" min="1" max="30" data-item-field="sets" value="${p.setCount}" /></label><label>${t('minReps')}<input type="number" min="0" data-item-field="min" value="${p.repetitionRange.min}" /></label><label>${t('maxReps')}<input type="number" min="0" data-item-field="max" value="${p.repetitionRange.max}" /></label><label>${t('rest')} (s)<input type="number" min="0" step="5" data-item-field="rest" value="${p.restSeconds || 0}" /></label></div>
+      <div class="advanced-options-section">
+        ${disclosureHeader('editor-toggle-item-advanced', t('advancedOptions'), '', advancedOpen, `data-item-id="${escapeHtml(item.id)}"`)}
+        ${advancedOpen ? `<div class="advanced-options-body"><div class="editor-item-settings prescription-grid advanced-prescription-grid"><label>${t('rir')}<input type="number" min="0" max="10" data-item-field="rir" value="${p.targetRir ?? ''}" /></label><label>${t('rpe')}<input type="number" min="1" max="10" step="0.5" data-item-field="rpe" value="${p.targetRpe ?? ''}" /></label><label>${t('tempo')}<input data-item-field="tempo" value="${escapeHtml(p.tempo || '')}" placeholder="3-1-1-0" /></label><label>${t('progression')}<select data-item-field="progression"><option value="" ${!p.progressionRuleId ? 'selected' : ''}>${t('none')}</option><option value="double_progression" ${p.progressionRuleId === 'double_progression' ? 'selected' : ''}>${t('doubleProgression')}</option></select></label><label class="wide-field">${t('note')}<input data-item-field="note" value="${escapeHtml(item.note || '')}" placeholder="${t('personalInstructions')}" /></label></div>
+        <div class="technique-editor"><label>${t('technique')}<select data-item-field="technique">${INTENSITY_TECHNIQUES.map((entry) => `<option value="${entry.id}" ${entry.id === technique.type ? 'selected' : ''}>${escapeHtml(getIntensityTechnique(entry.id).name)}</option>`).join('')}</select></label><div class="technique-parameters">${renderTechniqueParameters(technique)}</div></div></div>` : ''}
+      </div>
+      <div class="mini-actions"><button class="icon-button" data-action="editor-item-up" title="${t('moveUp')}">↑</button><button class="icon-button" data-action="editor-item-down" title="${t('moveDown')}">↓</button><button class="danger-command" data-action="editor-delete-item">${t('removeExercise')}</button></div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -202,20 +257,28 @@ function filteredExercises(categoryId = ui.editorCategory, queryValue = ui.edito
 function syncEditor() {
   const program = ui.editing;
   if (!program) return;
-  program.name = document.getElementById('editor-program-name')?.value.trim() || program.name;
-  program.description = document.getElementById('editor-program-description')?.value.trim() || '';
-  program.goal = document.getElementById('editor-program-goal')?.value || 'custom';
-  program.experienceLevel = document.getElementById('editor-program-level')?.value || 'intermediate';
-  const duration = document.getElementById('editor-program-duration')?.value;
-  program.sessionDurationMinutes = duration ? Number(duration) : null;
+  const nameInput = document.getElementById('editor-program-name');
+  const descriptionInput = document.getElementById('editor-program-description');
+  const goalInput = document.getElementById('editor-program-goal');
+  const levelInput = document.getElementById('editor-program-level');
+  const durationInput = document.getElementById('editor-program-duration');
+  if (nameInput) program.name = nameInput.value.trim() || program.name;
+  if (descriptionInput) program.description = descriptionInput.value.trim();
+  if (goalInput) program.goal = goalInput.value || 'custom';
+  if (levelInput) program.experienceLevel = levelInput.value || 'intermediate';
+  if (durationInput) program.sessionDurationMinutes = durationInput.value ? Number(durationInput.value) : null;
   const session = program.sessions[ui.editorSessionId];
   if (!session) return;
-  session.name = document.querySelector('[data-session-field="name"]')?.value.trim() || session.name;
-  session.subtitle = document.querySelector('[data-session-field="subtitle"]')?.value.trim() || '';
-  session.icon = document.querySelector('[data-session-field="icon"]')?.value.trim() || '🏋️';
-  session.color = document.querySelector('[data-session-field="color"]')?.value || session.color;
+  const sessionNameInput = document.querySelector('[data-session-field="name"]');
+  const sessionSubtitleInput = document.querySelector('[data-session-field="subtitle"]');
+  const sessionIconInput = document.querySelector('[data-session-field="icon"]');
+  const sessionColorInput = document.querySelector('[data-session-field="color"]');
+  if (sessionNameInput) session.name = sessionNameInput.value.trim() || session.name;
+  if (sessionSubtitleInput) session.subtitle = sessionSubtitleInput.value.trim();
+  if (sessionIconInput) session.icon = sessionIconInput.value.trim() || '🏋️';
+  if (sessionColorInput) session.color = sessionColorInput.value || session.color;
   session.colorRgb = hexToRgb(session.color);
-  document.querySelectorAll('.editor-block').forEach((element) => syncBlock(session, element));
+  document.querySelectorAll('.editor-block[data-block-expanded="true"]').forEach((element) => syncBlock(session, element));
 }
 
 function syncBlock(session, element) {
@@ -228,33 +291,40 @@ function syncBlock(session, element) {
   block.rounds = Math.max(1, Number(value('rounds')) || 1);
   block.restBetweenExercisesSeconds = Math.max(0, Number(value('exerciseRest')) || 0);
   block.restBetweenRoundsSeconds = Math.max(0, Number(value('roundRest')) || 0);
-  element.querySelectorAll('.editor-item').forEach((itemElement) => syncItem(block, itemElement));
+  element.querySelectorAll('.editor-item[data-item-expanded="true"]').forEach((itemElement) => syncItem(block, itemElement));
 }
 
 function syncItem(block, element) {
   const item = byId(block.items, element.dataset.itemId);
   if (!item) return;
-  const value = (field) => element.querySelector(`[data-item-field="${field}"]`)?.value;
-  item.exerciseId = value('exerciseId') || item.exerciseId;
-  delete item.selection;
+  const input = (field) => element.querySelector(`[data-item-field="${field}"]`);
+  const value = (field) => input(field)?.value;
+  const exerciseInput = input('exerciseId');
+  if (exerciseInput) {
+    item.exerciseId = exerciseInput.value || item.exerciseId;
+    delete item.selection;
+  }
   item.prescription ||= defaultPrescription();
   item.prescription.setCount = Math.max(1, Number(value('sets')) || 1);
   item.prescription.repetitionRange = { min: Math.max(0, Number(value('min')) || 0), max: Math.max(0, Number(value('max')) || 0) };
   item.prescription.repetitionRange.max = Math.max(item.prescription.repetitionRange.min, item.prescription.repetitionRange.max);
   item.prescription.restSeconds = Math.max(0, Number(value('rest')) || 0);
-  item.prescription.targetRir = value('rir') === '' ? null : Number(value('rir'));
-  item.prescription.targetRpe = value('rpe') === '' ? null : Number(value('rpe'));
-  item.prescription.tempo = value('tempo') || null;
-  item.prescription.progressionRuleId = value('progression') || null;
+  if (input('rir')) item.prescription.targetRir = value('rir') === '' ? null : Number(value('rir'));
+  if (input('rpe')) item.prescription.targetRpe = value('rpe') === '' ? null : Number(value('rpe'));
+  if (input('tempo')) item.prescription.tempo = value('tempo') || null;
+  if (input('progression')) item.prescription.progressionRuleId = value('progression') || null;
   item.prescription.segments = [{ type: 'working', setCount: item.prescription.setCount }];
-  item.note = value('note')?.trim() || null;
-  const type = value('technique') || 'straight_sets';
-  const config = {};
-  const definition = getIntensityTechnique(type);
-  element.querySelectorAll('[data-tech-param]').forEach((input) => {
-    if (definition?.parameters[input.dataset.techParam]) config[input.dataset.techParam] = input.type === 'number' ? Number(input.value) : input.value;
-  });
-  item.intensityTechnique = createIntensityTechnique(type, config);
+  if (input('note')) item.note = value('note').trim() || null;
+  const techniqueInput = input('technique');
+  if (techniqueInput) {
+    const type = techniqueInput.value || 'straight_sets';
+    const config = {};
+    const definition = getIntensityTechnique(type);
+    element.querySelectorAll('[data-tech-param]').forEach((parameterInput) => {
+      if (definition?.parameters[parameterInput.dataset.techParam]) config[parameterInput.dataset.techParam] = parameterInput.type === 'number' ? Number(parameterInput.value) : parameterInput.value;
+    });
+    item.intensityTechnique = createIntensityTechnique(type, config);
+  }
 }
 
 function move(items, id, direction) {
@@ -293,12 +363,30 @@ function redoEditor() {
   restoreSnapshot(ui.future.pop());
 }
 
+function toggleEditorDisclosure(action, button) {
+  syncEditor();
+  if (action === 'editor-toggle-program-meta') ui.disclosure.programInfoOpen = !ui.disclosure.programInfoOpen;
+  if (action === 'editor-toggle-session-settings') {
+    ui.disclosure.sessionSettingsOpen = toggleDisclosure(ui.disclosure.sessionSettingsOpen, button.dataset.sessionId);
+  }
+  if (action === 'editor-toggle-block') {
+    ui.disclosure.openBlocks = toggleDisclosure(ui.disclosure.openBlocks, button.dataset.blockId);
+  }
+  if (action === 'editor-toggle-item') {
+    ui.disclosure.openItems = toggleDisclosure(ui.disclosure.openItems, button.dataset.itemId);
+  }
+  if (action === 'editor-toggle-item-advanced') {
+    ui.disclosure.openAdvancedItems = toggleDisclosure(ui.disclosure.openAdvancedItems, button.dataset.itemId);
+  }
+  renderEditor();
+}
+
 function handleClick(event) {
   const button = event.target.closest('[data-action]');
   if (!button) return;
   const action = button.dataset.action;
   try {
-    if (action === 'new-program') openEditor(createBlankProgram());
+    if (action === 'new-program') openEditor(createBlankProgram(), { isNew: true });
     if (action === 'program-actions') {
       const card = button.closest('.program-card');
       const willOpen = !card?.classList.contains('actions-open');
@@ -314,6 +402,10 @@ function handleClick(event) {
     if (action === 'editor-save') { syncEditor(); const saved = saveProgram(ui.editing); setActiveProgram(saved.id); ui.screen = 'list'; renderPrograms(); resetDocumentScroll(); }
     if (action === 'editor-undo') undoEditor();
     if (action === 'editor-redo') redoEditor();
+    if (['editor-toggle-program-meta', 'editor-toggle-session-settings', 'editor-toggle-block', 'editor-toggle-item', 'editor-toggle-item-advanced'].includes(action)) {
+      toggleEditorDisclosure(action, button);
+      return;
+    }
     if (action === 'editor-session') { syncEditor(); ui.editorSessionId = button.dataset.sessionId; renderEditor(); }
     if (action === 'editor-add-session') addSession();
     if (action === 'editor-delete-session') deleteSession();
@@ -323,8 +415,27 @@ function handleClick(event) {
   } catch (error) { window.showToast?.(error.message || t('errorOccurred'), 'error'); }
 }
 
-function addSession() { syncEditor(); pushHistory(); const session = createSession(ui.editing.sessionOrder.length); ui.editing.sessions[session.id] = session; ui.editing.sessionOrder.push(session.id); ui.editorSessionId = session.id; renderEditor(); }
-function deleteSession() { syncEditor(); pushHistory(); delete ui.editing.sessions[ui.editorSessionId]; ui.editing.sessionOrder = ui.editing.sessionOrder.filter((id) => id !== ui.editorSessionId); ui.editorSessionId = ui.editing.sessionOrder[0] || null; renderEditor(); }
+function addSession() {
+  syncEditor();
+  pushHistory();
+  const session = createSession(ui.editing.sessionOrder.length);
+  ui.editing.sessions[session.id] = session;
+  ui.editing.sessionOrder.push(session.id);
+  ui.editorSessionId = session.id;
+  ui.disclosure.sessionSettingsOpen.add(session.id);
+  if (session.blocks[0]) ui.disclosure.openBlocks.add(session.blocks[0].id);
+  renderEditor();
+}
+
+function deleteSession() {
+  syncEditor();
+  pushHistory();
+  ui.disclosure.sessionSettingsOpen.delete(ui.editorSessionId);
+  delete ui.editing.sessions[ui.editorSessionId];
+  ui.editing.sessionOrder = ui.editing.sessionOrder.filter((id) => id !== ui.editorSessionId);
+  ui.editorSessionId = ui.editing.sessionOrder[0] || null;
+  renderEditor();
+}
 function moveSession(direction) { syncEditor(); const index = ui.editing.sessionOrder.indexOf(ui.editorSessionId); const target = index + direction; if (target >= 0 && target < ui.editing.sessionOrder.length) { pushHistory(); [ui.editing.sessionOrder[index], ui.editing.sessionOrder[target]] = [ui.editing.sessionOrder[target], ui.editing.sessionOrder[index]]; } renderEditor(); }
 
 function handleStructureAction(action, button) {
@@ -333,14 +444,39 @@ function handleStructureAction(action, button) {
   const blockElement = button.closest('.editor-block');
   const itemElement = button.closest('.editor-item');
   const block = blockElement ? byId(session.blocks, blockElement.dataset.blockId) : null;
-  if (action === 'editor-add-block') { pushHistory(); session.blocks.push(createBlock(session.blocks.length)); }
-  if (action === 'editor-delete-block' && block) { pushHistory(); session.blocks = session.blocks.filter((entry) => entry.id !== block.id); }
+  if (action === 'editor-add-block') {
+    pushHistory();
+    const createdBlock = createBlock(session.blocks.length);
+    session.blocks.push(createdBlock);
+    ui.disclosure.openBlocks.add(createdBlock.id);
+  }
+  if (action === 'editor-delete-block' && block) {
+    pushHistory();
+    ui.disclosure.openBlocks.delete(block.id);
+    block.items.forEach((item) => {
+      ui.disclosure.openItems.delete(item.id);
+      ui.disclosure.openAdvancedItems.delete(item.id);
+    });
+    session.blocks = session.blocks.filter((entry) => entry.id !== block.id);
+  }
   if (action === 'editor-block-up' && block) { pushHistory(); move(session.blocks, block.id, -1); }
   if (action === 'editor-block-down' && block) { pushHistory(); move(session.blocks, block.id, 1); }
-  if (action === 'editor-add-item' && block) { const exerciseId = blockElement.querySelector('[data-editor-add-exercise]')?.value; if (!exerciseId) throw new Error(t('noSearchExercise')); pushHistory(); block.items.push(createItem(exerciseId)); }
+  if (action === 'editor-add-item' && block) {
+    const exerciseId = blockElement.querySelector('[data-editor-add-exercise]')?.value;
+    if (!exerciseId) throw new Error(t('noSearchExercise'));
+    pushHistory();
+    const createdItem = createItem(exerciseId);
+    block.items.push(createdItem);
+    ui.disclosure.openItems.add(createdItem.id);
+  }
   if (itemElement && block) {
     const item = byId(block.items, itemElement.dataset.itemId);
-    if (action === 'editor-delete-item') { pushHistory(); block.items = block.items.filter((entry) => entry.id !== item.id); }
+    if (action === 'editor-delete-item') {
+      pushHistory();
+      ui.disclosure.openItems.delete(item.id);
+      ui.disclosure.openAdvancedItems.delete(item.id);
+      block.items = block.items.filter((entry) => entry.id !== item.id);
+    }
     if (action === 'editor-item-up') { pushHistory(); move(block.items, item.id, -1); }
     if (action === 'editor-item-down') { pushHistory(); move(block.items, item.id, 1); }
   }
