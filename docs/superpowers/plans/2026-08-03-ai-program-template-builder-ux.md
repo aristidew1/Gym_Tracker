@@ -368,36 +368,60 @@ git commit -m "feat: add compact builder presentation state"
 - Modify: `programs.js:18-396`
 - Modify: `i18n.js:20-71`
 - Modify: `index.css:2035-2350`
+- Create: `tests/programs-ui.test.js`
 
 **Interfaces:**
 - Consumes: all helpers from `services/program-builder-view.js`.
 - Produces: toggle actions `editor-toggle-program-meta`, `editor-toggle-session-settings`, `editor-toggle-block`, `editor-toggle-item`, and `editor-toggle-item-advanced` in the existing delegated click handler.
 
-- [ ] **Step 1: Add failing static integration assertions**
+- [ ] **Step 1: Add a failing integration test for the rendered editor**
 
-Extend `tests/program-builder-view.test.js` by loading the source strings with `readFile` and asserting the intended integration markers are absent before implementation:
+Create `tests/programs-ui.test.js` with a minimal real container and document boundary. Capture the delegated click listener, open the built-in program through the real `initPrograms()` flow, and assert on the resulting editor HTML:
 
 ```js
-import { readFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import test from 'node:test';
 
-test('program builder integrates disclosure controls and a sticky footer', async () => {
-  const [source, css] = await Promise.all([
-    readFile(new URL('../programs.js', import.meta.url), 'utf8'),
-    readFile(new URL('../index.css', import.meta.url), 'utf8'),
-  ]);
-  for (const action of ['editor-toggle-program-meta', 'editor-toggle-session-settings', 'editor-toggle-block', 'editor-toggle-item', 'editor-toggle-item-advanced']) {
-    assert.ok(source.includes(action), action);
-  }
-  assert.match(css, /\.workspace-footer\s*\{[^}]*position:\s*sticky/su);
-  assert.match(css, /\.editor-add-exercise\s*\{[^}]*grid-template-columns:\s*minmax\(0,/su);
+const values = new Map();
+globalThis.localStorage = {
+  getItem: (key) => values.get(key) ?? null,
+  setItem: (key, value) => values.set(key, String(value)),
+};
+const listeners = new Map();
+const container = {
+  innerHTML: '',
+  addEventListener(type, listener) { listeners.set(type, listener); },
+  querySelectorAll() { return []; },
+};
+const classNames = new Set();
+globalThis.document = {
+  body: { classList: { add: (name) => classNames.add(name), remove: (name) => classNames.delete(name) }, scrollTop: 0 },
+  documentElement: { scrollTop: 0 },
+  getElementById: (id) => id === 'programs-content' ? container : null,
+  addEventListener() {},
+};
+globalThis.window = { addEventListener() {}, scrollTo() {} };
+
+const { initPrograms } = await import('../programs.js');
+
+test('editing an existing program starts with compact disclosure controls', () => {
+  initPrograms();
+  listeners.get('click')({ target: { closest: () => ({
+    dataset: { action: 'edit', programId: 'pullup_deadlift_cycle' },
+  }) } });
+  assert.ok(classNames.has('program-editor-active'));
+  assert.match(container.innerHTML, /data-action="editor-toggle-program-meta"/u);
+  assert.match(container.innerHTML, /data-action="editor-toggle-session-settings"/u);
+  assert.match(container.innerHTML, /data-action="editor-toggle-block"/u);
+  assert.doesNotMatch(container.innerHTML, /data-item-field="sets"/u);
 });
 ```
 
 - [ ] **Step 2: Verify the integration assertion fails**
 
-Run: `node --test tests/program-builder-view.test.js`
+Run: `node --test tests/programs-ui.test.js`
 
-Expected: FAIL because `programs.js` does not contain `editor-toggle-program-meta`.
+Expected: FAIL because the rendered editor does not contain `editor-toggle-program-meta`.
 
 - [ ] **Step 3: Initialize and preserve disclosure state**
 
@@ -445,14 +469,14 @@ Give `.workspace-footer` a sticky bottom position, safe-area padding, opaque/gla
 
 - [ ] **Step 7: Run all automated checks**
 
-Run: `npm test && npm run sync:web && git diff --check`
+Run: `node --test tests/programs-ui.test.js tests/program-builder-view.test.js && npm test && npm run sync:web && git diff --check`
 
 Expected: tests PASS, `www synchronisé depuis les sources racines.`, and no whitespace errors.
 
 - [ ] **Step 8: Commit the compact builder**
 
 ```bash
-git add programs.js i18n.js index.css tests/program-builder-view.test.js www
+git add programs.js i18n.js index.css tests/programs-ui.test.js tests/program-builder-view.test.js www
 git commit -m "feat: simplify the mobile program builder"
 ```
 
