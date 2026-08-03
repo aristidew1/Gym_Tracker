@@ -38,6 +38,8 @@ import {
 } from './notifications.js';
 import { initPrograms, renderPrograms } from './programs.js';
 import { getActiveProgram, getProgramById } from './services/program-storage.js';
+import { buildAiProgramPrompt } from './services/ai-program-template.js';
+import { copyText } from './services/clipboard.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
 
 // ============================================
@@ -1371,6 +1373,7 @@ function initSettings() {
   const btnExportPrograms = document.getElementById('btn-export-programs');
   const btnImportPrograms = document.getElementById('btn-import-programs');
   const programsFileInput = document.getElementById('import-programs-file-input');
+  const btnCopyAiTemplate = document.getElementById('btn-copy-ai-template');
   const languageSelect = document.getElementById('settings-language');
   languageSelect.value = getLanguage();
   languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
@@ -1389,6 +1392,11 @@ function initSettings() {
     if (e.target === overlay) {
       overlay.classList.remove('active');
     }
+  });
+
+  btnCopyAiTemplate.addEventListener('click', async () => {
+    const copied = await copyText(buildAiProgramPrompt());
+    showToast(t(copied ? 'aiTemplateCopied' : 'aiTemplateCopyError'), copied ? 'success' : 'error');
   });
 
   // Export data
