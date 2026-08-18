@@ -89,6 +89,8 @@ async function updateNativeSafeAreaInsets() {
   const plugin = window.Capacitor?.Plugins?.SafeArea;
   if (!plugin?.getInsets) return;
 
+  document.documentElement.classList.add('platform-ios');
+
   try {
     const insets = await plugin.getInsets();
     const root = document.documentElement;

@@ -65,6 +65,9 @@
 
 html {
   font-size: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -72,6 +75,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
+  width: 100%;
+  max-width: 100%;
   min-height: 100dvh;
   overflow-x: hidden;
   line-height: 1.5;
@@ -79,6 +84,23 @@ body {
 }
 
 button, input, select { font: inherit; }
+
+/* iOS zooms the whole WebView when a focused form control renders below
+   16px. Keep controls at the native readability threshold without disabling
+   pinch-to-zoom for the rest of the application. */
+html.platform-ios input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
+html.platform-ios select,
+html.platform-ios textarea {
+  font-size: 16px !important;
+}
+
+@supports (overflow: clip) {
+  html,
+  body,
+  #app {
+    overflow-x: clip;
+  }
+}
 
 button:focus-visible,
 input:focus-visible,
@@ -112,6 +134,7 @@ body::before {
 #app {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
@@ -856,10 +879,12 @@ body::before {
 
 .set-input-group {
   position: relative;
+  min-width: 0;
 }
 
 .set-input {
   width: 100%;
+  min-width: 0;
   height: 44px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-glass);
