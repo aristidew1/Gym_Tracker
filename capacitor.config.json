@@ -5,6 +5,10 @@
   "android": {
     "backgroundColor": "#07070d"
   },
+  "ios": {
+    "backgroundColor": "#07070d",
+    "preferredContentMode": "mobile"
+  },
   "server": {
     "androidScheme": "https"
   }
