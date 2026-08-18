@@ -45,8 +45,10 @@
 
   --nav-height: 72px;
   --header-height: 60px;
-  --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --native-safe-area-top: 0px;
+  --native-safe-area-bottom: 0px;
+  --safe-area-top: max(env(safe-area-inset-top, 0px), var(--native-safe-area-top));
+  --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--native-safe-area-bottom));
   --nav-total-height: calc(var(--nav-height) + var(--safe-area-bottom));
 
   --transition-fast: 0.15s ease;

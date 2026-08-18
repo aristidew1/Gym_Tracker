@@ -85,7 +85,26 @@ function getCurrentWorkoutSession() {
 // ============================================
 // INITIALIZATION
 // ============================================
+async function updateNativeSafeAreaInsets() {
+  const plugin = window.Capacitor?.Plugins?.SafeArea;
+  if (!plugin?.getInsets) return;
+
+  try {
+    const insets = await plugin.getInsets();
+    const root = document.documentElement;
+    const top = Math.max(0, Number(insets?.top) || 0);
+    const bottom = Math.max(0, Number(insets?.bottom) || 0);
+    root.style.setProperty('--native-safe-area-top', `${top}px`);
+    root.style.setProperty('--native-safe-area-bottom', `${bottom}px`);
+  } catch (error) {
+    console.warn('Unable to read native safe-area insets:', error);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  updateNativeSafeAreaInsets();
+  window.addEventListener('resize', updateNativeSafeAreaInsets);
+  window.addEventListener('orientationchange', updateNativeSafeAreaInsets);
   translateDocument();
   initNavigation();
   initSupplements();
