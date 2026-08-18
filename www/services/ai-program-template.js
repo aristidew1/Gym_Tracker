@@ -19,7 +19,8 @@ const COPY = {
     techniqueNone: 'aucun paramètre supplémentaire',
     lines: [
       '- Produis exactement un objet racine avec format="muscu-tracker-programs", version=1, exportedAt au format ISO, programs contenant exactement un programme, et activeProgramId égal à l’id de ce programme.',
-      '- Le programme utilise schemaVersion=2. Son id est unique et stable. goal vaut custom, strength, hypertrophy, endurance ou mixed. experienceLevel vaut beginner, intermediate ou advanced.',
+      '- Le programme utilise schemaVersion=4. Son id est unique et stable. goal vaut custom, strength, hypertrophy, endurance ou mixed. experienceLevel vaut beginner, intermediate ou advanced.',
+      '- trainingFrequency vaut soit {mode:"interval", intervalDays:X} avec X entier de 1 à 30, soit {mode:"weekly", sessionsPerWeek:X} avec X entier de 1 à 7.',
       '- sessionOrder contient au moins un id et donne l’ordre exact des séances. Chaque id doit être une clé de sessions et être identique au champ id de cette séance.',
       '- Chaque séance contient id, name, subtitle, icon, color au format #RRGGBB, colorRgb sous la forme "R, G, B", et un tableau blocks.',
       '- Chaque bloc contient un id unique, name, presentation {label, badgeClass}, executionMode valant sequential, superset ou circuit, rounds >= 1, les deux temps de repos en secondes, et un tableau items non vide.',
@@ -47,7 +48,8 @@ const COPY = {
     techniqueNone: 'no additional parameters',
     lines: [
       '- Produce exactly one root object with format="muscu-tracker-programs", version=1, an ISO exportedAt value, programs containing exactly one program, and activeProgramId equal to that program id.',
-      '- The program uses schemaVersion=2. Its id is unique and stable. goal is custom, strength, hypertrophy, endurance, or mixed. experienceLevel is beginner, intermediate, or advanced.',
+      '- The program uses schemaVersion=4. Its id is unique and stable. goal is custom, strength, hypertrophy, endurance, or mixed. experienceLevel is beginner, intermediate, or advanced.',
+      '- trainingFrequency is either {mode:"interval", intervalDays:X} with an integer X from 1 to 30, or {mode:"weekly", sessionsPerWeek:X} with an integer X from 1 to 7.',
       '- sessionOrder contains at least one id and defines the exact workout order. Each id must be a sessions key and match that workout’s id field.',
       '- Each workout contains id, name, subtitle, icon, color as #RRGGBB, colorRgb as "R, G, B", and a blocks array.',
       '- Each block contains a unique id, name, presentation {label, badgeClass}, executionMode set to sequential, superset, or circuit, rounds >= 1, both rest durations in seconds, and a non-empty items array.',
@@ -70,12 +72,13 @@ export function createAiProgramImportExample(language = getLanguage()) {
     exportedAt: '2026-01-01T00:00:00.000Z',
     programs: [{
       id,
-      schemaVersion: 2,
+      schemaVersion: 4,
       name: text.programName,
       description: '',
       goal: 'custom',
       experienceLevel: 'intermediate',
       sessionDurationMinutes: 60,
+      trainingFrequency: { mode: 'weekly', sessionsPerWeek: 3 },
       sessionOrder: ['session_a'],
       sessions: {
         session_a: {

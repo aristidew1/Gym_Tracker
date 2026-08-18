@@ -1,5 +1,5 @@
 import { DEFAULT_PROGRAM } from '../data/default-program.js';
-import { validateProgram } from '../models/workout-schema.js';
+import { migrateProgram, migratePrograms, validateProgram } from '../models/workout-schema.js';
 import { t } from '../i18n.js';
 
 const PROGRAMS_KEY = 'muscu_programs';
@@ -12,7 +12,11 @@ function clone(value) {
 function readStoredPrograms() {
   try {
     const value = JSON.parse(localStorage.getItem(PROGRAMS_KEY) || '[]');
-    return Array.isArray(value) ? value.filter((program) => validateProgram(program).length === 0) : [];
+    if (!Array.isArray(value)) return [];
+    const { programs, changed } = migratePrograms(value);
+    const validPrograms = programs.filter((program) => validateProgram(program).length === 0);
+    if (changed || validPrograms.length !== value.length) writeStoredPrograms(validPrograms);
+    return validPrograms;
   } catch {
     return [];
   }
@@ -86,9 +90,8 @@ export function getActiveProgram() {
 }
 
 export function saveProgram(program) {
-  const next = clone(program);
+  const next = migrateProgram(clone(program));
   next.id = next.id || makeId();
-  next.schemaVersion = 2;
   delete next.builtIn;
   const errors = validateProgram(next);
   if (errors.length) throw new Error(errors.join(' '));
@@ -131,13 +134,14 @@ export function setActiveProgram(id) {
 
 export function restorePrograms(programs, activeProgramId) {
   if (!Array.isArray(programs)) return false;
-  if (programs.some((program) => (
+  const migratedPrograms = migratePrograms(programs).programs;
+  if (migratedPrograms.some((program) => (
     !program
     || validateProgram(program).length > 0
   ))) return false;
-  if (new Set(programs.map((program) => program.id)).size !== programs.length) return false;
+  if (new Set(migratedPrograms.map((program) => program.id)).size !== migratedPrograms.length) return false;
 
-  const nextPrograms = clone(programs);
+  const nextPrograms = clone(migratedPrograms);
   writeStoredPrograms(nextPrograms);
   const activeExists = activeProgramId === DEFAULT_PROGRAM.id
     || nextPrograms.some((program) => program.id === activeProgramId);
@@ -150,7 +154,9 @@ export function restorePrograms(programs, activeProgramId) {
 // active program intact. New ids avoid collisions, while names are made unique
 // so the user can easily distinguish imported copies.
 export function appendPrograms(programs) {
-  if (!Array.isArray(programs) || programs.some((program) => (
+  if (!Array.isArray(programs)) return false;
+  const migratedPrograms = migratePrograms(programs).programs;
+  if (migratedPrograms.some((program) => (
     !program || validateProgram(program).length > 0
   ))) return false;
 
@@ -158,7 +164,7 @@ export function appendPrograms(programs) {
   const nextPrograms = readStoredPrograms();
   const usedIds = new Set(getPrograms().map((program) => program.id));
 
-  programs.forEach((program) => {
+  migratedPrograms.forEach((program) => {
     const next = clone(program);
     next.name = makeUniqueProgramName(next.name, existingNames);
     existingNames.add(normalizeProgramName(next.name));

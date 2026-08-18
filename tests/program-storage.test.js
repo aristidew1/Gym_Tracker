@@ -37,3 +37,19 @@ test('editing the base program keeps its id instead of creating a copy', () => {
   assert.equal(store.getPrograms().length, 1);
   assert.equal(store.getPrograms()[0].builtIn, true);
 });
+
+test('stored programs with the former day frequency are migrated without losing them', () => {
+  values.clear();
+  const legacyProgram = structuredClone(DEFAULT_PROGRAM);
+  legacyProgram.id = 'legacy_program';
+  legacyProgram.schemaVersion = 3;
+  delete legacyProgram.trainingFrequency;
+  legacyProgram.trainingFrequencyDays = 5;
+  values.set('muscu_programs', JSON.stringify([legacyProgram]));
+
+  const migrated = store.getProgramById(legacyProgram.id);
+
+  assert.equal(migrated.schemaVersion, 4);
+  assert.deepEqual(migrated.trainingFrequency, { mode: 'interval', intervalDays: 5 });
+  assert.deepEqual(JSON.parse(values.get('muscu_programs'))[0].trainingFrequency, { mode: 'interval', intervalDays: 5 });
+});

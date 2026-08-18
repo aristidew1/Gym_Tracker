@@ -2,7 +2,9 @@ import { getExerciseById, getExerciseDisplayName } from '../data/exercises.js';
 import { DEFAULT_PROGRAM } from '../data/default-program.js';
 
 export const CURRENT_WORKOUT_SCHEMA_VERSION = 2;
-export const CURRENT_PROGRAM_SCHEMA_VERSION = 2;
+export const CURRENT_PROGRAM_SCHEMA_VERSION = 4;
+export const DEFAULT_TRAINING_FREQUENCY_DAYS = 2;
+export const DEFAULT_TRAINING_FREQUENCY = Object.freeze({ mode: 'interval', intervalDays: DEFAULT_TRAINING_FREQUENCY_DAYS });
 
 const LEGACY_EXERCISE_IDS = {
   tractions_lestees: 'weighted_pull_up',
@@ -155,10 +157,63 @@ export function validateWorkout(workout) {
   return errors;
 }
 
+export function migrateProgram(program) {
+  if (!program || typeof program !== 'object') return program;
+  const legacyDays = Number(program.trainingFrequencyDays);
+  const inputFrequency = program.trainingFrequency;
+  let trainingFrequency;
+  if (inputFrequency?.mode === 'weekly') {
+    const sessionsPerWeek = Number(inputFrequency.sessionsPerWeek);
+    trainingFrequency = {
+      mode: 'weekly',
+      sessionsPerWeek: Number.isInteger(sessionsPerWeek) && sessionsPerWeek >= 1 && sessionsPerWeek <= 7
+        ? sessionsPerWeek
+        : 3,
+    };
+  } else {
+    const intervalDays = Number(inputFrequency?.intervalDays ?? legacyDays);
+    trainingFrequency = {
+      mode: 'interval',
+      intervalDays: Number.isInteger(intervalDays) && intervalDays >= 1 && intervalDays <= 30
+        ? intervalDays
+        : DEFAULT_TRAINING_FREQUENCY_DAYS,
+    };
+  }
+  const { trainingFrequencyDays: _legacyFrequency, ...rest } = program;
+  return {
+    ...rest,
+    schemaVersion: CURRENT_PROGRAM_SCHEMA_VERSION,
+    trainingFrequency,
+  };
+}
+
+export function migratePrograms(programs) {
+  if (!Array.isArray(programs)) return { programs: [], changed: false };
+  let changed = false;
+  const migrated = programs.map((program) => {
+    const next = migrateProgram(program);
+    if (JSON.stringify(program) !== JSON.stringify(next)) changed = true;
+    return next;
+  });
+  return { programs: migrated, changed };
+}
+
 export function validateProgram(program) {
   const errors = [];
   if (!program || typeof program !== 'object') return ['Un programme doit être un objet.'];
   if (program.schemaVersion !== CURRENT_PROGRAM_SCHEMA_VERSION) errors.push('Version de schéma du programme invalide.');
+  const frequency = program.trainingFrequency;
+  if (frequency?.mode === 'interval') {
+    if (!Number.isInteger(frequency.intervalDays) || frequency.intervalDays < 1 || frequency.intervalDays > 30) {
+      errors.push('L’intervalle du programme doit être compris entre 1 et 30 jours.');
+    }
+  } else if (frequency?.mode === 'weekly') {
+    if (!Number.isInteger(frequency.sessionsPerWeek) || frequency.sessionsPerWeek < 1 || frequency.sessionsPerWeek > 7) {
+      errors.push('La fréquence hebdomadaire doit être comprise entre 1 et 7 séances.');
+    }
+  } else {
+    errors.push('Le programme doit définir une fréquence valide.');
+  }
   if (!Array.isArray(program.sessionOrder) || program.sessionOrder.length === 0) errors.push('Le programme doit définir sessionOrder.');
   if (!program.sessions || typeof program.sessions !== 'object') errors.push('Le programme doit définir sessions.');
 

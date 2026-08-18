@@ -30,6 +30,15 @@ function makeId(prefix) { return `${prefix}_${Date.now().toString(36)}${Math.ran
 function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
 function byId(items, id) { return items.find((item) => item.id === id); }
 function hexToRgb(hex) { const value = hex.replace('#', ''); return `${parseInt(value.slice(0, 2), 16)}, ${parseInt(value.slice(2, 4), 16)}, ${parseInt(value.slice(4, 6), 16)}`; }
+function formatFrequency(frequency) {
+  if (frequency?.mode === 'weekly') {
+    return frequency.sessionsPerWeek === 1
+      ? t('oncePerWeek')
+      : t('timesPerWeek', { count: frequency.sessionsPerWeek });
+  }
+  const days = frequency?.intervalDays || 2;
+  return days === 1 ? t('everyDay') : t('everyDays', { count: days });
+}
 
 function defaultPrescription() {
   return { setCount: 3, repetitionRange: { min: 8, max: 12 }, segments: [{ type: 'working', setCount: 3 }], restSeconds: 90, targetRir: 2, targetRpe: null, tempo: null, progressionRuleId: 'double_progression' };
@@ -57,7 +66,7 @@ function createSession(index = 0) {
 
 export function createBlankProgram() {
   const session = createSession(0);
-  return { id: '', schemaVersion: 2, name: t('newProgram'), description: '', goal: 'custom', experienceLevel: 'intermediate', sessionDurationMinutes: null, sessionOrder: [session.id], sessions: { [session.id]: session } };
+  return { id: '', schemaVersion: 4, name: t('newProgram'), description: '', goal: 'custom', experienceLevel: 'intermediate', sessionDurationMinutes: null, trainingFrequency: { mode: 'interval', intervalDays: 2 }, sessionOrder: [session.id], sessions: { [session.id]: session } };
 }
 
 function getContainer() { return document.getElementById('programs-content'); }
@@ -120,7 +129,7 @@ function renderProgramCard(program, activeId) {
   const actions = `${active ? '' : `<button data-action="activate" data-program-id="${escapeHtml(program.id)}">▶ ${t('activate')}</button>`}<button data-action="duplicate" data-program-id="${escapeHtml(program.id)}">⧉ ${t('duplicate')}</button><button data-action="edit" data-program-id="${escapeHtml(program.id)}">✎ ${t('edit')}</button>${program.builtIn ? '' : `<button class="danger" data-action="delete" data-program-id="${escapeHtml(program.id)}">⌫ ${t('delete')}</button>`}`;
   return `<article class="program-card ${active ? 'active-program' : ''}">
     <div class="program-card-accent" style="background:${escapeHtml(program.sessions[program.sessionOrder[0]]?.color || '#4d7cff')}"></div>
-    <div class="program-card-main"><div class="program-card-title-row"><h2>${escapeHtml(localizeText(program.name))}</h2>${active ? `<span class="active-pill">${t('active')}</span>` : ''}</div><p>${escapeHtml(localizeText(program.description) || `${sessionCount} ${t('workouts').toLowerCase()}`)}</p><span class="program-meta">${sessionCount} ${t('workouts').toLowerCase()} · ${escapeHtml(program.goal === 'custom' ? t('custom') : t(program.goal || 'custom'))}</span></div>
+    <div class="program-card-main"><div class="program-card-title-row"><h2>${escapeHtml(localizeText(program.name))}</h2>${active ? `<span class="active-pill">${t('active')}</span>` : ''}</div><p>${escapeHtml(localizeText(program.description) || `${sessionCount} ${t('workouts').toLowerCase()}`)}</p><span class="program-meta">${sessionCount} ${t('workouts').toLowerCase()} · ${escapeHtml(formatFrequency(program.trainingFrequency))} · ${escapeHtml(program.goal === 'custom' ? t('custom') : t(program.goal || 'custom'))}</span></div>
     <div class="program-card-actions">${active ? '<span class="program-active-check">✓</span>' : ''}<button class="icon-button" data-action="program-actions" title="${t('moreActions')}" aria-label="${t('moreActions')}">⋯</button><div class="program-action-menu">${actions}</div></div>
   </article>`;
 }
@@ -153,12 +162,14 @@ function programSummary(program) {
   const goal = t(program.goal || 'custom');
   const level = t(program.experienceLevel || 'intermediate');
   const duration = program.sessionDurationMinutes ? ` · ${program.sessionDurationMinutes} ${t('minutes')}` : '';
-  return `${localizeText(program.name)} · ${goal} · ${level}${duration}`;
+  return `${localizeText(program.name)} · ${goal} · ${level} · ${formatFrequency(program.trainingFrequency)}${duration}`;
 }
 
 function renderEditor() {
   const program = ui.editing;
   if (!program) { ui.screen = 'list'; return renderPrograms(); }
+  const frequency = program.trainingFrequency || { mode: 'interval', intervalDays: 2 };
+  const weeklyFrequency = frequency.mode === 'weekly';
   document.body.classList.add('program-editor-active');
   const session = program.sessions[ui.editorSessionId] || program.sessions[program.sessionOrder[0]] || null;
   if (session && session.id !== ui.editorSessionId) ui.editorSessionId = session.id;
@@ -174,6 +185,8 @@ function renderEditor() {
       <label>${t('goal')}<select id="editor-program-goal">${['custom','strength','hypertrophy','endurance','mixed'].map((goal) => `<option value="${goal}" ${program.goal === goal ? 'selected' : ''}>${t(goal)}</option>`).join('')}</select></label>
       <label>${t('level')}<select id="editor-program-level">${['beginner','intermediate','advanced'].map((level) => `<option value="${level}" ${(program.experienceLevel || 'intermediate') === level ? 'selected' : ''}>${t(level)}</option>`).join('')}</select></label>
       <label>${t('duration')}<input id="editor-program-duration" type="number" min="0" step="5" value="${program.sessionDurationMinutes ?? ''}" placeholder="${t('minutes')}" /></label>
+      <label>${t('trainingFrequency')}<select id="editor-program-frequency-mode"><option value="interval" ${weeklyFrequency ? '' : 'selected'}>${t('frequencyInterval')}</option><option value="weekly" ${weeklyFrequency ? 'selected' : ''}>${t('frequencyWeekly')}</option></select></label>
+      <label>${weeklyFrequency ? t('sessionsPerWeek') : t('daysBetweenWorkouts')}<input id="editor-program-frequency-value" type="number" min="1" max="${weeklyFrequency ? 7 : 30}" step="1" value="${weeklyFrequency ? frequency.sessionsPerWeek : frequency.intervalDays}" /><small>${weeklyFrequency ? t('weeklyFrequencyHelp') : t('intervalFrequencyHelp')}</small></label>
       </div>` : ''}
     </section>
     <div class="session-tabs">${program.sessionOrder.map((sessionId) => `<button class="session-tab ${session && sessionId === session.id ? 'active' : ''}" data-action="editor-session" data-session-id="${escapeHtml(sessionId)}">${escapeHtml(localizeText(program.sessions[sessionId].name))}</button>`).join('')}<button class="icon-button" data-action="editor-add-session" title="${t('addWorkout')}">＋</button></div>
@@ -262,11 +275,19 @@ function syncEditor() {
   const goalInput = document.getElementById('editor-program-goal');
   const levelInput = document.getElementById('editor-program-level');
   const durationInput = document.getElementById('editor-program-duration');
+  const frequencyModeInput = document.getElementById('editor-program-frequency-mode');
+  const frequencyValueInput = document.getElementById('editor-program-frequency-value');
   if (nameInput) program.name = nameInput.value.trim() || program.name;
   if (descriptionInput) program.description = descriptionInput.value.trim();
   if (goalInput) program.goal = goalInput.value || 'custom';
   if (levelInput) program.experienceLevel = levelInput.value || 'intermediate';
   if (durationInput) program.sessionDurationMinutes = durationInput.value ? Number(durationInput.value) : null;
+  if (frequencyModeInput && frequencyValueInput) {
+    const frequencyValue = Number(frequencyValueInput.value);
+    program.trainingFrequency = frequencyModeInput.value === 'weekly'
+      ? { mode: 'weekly', sessionsPerWeek: Math.min(7, Math.max(1, Number.isInteger(frequencyValue) ? frequencyValue : 3)) }
+      : { mode: 'interval', intervalDays: Math.min(30, Math.max(1, Number.isInteger(frequencyValue) ? frequencyValue : 2)) };
+  }
   const session = program.sessions[ui.editorSessionId];
   if (!session) return;
   const sessionNameInput = document.querySelector('[data-session-field="name"]');
@@ -484,6 +505,7 @@ function handleStructureAction(action, button) {
 }
 
 function handleChange(event) {
+  if (event.target.id === 'editor-program-frequency-mode') { syncEditor(); renderEditor(); return; }
   if (event.target.dataset.editorCategory !== undefined) updateAddExerciseOptions(event.target, '');
   if (event.target.dataset.itemField === 'muscleCategory') { changeItemMuscleCategory(event.target); }
   if (event.target.dataset.editorQuery !== undefined) updateAddExerciseOptions(event.target.closest('.editor-block')?.querySelector('[data-editor-category]'), event.target.value);

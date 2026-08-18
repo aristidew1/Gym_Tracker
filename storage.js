@@ -5,6 +5,7 @@ import { getExerciseDisplayName } from './data/exercises.js';
 import {
   createWorkoutRecord,
   getWorkoutSessionId,
+  migratePrograms,
   migrateWorkouts,
   validateProgram,
   validateWorkout,
@@ -16,10 +17,11 @@ import {
   getPrograms,
   restorePrograms,
 } from './services/program-storage.js';
+import { getSupplementsBackup, restoreSupplementsBackup } from './supplements.js';
 
 const STORAGE_KEY = 'muscu_workouts';
 const EXPORT_FORMAT = 'muscu-tracker-backup';
-const EXPORT_VERSION = 2;
+const EXPORT_VERSION = 3;
 const PROGRAM_EXPORT_FORMAT = 'muscu-tracker-programs';
 const PROGRAM_EXPORT_VERSION = 1;
 
@@ -55,6 +57,26 @@ export function saveWorkout(workout) {
   if (errors.length > 0) throw new Error(`Séance invalide : ${errors.join(' ')}`);
   const workouts = getWorkouts();
   workouts.push(record);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+  return record;
+}
+
+export function updateWorkout(id, workout) {
+  const workouts = getWorkouts();
+  const index = workouts.findIndex((item) => item.id === id);
+  if (index < 0) return null;
+
+  const previous = workouts[index];
+  const record = createWorkoutRecord({
+    ...previous,
+    ...workout,
+    id,
+    date: workout.date || previous.date,
+    updatedAt: new Date().toISOString(),
+  }, id, previous.savedAt);
+  const errors = validateWorkout(record);
+  if (errors.length > 0) throw new Error(`Séance invalide : ${errors.join(' ')}`);
+  workouts[index] = record;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
   return record;
 }
@@ -147,28 +169,68 @@ export function getLastExerciseDataByExerciseId(exerciseId) {
   return null;
 }
 
-export function getStats() {
-  const workouts = getWorkouts();
-  if (workouts.length === 0) return { totalWorkouts: 0, streak: 0, thisMonth: 0 };
+function dateToDayNumber(dateValue) {
+  if (typeof dateValue === 'string') {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateValue);
+    if (match) return Math.floor(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000);
+  }
+  const date = new Date(dateValue);
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+}
 
-  const now = new Date();
+function getIntervalStreak(workouts, intervalDays, todayDay) {
+  const sortedDays = [...new Set(workouts.map((workout) => dateToDayNumber(workout.date)))]
+    .sort((a, b) => b - a);
+  if (!sortedDays.length || todayDay - sortedDays[0] > intervalDays) return 0;
+
+  let streak = 1;
+  for (let index = 1; index < sortedDays.length; index += 1) {
+    if (sortedDays[index - 1] - sortedDays[index] > intervalDays) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+function getWeekStart(dayNumber) {
+  return dayNumber - ((dayNumber + 3) % 7);
+}
+
+function getWeeklyStreak(workouts, sessionsPerWeek, todayDay) {
+  const workoutsByWeek = new Map();
+  workouts.forEach((workout) => {
+    const weekStart = getWeekStart(dateToDayNumber(workout.date));
+    workoutsByWeek.set(weekStart, (workoutsByWeek.get(weekStart) || 0) + 1);
+  });
+
+  let weekStart = getWeekStart(todayDay);
+  // The current week only joins the streak once its target is reached and
+  // cannot break the previous completed weeks before it ends.
+  if ((workoutsByWeek.get(weekStart) || 0) < sessionsPerWeek) weekStart -= 7;
+
+  let streak = 0;
+  while ((workoutsByWeek.get(weekStart) || 0) >= sessionsPerWeek) {
+    streak += 1;
+    weekStart -= 7;
+  }
+  return streak;
+}
+
+export function getStats(program = DEFAULT_PROGRAM, now = new Date()) {
+  const workouts = getWorkouts();
+  const frequency = program?.trainingFrequency || { mode: 'interval', intervalDays: 2 };
+  const streakUnit = frequency.mode === 'weekly' ? 'week' : 'workout';
+  if (workouts.length === 0) return { totalWorkouts: 0, streak: 0, streakUnit, thisMonth: 0 };
+
   const thisMonth = workouts.filter((workout) => {
     const date = new Date(workout.date);
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   }).length;
-  const sortedDates = [...new Set(workouts.map((workout) => workout.date))]
-    .sort((a, b) => new Date(b) - new Date(a));
-  const daysSinceLast = Math.floor((Date.now() - new Date(sortedDates[0]).getTime()) / 86400000);
-  let streak = 0;
-  if (daysSinceLast <= 2) {
-    streak = 1;
-    for (let index = 1; index < sortedDates.length; index += 1) {
-      const gap = Math.floor((new Date(sortedDates[index - 1]) - new Date(sortedDates[index])) / 86400000);
-      if (gap > 3) break;
-      streak += 1;
-    }
-  }
-  return { totalWorkouts: workouts.length, streak, thisMonth };
+  const programWorkouts = workouts.filter((workout) => workout.programId === program?.id);
+  const todayDay = dateToDayNumber(now);
+  const streak = frequency.mode === 'weekly'
+    ? getWeeklyStreak(programWorkouts, frequency.sessionsPerWeek || 3, todayDay)
+    : getIntervalStreak(programWorkouts, frequency.intervalDays || 2, todayDay);
+  return { totalWorkouts: workouts.length, streak, streakUnit, thisMonth };
 }
 
 export function exportData() {
@@ -180,6 +242,7 @@ export function exportData() {
     workouts: getWorkouts(),
     programs,
     activeProgramId: getActiveProgramId(),
+    ...getSupplementsBackup(),
   }, null, 2);
 }
 
@@ -209,7 +272,7 @@ function parseImportData(jsonString) {
     const { workouts } = migrateWorkouts(workoutsInput);
     if (workouts.some((workout) => validateWorkout(workout).length > 0)) return null;
 
-    const programs = isLegacyExport ? null : raw.programs;
+    const programs = isLegacyExport ? null : migratePrograms(raw.programs).programs;
     if (programs && (
       programs.some((program) => !program || validateProgram(program).length > 0)
       || new Set(programs.map((program) => program.id)).size !== programs.length
@@ -220,6 +283,8 @@ function parseImportData(jsonString) {
       workouts,
       programs: programs || null,
       activeProgramId: isLegacyExport ? null : raw.activeProgramId,
+      supplements: isLegacyExport ? [] : raw.supplements,
+      supplementLog: isLegacyExport ? {} : raw.supplementLog,
     };
   } catch {
     return null;
@@ -235,13 +300,14 @@ function parseProgramsImportData(jsonString) {
       || typeof raw.activeProgramId !== 'string'
     ) return null;
 
+    const programs = migratePrograms(raw.programs).programs;
     if (
-      raw.programs.some((program) => !program || validateProgram(program).length > 0)
-      || new Set(raw.programs.map((program) => program.id)).size !== raw.programs.length
-      || !raw.programs.some((program) => program.id === raw.activeProgramId)
+      programs.some((program) => !program || validateProgram(program).length > 0)
+      || new Set(programs.map((program) => program.id)).size !== programs.length
+      || !programs.some((program) => program.id === raw.activeProgramId)
     ) return null;
 
-    return { programs: raw.programs, activeProgramId: raw.activeProgramId };
+    return { programs, activeProgramId: raw.activeProgramId };
   } catch {
     return null;
   }
@@ -274,6 +340,7 @@ export function importData(jsonString) {
   if (!data) return false;
   if (data.programs && !restorePrograms(data.programs, data.activeProgramId)) return false;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data.workouts));
+  restoreSupplementsBackup(data);
   return true;
 }
 

@@ -10,6 +10,7 @@ globalThis.localStorage = {
 
 const storage = await import('../storage.js');
 const programs = await import('../services/program-storage.js');
+const supplements = await import('../supplements.js');
 const { DEFAULT_PROGRAM } = await import('../data/default-program.js');
 
 test('storage migrates old local data in place and keeps the next session generic', () => {
@@ -35,6 +36,27 @@ test('storage saves versioned records and looks them up by program exercise id',
     }],
   });
   assert.equal(storage.getLastExerciseData('press_main', 'one').exerciseId, 'barbell_bench_press');
+});
+
+test('storage updates a recorded workout in place without changing its date or id', () => {
+  values.clear();
+  const saved = storage.saveWorkout({
+    date: '2026-07-14', programId: 'custom', sessionId: 'one', exercises: [{
+      programExerciseId: 'press_main', exerciseId: 'barbell_bench_press', exerciseName: 'Développé couché',
+      sets: [{ weight: 80, reps: 8 }],
+    }],
+  });
+  const updated = storage.updateWorkout(saved.id, {
+    exercises: [{
+      programExerciseId: 'press_main', exerciseId: 'dumbbell_bench_press', exerciseName: 'Développé couché haltères',
+      sets: [{ weight: 32, reps: 10 }],
+    }],
+  });
+
+  assert.equal(storage.getWorkouts().length, 1);
+  assert.equal(updated.id, saved.id);
+  assert.equal(updated.date, '2026-07-14');
+  assert.equal(updated.exercises[0].exerciseId, 'dumbbell_bench_press');
 });
 
 test('last exercise data follows the exercise across programs and sessions', () => {
@@ -64,6 +86,37 @@ test('the previous workout lookup stays within the same program and session', ()
 
   assert.equal(storage.getLastWorkout('A', 'active_program').programId, 'active_program');
   assert.equal(storage.getLastWorkout('A', 'active_program').sessionId, 'A');
+});
+
+test('interval streak follows the active program frequency', () => {
+  values.clear();
+  const program = { ...structuredClone(DEFAULT_PROGRAM), id: 'frequency_program', trainingFrequency: { mode: 'interval', intervalDays: 3 } };
+  ['2026-08-12', '2026-08-15', '2026-08-18'].forEach((date) => {
+    storage.saveWorkout({ programId: program.id, sessionId: 'A', date, exercises: [] });
+  });
+  storage.saveWorkout({ programId: 'another_program', sessionId: 'A', date: '2026-08-17', exercises: [] });
+
+  assert.equal(storage.getStats(program, new Date(2026, 7, 18)).streak, 3);
+  assert.equal(storage.getStats(program, new Date(2026, 7, 21)).streak, 3);
+  assert.equal(storage.getStats(program, new Date(2026, 7, 22)).streak, 0);
+});
+
+test('weekly streak counts consecutive weeks that reach their workout target', () => {
+  values.clear();
+  const program = { ...structuredClone(DEFAULT_PROGRAM), id: 'weekly_program', trainingFrequency: { mode: 'weekly', sessionsPerWeek: 3 } };
+  [
+    '2026-07-27', '2026-07-29', '2026-07-31',
+    '2026-08-03', '2026-08-05', '2026-08-07',
+    '2026-08-10', '2026-08-12', '2026-08-14',
+    '2026-08-17',
+  ].forEach((date) => storage.saveWorkout({ programId: program.id, sessionId: 'A', date, exercises: [] }));
+
+  const currentPartialWeek = storage.getStats(program, new Date(2026, 7, 18));
+  assert.equal(currentPartialWeek.streak, 3);
+  assert.equal(currentPartialWeek.streakUnit, 'week');
+
+  ['2026-08-18', '2026-08-19'].forEach((date) => storage.saveWorkout({ programId: program.id, sessionId: 'A', date, exercises: [] }));
+  assert.equal(storage.getStats(program, new Date(2026, 7, 19)).streak, 4);
 });
 
 test('backup exports and restores workouts, custom programs, and the active program', () => {
@@ -133,4 +186,22 @@ test('storage still imports the legacy workout-array export format', () => {
   assert.equal(storage.importData(legacyExport), true);
   assert.equal(storage.getWorkouts().length, 1);
   assert.equal(programs.getCustomPrograms().length, 0);
+});
+
+test('supplements persist daily intake and are included in full backups', () => {
+  values.clear();
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const creatine = supplements.addSupplement({ name: 'Créatine', dose: '5', unit: 'g' });
+  const omega = supplements.addSupplement({ name: 'Oméga-3' });
+  supplements.toggleSupplementTaken(creatine.id, date);
+  assert.deepEqual(supplements.getSupplementStatus(date), { total: 2, taken: 1, complete: false });
+
+  const backup = storage.exportData();
+  values.clear();
+  assert.equal(storage.importData(backup), true);
+  assert.equal(supplements.getSupplements().length, 2);
+  assert.deepEqual(supplements.getTakenSupplementIds(date), [creatine.id]);
+  assert.equal(supplements.getSupplementStatus(date).complete, false);
+  assert.equal(supplements.getSupplements()[1].id, omega.id);
 });

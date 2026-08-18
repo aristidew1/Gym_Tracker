@@ -54,9 +54,10 @@ const block = (id, name, presentation, executionMode, restBetweenRoundsSeconds, 
 // This preset is the former A/B/C/D cycle expressed with the generic schema.
 export const DEFAULT_PROGRAM = {
   id: 'pullup_deadlift_cycle',
-  schemaVersion: 2,
+  schemaVersion: 4,
   name: 'Cycle tractions et deadlift',
   description: 'Cycle roulant A/B/C/D, un jour sur deux.',
+  trainingFrequency: { mode: 'interval', intervalDays: 2 },
   sessionOrder: ['A', 'B', 'C', 'D'],
   sessions: {
     A: {

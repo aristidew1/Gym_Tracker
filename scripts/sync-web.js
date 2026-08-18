@@ -5,7 +5,7 @@ const root = process.cwd();
 const webRoot = resolve(root, 'www');
 const files = [
   'app.js', 'calendar.js', 'chart.umd.min.js', 'data.js', 'i18n.js', 'index.css', 'index.html',
-  'notifications.js', 'programs.js', 'stats.js', 'storage.js', 'sw.js',
+  'notifications.js', 'programs.js', 'stats.js', 'storage.js', 'supplements.js', 'sw.js',
 ];
 const directories = ['data', 'models', 'services'];
 

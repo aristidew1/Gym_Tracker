@@ -4,6 +4,7 @@
 
 import { getNextSession, getLastWorkout, getWorkouts } from './storage.js';
 import { getActiveProgram } from './services/program-storage.js';
+import { getSupplementStatus } from './supplements.js';
 import { localizeText, t } from './i18n.js';
 
 const NOTIFICATION_TAG = 'muscu-daily-status';
@@ -315,28 +316,42 @@ function getDailyStatus() {
 
   const order = program.sessionOrder;
 
+  let workoutStatus;
   if (workouts.length === 0) {
     const session = program.sessions[order[0]];
-    return { title: t('workoutToday', { name: localizeText(session.name) }), body: localizeText(session.subtitle) };
-  }
-
-  const sorted = [...workouts].sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
-  const lastDate = new Date(sorted[0].date);
-  lastDate.setHours(0, 0, 0, 0);
-
-  const daysDiff = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
-  const lastSessionId = sorted[0].sessionId || sorted[0].sessionType;
-  const lastIndex = order.indexOf(lastSessionId);
-  const nextType = order[(lastIndex === -1 ? 0 : lastIndex + 1) % order.length];
-  const nextSession = program.sessions[nextType];
-
-  if (daysDiff === 0) {
-    return { title: t('restTomorrow'), body: `${t('nextWorkout', { name: localizeText(nextSession.name) })} — ${localizeText(nextSession.subtitle)}` };
-  } else if (daysDiff === 1) {
-    return { title: t('restToday'), body: `${t('tomorrowWorkout', { name: localizeText(nextSession.name) })} — ${localizeText(nextSession.subtitle)}` };
+    workoutStatus = { title: t('workoutToday', { name: localizeText(session.name) }), body: localizeText(session.subtitle) };
   } else {
-    return { title: t('workoutToday', { name: localizeText(nextSession.name) }), body: localizeText(nextSession.subtitle) };
+    const sorted = [...workouts].sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
+    const lastDate = new Date(sorted[0].date);
+    lastDate.setHours(0, 0, 0, 0);
+    const daysDiff = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+    const frequencyDays = program.trainingFrequency?.mode === 'weekly'
+      ? Math.ceil(7 / (program.trainingFrequency.sessionsPerWeek || 3))
+      : program.trainingFrequency?.intervalDays || 2;
+    const lastSessionId = sorted[0].sessionId || sorted[0].sessionType;
+    const lastIndex = order.indexOf(lastSessionId);
+    const nextType = order[(lastIndex === -1 ? 0 : lastIndex + 1) % order.length];
+    const nextSession = program.sessions[nextType];
+    if (daysDiff >= frequencyDays) {
+      workoutStatus = { title: t('workoutToday', { name: localizeText(nextSession.name) }), body: localizeText(nextSession.subtitle) };
+    } else {
+      const daysUntilNext = frequencyDays - daysDiff;
+      const nextLabel = daysUntilNext === 1
+        ? t('tomorrowWorkout', { name: localizeText(nextSession.name) })
+        : t('nextWorkoutInDays', { count: daysUntilNext, name: localizeText(nextSession.name) });
+      workoutStatus = {
+        title: daysDiff === 0 ? t('workoutCompletedToday') : t('restToday'),
+        body: `${nextLabel} — ${localizeText(nextSession.subtitle)}`,
+      };
+    }
   }
+
+  const supplementStatus = getSupplementStatus();
+  if (!supplementStatus) return workoutStatus;
+  return {
+    ...workoutStatus,
+    body: `${workoutStatus.body}\n${supplementStatus.complete ? t('supplementsNotificationComplete') : t('supplementsNotificationPending')}`,
+  };
 }
 
 // ============================================

@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { DEFAULT_PROGRAM, getResolvedExercise } from '../data/default-program.js';
 import { getNextPrescription } from '../services/progression-engine.js';
-import { migrateWorkout, validateProgram, validateWorkout } from '../models/workout-schema.js';
+import { migrateProgram, migrateWorkout, validateProgram, validateWorkout } from '../models/workout-schema.js';
 import { createBlankProgram } from '../programs.js';
 
 test('legacy workout is migrated to the versioned schema without losing its sets', () => {
@@ -50,6 +50,30 @@ test('manually composed program satisfies the generic schema', () => {
   assert.deepEqual(validateProgram(DEFAULT_PROGRAM), []);
   assert.deepEqual(validateProgram(program), []);
   assert.deepEqual(validateProgram(createBlankProgram()), []);
+});
+
+test('legacy program frequencies migrate to the polyvalent schema', () => {
+  const legacyProgram = structuredClone(DEFAULT_PROGRAM);
+  legacyProgram.schemaVersion = 3;
+  delete legacyProgram.trainingFrequency;
+  legacyProgram.trainingFrequencyDays = 4;
+
+  const migrated = migrateProgram(legacyProgram);
+
+  assert.equal(migrated.schemaVersion, 4);
+  assert.deepEqual(migrated.trainingFrequency, { mode: 'interval', intervalDays: 4 });
+  assert.equal('trainingFrequencyDays' in migrated, false);
+  assert.deepEqual(validateProgram(migrated), []);
+});
+
+test('program schema accepts interval and weekly frequencies', () => {
+  const intervalProgram = structuredClone(DEFAULT_PROGRAM);
+  intervalProgram.trainingFrequency = { mode: 'interval', intervalDays: 5 };
+  const weeklyProgram = structuredClone(DEFAULT_PROGRAM);
+  weeklyProgram.trainingFrequency = { mode: 'weekly', sessionsPerWeek: 4 };
+
+  assert.deepEqual(validateProgram(intervalProgram), []);
+  assert.deepEqual(validateProgram(weeklyProgram), []);
 });
 
 test('double progression only proposes a load increase when all sets reach the top range', () => {

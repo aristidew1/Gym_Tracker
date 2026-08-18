@@ -18,6 +18,8 @@ test('AI example follows the program-only import contract', () => {
   const example = createAiProgramImportExample('fr');
   assert.deepEqual(getProgramsImportSummary(JSON.stringify(example)), { programs: 1 });
   assert.equal(example.activeProgramId, example.programs[0].id);
+  assert.equal(example.programs[0].schemaVersion, 4);
+  assert.deepEqual(example.programs[0].trainingFrequency, { mode: 'weekly', sessionsPerWeek: 3 });
   assert.deepEqual(validateProgram(example.programs[0]), []);
 });
 
@@ -35,6 +37,7 @@ test('AI prompt follows the active application language and complete catalog', (
 
   for (const prompt of [french, english]) {
     assert.match(prompt, /"format": "muscu-tracker-programs"/u);
+    assert.match(prompt, /trainingFrequency/u);
     assert.match(prompt, /without Markdown|sans Markdown/u);
     EXERCISES.forEach(({ id }) => assert.ok(prompt.includes(id), id));
     INTENSITY_TECHNIQUES.forEach(({ id }) => assert.ok(prompt.includes(id), id));

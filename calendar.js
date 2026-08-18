@@ -6,6 +6,7 @@ import { getWorkoutSessionId } from './models/workout-schema.js';
 import { getActiveProgram, getProgramById } from './services/program-storage.js';
 import { getExerciseDisplayName } from './data.js';
 import { getLanguage, localizeText, t } from './i18n.js';
+import { getSupplementStatus } from './supplements.js';
 
 // ── Internal navigation state ───────────────────────────────────────────────
 const now = new Date();
@@ -43,6 +44,14 @@ export function initCalendar() {
 
   // Initial render for today's month
   renderCalendar(currentYear, currentMonth);
+}
+
+export function openWorkoutDate(dateStr) {
+  const [year, month] = dateStr.split('-').map(Number);
+  currentYear = year;
+  currentMonth = month - 1;
+  renderCalendar(currentYear, currentMonth);
+  showDayDetail(dateStr);
 }
 
 /**
@@ -115,17 +124,31 @@ export function renderCalendar(year, month) {
 
     // Build the date string (YYYY-MM-DD) for click handler
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const supplementStatus = getSupplementStatus(dateStr);
+    // The current day is trackable throughout the day; only dates after today
+    // must remain unmarked.
+    const isFuture = new Date(`${dateStr}T00:00:00`).getTime() > Date.now();
+    if (supplementStatus && !isFuture) {
+      cell.classList.add(supplementStatus.complete ? 'supplements-complete' : 'supplements-incomplete');
+      cell.setAttribute('aria-label', supplementStatus.complete ? t('supplementsTakenCalendar') : t('supplementsMissingCalendar'));
+      const marker = document.createElement('span');
+      marker.className = `calendar-supplement-marker ${supplementStatus.complete ? 'complete' : 'incomplete'}`;
+      marker.setAttribute('aria-hidden', 'true');
+      cell.appendChild(marker);
+    }
     cell.addEventListener('click', () => showDayDetail(dateStr));
 
     container.appendChild(cell);
   }
 
   // ── 5. Update streak display ────────────────────────────────────────────
-  const stats = getStats();
+  const stats = getStats(getActiveProgram());
   const streakEl = document.getElementById('cal-streak-value');
   if (streakEl) {
     streakEl.textContent = stats.streak;
   }
+  const streakLabel = document.getElementById('cal-streak-label');
+  if (streakLabel) streakLabel.textContent = t(stats.streakUnit === 'week' ? 'consecutiveWeeks' : 'consecutiveWorkouts');
 }
 
 function renderCalendarLegend() {
@@ -133,8 +156,7 @@ function renderCalendarLegend() {
   const program = getActiveProgram();
   legend.replaceChildren();
   legend.setAttribute('aria-label', t('calendarLegend'));
-  if (!program) return;
-  program.sessionOrder.forEach((sessionId) => {
+  (program?.sessionOrder || []).forEach((sessionId) => {
     const session = program.sessions[sessionId];
     if (!session) return;
     const item = document.createElement('span');
@@ -147,6 +169,15 @@ function renderCalendarLegend() {
     item.append(dot, name);
     legend.appendChild(item);
   });
+  if (getSupplementStatus()) {
+    const complete = document.createElement('span');
+    complete.className = 'calendar-legend-item supplement-legend-item';
+    complete.innerHTML = `<span class="supplement-calendar-dot complete"></span><span>${t('supplementsTakenCalendar')}</span>`;
+    const incomplete = document.createElement('span');
+    incomplete.className = 'calendar-legend-item supplement-legend-item';
+    incomplete.innerHTML = `<span class="supplement-calendar-dot incomplete"></span><span>${t('supplementsMissingCalendar')}</span>`;
+    legend.append(complete, incomplete);
+  }
 }
 
 /**
@@ -158,9 +189,10 @@ function renderCalendarLegend() {
 export function showDayDetail(dateStr) {
   const panel = document.getElementById('calendar-detail');
   const workouts = getWorkoutsByDate(dateStr);
+  const supplementStatus = getSupplementStatus(dateStr);
 
-  // No workouts → hide the panel
-  if (!workouts || workouts.length === 0) {
+  // No tracked activity → hide the panel
+  if ((!workouts || workouts.length === 0) && !supplementStatus) {
     panel.classList.remove('active');
     return;
   }
@@ -170,7 +202,7 @@ export function showDayDetail(dateStr) {
   const formattedDate = new Intl.DateTimeFormat(getLanguage() === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr)));
 
   // Build detail HTML for every workout on that day
-  let html = '';
+  let html = supplementStatus ? `<div class="calendar-supplement-status ${supplementStatus.complete ? 'complete' : 'incomplete'}"><span aria-hidden="true">${supplementStatus.complete ? '✓' : '!'}</span><div><strong>${t('supplements')}</strong><small>${supplementStatus.complete ? t('supplementsTakenCalendar') : t('supplementsProgress', supplementStatus)}</small></div></div>` : '';
 
   workouts.forEach(workout => {
     const sessionId = getWorkoutSessionId(workout);
@@ -205,13 +237,22 @@ export function showDayDetail(dateStr) {
       });
     }
 
-    // ── Delete button ─────────────────────────────────────────────────────
+    // ── Workout actions ───────────────────────────────────────────────────
     html += `
-      <button class="btn-delete-workout" data-id="${workout.id}">${t('deleteRecordedWorkout')}</button>`;
+      <div class="calendar-workout-actions">
+        <button class="btn-edit-recorded-workout" data-id="${workout.id}">✎ ${t('editRecordedWorkout')}</button>
+        <button class="btn-delete-workout" data-id="${workout.id}">${t('deleteRecordedWorkout')}</button>
+      </div>`;
   });
 
   panel.innerHTML = html;
   panel.classList.add('active');
+
+  panel.querySelectorAll('.btn-edit-recorded-workout').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('workout:edit-requested', { detail: { workoutId: btn.dataset.id } }));
+    });
+  });
 
   // ── Wire up delete buttons ──────────────────────────────────────────────
   panel.querySelectorAll('.btn-delete-workout').forEach(btn => {
