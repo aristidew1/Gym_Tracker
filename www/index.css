@@ -45,6 +45,9 @@
 
   --nav-height: 72px;
   --header-height: 60px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-total-height: calc(var(--nav-height) + var(--safe-area-bottom));
 
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
@@ -110,7 +113,8 @@ body::before {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
-  padding-bottom: var(--nav-height);
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--nav-total-height);
 }
 
 /* --- Views --- */
@@ -348,7 +352,7 @@ body::before {
   gap: 12px;
   padding: 16px 0;
   position: sticky;
-  top: 0;
+  top: var(--safe-area-top);
   z-index: 10;
   background: linear-gradient(180deg, rgba(7, 7, 13, 0.98) 72%, rgba(7, 7, 13, 0.88));
   backdrop-filter: blur(16px);
@@ -1600,7 +1604,7 @@ body::before {
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--nav-height);
+  height: var(--nav-total-height);
   background: rgba(12, 12, 22, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1610,7 +1614,7 @@ body::before {
   justify-content: center;
   gap: 0;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-area-bottom);
 }
 
 .program-editor-active #bottom-nav { display: none !important; }
