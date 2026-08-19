@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.muscu.tracker"
+    namespace = "fr.aris.gymtrack"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.muscu.tracker"
+        applicationId "fr.aris.gymtrack"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

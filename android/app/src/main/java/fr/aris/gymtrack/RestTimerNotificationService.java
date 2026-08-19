@@ -1,4 +1,4 @@
-package com.muscu.tracker;
+package fr.aris.gymtrack;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -28,8 +28,8 @@ public class RestTimerNotificationService extends Service {
     public static final int NOTIFICATION_ID = 43;
     public static final int COMPLETE_NOTIFICATION_ID = 44;
 
-    private static final String ACTION_START = "com.muscu.tracker.action.START_REST_TIMER";
-    private static final String ACTION_CANCEL = "com.muscu.tracker.action.CANCEL_REST_TIMER";
+    private static final String ACTION_START = "fr.aris.gymtrack.action.START_REST_TIMER";
+    private static final String ACTION_CANCEL = "fr.aris.gymtrack.action.CANCEL_REST_TIMER";
     private static final String EXTRA_DURATION_SECONDS = "durationSeconds";
     private static final String EXTRA_TITLE = "title";
     private static final String EXTRA_BODY = "body";

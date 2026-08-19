@@ -1,4 +1,4 @@
-package com.muscu.tracker;
+package fr.aris.gymtrack;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -25,8 +25,8 @@ public class PersistentNotificationService extends Service {
     public static final String CHANNEL_ID = "muscu_persistent";
     public static final int NOTIFICATION_ID = 42;
 
-    private static final String ACTION_SHOW = "com.muscu.tracker.action.SHOW_PERSISTENT_NOTIFICATION";
-    private static final String ACTION_REPOST = "com.muscu.tracker.action.REPOST_PERSISTENT_NOTIFICATION";
+    private static final String ACTION_SHOW = "fr.aris.gymtrack.action.SHOW_PERSISTENT_NOTIFICATION";
+    private static final String ACTION_REPOST = "fr.aris.gymtrack.action.REPOST_PERSISTENT_NOTIFICATION";
     private static final long REPOST_DELAY_MS = 500L;
     private static final String PREFS_NAME = "persistent_notification";
     private static final String PREF_ENABLED = "enabled";

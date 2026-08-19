@@ -8,7 +8,7 @@ Permettre à une personne de copier depuis les paramètres un prompt complet exp
 
 ## Constat vérifié sur téléphone
 
-Le parcours a été reproduit via ADB sur un Pixel 8 Pro utilisant l'application installée `com.muscu.tracker`.
+Le parcours a été reproduit via ADB sur un Pixel 8 Pro utilisant l'application installée `fr.aris.gymtrack`.
 
 - Le constructeur affiche immédiatement les informations générales, les réglages de séance, tous les blocs et tous les champs de chaque exercice.
 - Il faut environ six grands balayages pour atteindre les actions situées à la fin de la première séance du programme intégré.

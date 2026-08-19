@@ -1,4 +1,4 @@
-package com.muscu.tracker;
+package fr.aris.gymtrack;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

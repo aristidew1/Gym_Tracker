@@ -490,7 +490,7 @@ git commit -m "feat: simplify the mobile program builder"
 
 **Interfaces:**
 - Consumes: synchronized web source from Tasks 1-4.
-- Produces: an installed debug APK verified on `com.muscu.tracker` without saving test drafts.
+- Produces: an installed debug APK verified on `fr.aris.gymtrack` without saving test drafts.
 
 - [ ] **Step 1: Run final automated verification from a clean process**
 
@@ -504,8 +504,8 @@ Run:
 
 ```bash
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-adb shell am force-stop com.muscu.tracker
-adb shell monkey -p com.muscu.tracker -c android.intent.category.LAUNCHER 1
+adb shell am force-stop fr.aris.gymtrack
+adb shell monkey -p fr.aris.gymtrack -c android.intent.category.LAUNCHER 1
 ```
 
 Expected: `Success` from installation and Muscu Tracker in the foreground.
