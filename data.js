@@ -1,4 +1,8 @@
-if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+if (
+  typeof document !== 'undefined'
+  && typeof document.addEventListener === 'function'
+  && typeof document.createElement === 'function'
+) {
   import('./active-workout-patch.js');
 }
 
