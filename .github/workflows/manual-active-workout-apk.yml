@@ -35,8 +35,9 @@ jobs:
         run: |
           mkdir -p builds
           : > builds/build.log
-          echo "Gym Tracker Android TEST build" >> builds/build.log
+          echo "Gym Tracker Android STABLE TEST build" >> builds/build.log
           echo "Package: fr.aris.gymtrack.test" >> builds/build.log
+          echo "Signing: dedicated stable test key" >> builds/build.log
           echo "Commit: $GITHUB_SHA" >> builds/build.log
           echo "Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> builds/build.log
           echo >> builds/build.log
@@ -71,12 +72,12 @@ jobs:
             if [ "$code" -ne 0 ]; then result=failure; fi
           fi
 
-          rm -f builds/gym-tracker-debug.apk
+          rm -f builds/gym-tracker-debug.apk builds/gym-tracker-test-debug.apk
           if [ "$result" = success ] && [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp android/app/build/outputs/apk/debug/app-debug.apk builds/gym-tracker-test-debug.apk
+            cp android/app/build/outputs/apk/debug/app-debug.apk builds/gym-tracker-test-stable-debug.apk
             echo "RESULT=success" >> builds/build.log
           else
-            rm -f builds/gym-tracker-test-debug.apk
+            rm -f builds/gym-tracker-test-stable-debug.apk
             echo "RESULT=failure" >> builds/build.log
           fi
 
@@ -88,6 +89,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- builds
           if ! git diff --cached --quiet; then
-            git commit -m "build: publish Android test debug result [skip ci]"
+            git commit -m "build: publish stable Android test debug result [skip ci]"
             git push origin HEAD:main
           fi

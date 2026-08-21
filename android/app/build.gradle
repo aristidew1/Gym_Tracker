@@ -1,8 +1,27 @@
 apply plugin: 'com.android.application'
 
+// Public, non-production key used only for the side-by-side test package.
+// It makes fr.aris.gymtrack.test updates reproducibly signed across CI runs.
+def testKeystoreBase64File = rootProject.file('test-debug.keystore.b64')
+def stableTestKeystore = file("$buildDir/gymtrack-test.keystore")
+if (testKeystoreBase64File.exists()) {
+    stableTestKeystore.parentFile.mkdirs()
+    stableTestKeystore.bytes = testKeystoreBase64File.text.trim().decodeBase64()
+}
+
 android {
     namespace = "fr.aris.gymtrack"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        stableTest {
+            storeFile stableTestKeystore
+            storePassword "gymtracktest"
+            keyAlias "gymtracktest"
+            keyPassword "gymtracktest"
+        }
+    }
+
     defaultConfig {
         applicationId "fr.aris.gymtrack"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -18,12 +37,12 @@ android {
     }
     buildTypes {
         debug {
-            // Debug builds are a separate app so they can coexist with the Play Store install,
-            // regardless of signing key.
+            // Debug builds are a separate app so they can coexist with the Play Store install.
             applicationIdSuffix ".test"
             versionNameSuffix "-test"
             resValue "string", "app_name", "Muscu Tracker Test"
             resValue "string", "title_activity_main", "Muscu Tracker Test"
+            signingConfig signingConfigs.stableTest
         }
         release {
             minifyEnabled false
