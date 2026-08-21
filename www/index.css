@@ -992,108 +992,56 @@ body::before {
   border-style: solid;
 }
 
-/* --- Rest Timer Overlay --- */
+/* --- Active workout / rest timer banners --- */
+.active-workout-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 16px 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(var(--session-color-rgb, 77, 124, 255), 0.28);
+  border-radius: var(--radius-md);
+  background: linear-gradient(145deg, rgba(var(--session-color-rgb, 77, 124, 255), 0.14), rgba(255,255,255,0.035));
+}
+.active-workout-banner[hidden] { display: none; }
+.active-workout-copy { display: grid; min-width: 0; }
+.active-workout-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; }
+.active-workout-copy span { margin-top: 2px; color: var(--text-secondary); font-size: .69rem; font-variant-numeric: tabular-nums; }
+.btn-resume-workout { flex: 0 0 auto; min-height: 36px; padding: 7px 11px; border: 0; border-radius: 9px; background: rgb(var(--session-color-rgb, 77, 124, 255)); color: white; font-size: .72rem; font-weight: 750; cursor: pointer; }
+
 .rest-timer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(7, 7, 13, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 100;
   display: none;
   align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  animation: fadeIn 0.2s ease;
-}
-
-.rest-timer-overlay.active {
-  display: flex;
-}
-
-.timer-circle {
-  position: relative;
-  width: 220px;
-  height: 220px;
-  margin-bottom: 30px;
-}
-
-.timer-circle svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.timer-circle .timer-bg {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.06);
-  stroke-width: 6;
-}
-
-.timer-circle .timer-progress {
-  fill: none;
-  stroke-width: 6;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 1s linear;
-}
-
-.timer-display {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-
-.timer-display .timer-time {
-  font-size: 3rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.timer-display .timer-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-.timer-controls {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-timer {
-  padding: 14px 28px;
+  gap: 10px;
+  margin: 10px 16px 8px;
+  padding: 9px 10px;
+  min-height: 64px;
+  border: 1px solid rgba(var(--session-color-rgb, 77, 124, 255), .3);
   border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  font-family: inherit;
+  background: linear-gradient(145deg, rgba(var(--session-color-rgb, 77, 124, 255), .12), rgba(255,255,255,.035));
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn .2s ease;
 }
+.rest-timer-overlay.active { display: flex; }
+.timer-circle { position: relative; flex: 0 0 44px; width: 44px; height: 44px; }
+.timer-circle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer-circle .timer-bg { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 15; }
+.timer-circle .timer-progress { fill: none; stroke-width: 15; stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+.timer-display { min-width: 62px; }
+.timer-display .timer-time { font-size: 1.18rem; line-height: 1.05; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.timer-display .timer-label { margin-top: 2px; color: var(--text-secondary); font-size: .65rem; }
+.timer-controls { display: flex; gap: 6px; margin-left: auto; }
+.btn-timer { min-height: 36px; padding: 7px 10px; border-radius: 9px; font-size: .69rem; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); font-family: inherit; }
+.btn-timer.primary { border: 0; background: var(--accent); color: white; }
+.btn-timer.secondary { background: rgba(255,255,255,.045); border: 1px solid var(--border-glass); color: var(--text-primary); }
+.btn-timer:active { transform: scale(.97); }
 
-.btn-timer.primary {
-  background: var(--accent);
-  color: white;
-}
-
-.btn-timer.secondary {
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
-  color: var(--text-primary);
-}
-
-.btn-timer:hover {
-  transform: scale(1.03);
-}
-
-.btn-timer:active {
-  transform: scale(0.97);
+@media (max-width: 360px) {
+  .rest-timer-overlay { gap: 7px; margin-left: 10px; margin-right: 10px; }
+  .timer-circle { flex-basis: 38px; width: 38px; height: 38px; }
+  .timer-display { min-width: 54px; }
+  .btn-timer { padding-left: 8px; padding-right: 8px; }
 }
 
 /* Start rest timer button (inside exercise card) */

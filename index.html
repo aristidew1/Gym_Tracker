@@ -14,6 +14,33 @@
 <body>
   <div id="app">
 
+    <!-- ============ ACTIVE WORKOUT ============ -->
+    <div class="active-workout-banner" id="active-workout-banner" hidden>
+      <div class="active-workout-copy">
+        <strong id="active-workout-name">Séance</strong>
+        <span id="active-workout-duration">Séance en cours · 00:00</span>
+      </div>
+      <button type="button" class="btn-resume-workout" id="btn-resume-workout">Reprendre</button>
+    </div>
+
+    <!-- ============ REST TIMER ============ -->
+    <div class="rest-timer-overlay" id="rest-timer-overlay" aria-live="polite">
+      <div class="timer-circle" aria-hidden="true">
+        <svg viewBox="0 0 220 220">
+          <circle class="timer-bg" cx="110" cy="110" r="100" />
+          <circle class="timer-progress" id="timer-progress" cx="110" cy="110" r="100" stroke-dasharray="628.32" stroke-dashoffset="0" />
+        </svg>
+      </div>
+      <div class="timer-display">
+        <div class="timer-time" id="timer-time">2:30</div>
+        <div class="timer-label" data-i18n="rest">repos</div>
+      </div>
+      <div class="timer-controls">
+        <button class="btn-timer secondary" id="btn-timer-skip" data-i18n="skip">Passer</button>
+        <button class="btn-timer secondary" id="btn-timer-add30">+30s</button>
+      </div>
+    </div>
+
     <!-- ============ HOME VIEW ============ -->
     <div id="view-home" class="view active">
       <div class="view-header">
@@ -160,25 +187,6 @@
         <button class="btn-back" id="btn-supplements-back" aria-label="Retour" data-i18n-aria-label="back">←</button>
       </div>
       <div id="supplements-content"></div>
-    </div>
-
-    <!-- ============ REST TIMER OVERLAY ============ -->
-    <div class="rest-timer-overlay" id="rest-timer-overlay">
-      <div class="timer-circle">
-        <svg viewBox="0 0 220 220">
-          <circle class="timer-bg" cx="110" cy="110" r="100" />
-          <circle class="timer-progress" id="timer-progress" cx="110" cy="110" r="100"
-            stroke-dasharray="628.32" stroke-dashoffset="0" />
-        </svg>
-        <div class="timer-display">
-          <div class="timer-time" id="timer-time">2:30</div>
-          <div class="timer-label" data-i18n="rest">repos</div>
-        </div>
-      </div>
-      <div class="timer-controls">
-        <button class="btn-timer secondary" id="btn-timer-skip" data-i18n="skip">Passer</button>
-        <button class="btn-timer secondary" id="btn-timer-add30">+30s</button>
-      </div>
     </div>
 
     <!-- ============ WORKOUT SUMMARY OVERLAY ============ -->

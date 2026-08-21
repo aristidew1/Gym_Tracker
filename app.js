@@ -114,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCalendar();
   initStats();
   initWorkoutControls();
+  initActiveWorkoutBanner();
   initTimerControls();
   initTimerLifecycle();
   initConfirmDialog();
@@ -133,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCalendar(now.getFullYear(), now.getMonth());
     renderPrograms();
     if (state.currentView === 'workout') { renderChoices(); renderExercises(); }
+    updateActiveWorkoutBanner();
     updateNotification();
   });
   window.addEventListener('program:changed', () => {
@@ -160,8 +162,9 @@ function initNavigation() {
 }
 
 function navigateTo(viewName) {
-  // Don't navigate away from workout without confirmation
-  if (state.currentView === 'workout' && viewName !== 'workout') {
+  // A live workout stays in memory while the user browses the app. Editing a
+  // recorded workout remains destructive, so it still asks for confirmation.
+  if (state.currentView === 'workout' && viewName !== 'workout' && state.editingWorkout) {
     confirmLeaveWorkout(() => {
       cleanupWorkout();
       doNavigate(viewName);
@@ -197,6 +200,7 @@ function doNavigate(viewName) {
   // Update app padding
   const app = document.getElementById('app');
   app.style.paddingBottom = viewName === 'workout' ? '16px' : '';
+  updateActiveWorkoutBanner();
 
   // Refresh data when navigating
   if (viewName === 'home') renderHome();
@@ -493,16 +497,50 @@ function renderSupplements() {
 }
 
 // ============================================
+// ACTIVE WORKOUT BANNER
+// ============================================
+function initActiveWorkoutBanner() {
+  document.getElementById('btn-resume-workout').addEventListener('click', () => {
+    if (!state.workoutSession) return;
+    doNavigate('workout');
+  });
+  updateActiveWorkoutBanner();
+}
+
+function updateActiveWorkoutBanner() {
+  const banner = document.getElementById('active-workout-banner');
+  if (!banner) return;
+  const hasLiveWorkout = Boolean(state.workoutSession && !state.editingWorkout);
+  const shouldShow = hasLiveWorkout && state.currentView !== 'workout';
+  banner.hidden = !shouldShow;
+  if (!hasLiveWorkout) return;
+
+  const title = document.getElementById('active-workout-name');
+  const duration = document.getElementById('active-workout-duration');
+  title.textContent = localizeText(state.workoutSession.name);
+  const elapsed = Math.max(0, Math.floor((Date.now() - state.workoutStartTime) / 1000));
+  const min = Math.floor(elapsed / 60).toString().padStart(2, '0');
+  const sec = (elapsed % 60).toString().padStart(2, '0');
+  duration.textContent = `${t('workoutInProgress')} · ${min}:${sec}`;
+  document.getElementById('btn-resume-workout').textContent = t('resumeWorkout');
+}
+
+// ============================================
 // WORKOUT SESSION
 // ============================================
 function initWorkoutControls() {
   const exercisesContainer = document.getElementById('workout-exercises');
 
   document.getElementById('btn-back').addEventListener('click', () => {
-    confirmLeaveWorkout(() => {
-      cleanupWorkout();
-      doNavigate('home');
-    });
+    if (state.editingWorkout) {
+      confirmLeaveWorkout(() => {
+        cleanupWorkout();
+        doNavigate('home');
+      });
+      return;
+    }
+    // Minimise the current workout instead of destroying it.
+    doNavigate('home');
   });
 
   document.getElementById('btn-finish').addEventListener('click', () => {
@@ -710,6 +748,12 @@ function handleWorkoutEditorChange(event) {
 }
 
 function startSession(sessionId) {
+  // Only one live workout can exist at a time. Tapping another session while
+  // one is active resumes the current workout instead of overwriting it.
+  if (state.workoutSession && !state.editingWorkout) {
+    doNavigate('workout');
+    return;
+  }
   const program = getActiveProgram();
   state.activeSessionId = sessionId;
   state.activeProgramId = program.id;
@@ -757,6 +801,7 @@ function startSession(sessionId) {
   // Render choices first, then exercises
   renderChoices();
   renderExercises();
+  updateActiveWorkoutBanner();
 }
 
 function buildRecordedWorkoutSession(workout) {
@@ -847,6 +892,7 @@ function updateDuration() {
   const min = Math.floor(elapsed / 60).toString().padStart(2, '0');
   const sec = (elapsed % 60).toString().padStart(2, '0');
   document.getElementById('workout-duration').textContent = `${min}:${sec}`;
+  updateActiveWorkoutBanner();
 }
 
 function cleanupWorkout() {
@@ -867,6 +913,7 @@ function cleanupWorkout() {
   document.getElementById('rest-timer-overlay').classList.remove('active');
   document.getElementById('btn-workout-edit').classList.remove('active');
   document.getElementById('btn-finish').textContent = t('finish');
+  updateActiveWorkoutBanner();
 }
 
 // ============================================
