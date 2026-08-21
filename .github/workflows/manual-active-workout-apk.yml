@@ -104,4 +104,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# Stable test-signing build trigger + stack-layout validation.
+# Stable test-signing build trigger + first-frame stack fix validation.
