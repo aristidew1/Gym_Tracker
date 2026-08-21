@@ -1,0 +1,254 @@
+Gym Tracker Android build
+Commit: 10101bf0ec93f1bbd68ba49e8e27b89503dfa5ec
+Started: 2026-08-21T15:33:59Z
+
+===== npm ci =====
+npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+
+added 103 packages, and audited 104 packages in 2s
+
+11 packages are looking for funding
+  run `npm fund` for details
+
+3 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Exit code: 0
+
+===== patch syntax =====
+Exit code: 0
+
+===== tests =====
+
+> muscu_app@1.0.0 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: AI example follows the program-only import contract
+ok 1 - AI example follows the program-only import contract
+  ---
+  duration_ms: 2.726183
+  type: 'test'
+  ...
+# Subtest: AI prompt follows the active application language and complete catalog
+ok 2 - AI prompt follows the active application language and complete catalog
+  ---
+  duration_ms: 2.774413
+  type: 'test'
+  ...
+# Subtest: copyText uses the asynchronous Clipboard API
+ok 3 - copyText uses the asynchronous Clipboard API
+  ---
+  duration_ms: 1.166249
+  type: 'test'
+  ...
+# Subtest: copyText falls back to a temporary textarea
+ok 4 - copyText falls back to a temporary textarea
+  ---
+  duration_ms: 0.364621
+  type: 'test'
+  ...
+# Subtest: copyText reports failure when neither copy mechanism is available
+ok 5 - copyText reports failure when neither copy mechanism is available
+  ---
+  duration_ms: 0.153938
+  type: 'test'
+  ...
+# Subtest: expanded exercise catalogue has unique IDs and every exercise has a muscle category
+ok 6 - expanded exercise catalogue has unique IDs and every exercise has a muscle category
+  ---
+  duration_ms: 4.342362
+  type: 'test'
+  ...
+# Subtest: pull-ups are available after selecting the back category
+ok 7 - pull-ups are available after selecting the back category
+  ---
+  duration_ms: 0.290943
+  type: 'test'
+  ...
+# Subtest: every muscle category contains exercises
+ok 8 - every muscle category contains exercises
+  ---
+  duration_ms: 0.462284
+  type: 'test'
+  ...
+# Subtest: common barbell movements also expose their dumbbell variants
+ok 9 - common barbell movements also expose their dumbbell variants
+  ---
+  duration_ms: 0.276977
+  type: 'test'
+  ...
+# Subtest: language preference is persistent and translates interface strings
+ok 10 - language preference is persistent and translates interface strings
+  ---
+  duration_ms: 1.280162
+  type: 'test'
+  ...
+# Subtest: every exercise and muscle category has an English display name
+ok 11 - every exercise and muscle category has an English display name
+  ---
+  duration_ms: 1.321619
+  type: 'test'
+  ...
+# Subtest: existing programs start compact while new programs guide the first edit
+ok 12 - existing programs start compact while new programs guide the first edit
+  ---
+  duration_ms: 1.726135
+  type: 'test'
+  ...
+# Subtest: summaries expose useful information without advanced fields
+ok 13 - summaries expose useful information without advanced fields
+  ---
+  duration_ms: 0.891315
+  type: 'test'
+  ...
+# Subtest: summaries omit optional targets that are not configured
+ok 14 - summaries omit optional targets that are not configured
+  ---
+  duration_ms: 0.282548
+  type: 'test'
+  ...
+# Subtest: program library saves, activates and deletes custom programs without touching the preset
+ok 15 - program library saves, activates and deletes custom programs without touching the preset
+  ---
+  duration_ms: 6.906683
+  type: 'test'
+  ...
+# Subtest: editing the base program keeps its id instead of creating a copy
+ok 16 - editing the base program keeps its id instead of creating a copy
+  ---
+  duration_ms: 2.124389
+  type: 'test'
+  ...
+# Subtest: stored programs with the former day frequency are migrated without losing them
+ok 17 - stored programs with the former day frequency are migrated without losing them
+  ---
+  duration_ms: 1.885072
+  type: 'test'
+  ...
+# file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:14
+#   const style = document.createElement('style');
+#                          ^
+# TypeError: document.createElement is not a function
+#     at injectActiveWorkoutStyles (file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:14:26)
+#     at installPatch (file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:327:3)
+#     at file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:337:3
+#     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+#     at async file:///home/runner/work/Gym_Tracker/Gym_Tracker/tests/programs-ui.test.js:31:26
+# Node.js v22.23.2
+# Subtest: tests/programs-ui.test.js
+not ok 7 - tests/programs-ui.test.js
+  ---
+  duration_ms: 60.347409
+  type: 'test'
+  location: '/home/runner/work/Gym_Tracker/Gym_Tracker/tests/programs-ui.test.js:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: storage migrates old local data in place and keeps the next session generic
+ok 19 - storage migrates old local data in place and keeps the next session generic
+  ---
+  duration_ms: 1.594669
+  type: 'test'
+  ...
+# Subtest: storage saves versioned records and looks them up by program exercise id
+ok 20 - storage saves versioned records and looks them up by program exercise id
+  ---
+  duration_ms: 0.710557
+  type: 'test'
+  ...
+# Subtest: storage updates a recorded workout in place without changing its date or id
+ok 21 - storage updates a recorded workout in place without changing its date or id
+  ---
+  duration_ms: 0.377586
+  type: 'test'
+  ...
+# Subtest: last exercise data follows the exercise across programs and sessions
+ok 22 - last exercise data follows the exercise across programs and sessions
+  ---
+  duration_ms: 0.46018
+  type: 'test'
+  ...
+# Subtest: the previous workout lookup stays within the same program and session
+ok 23 - the previous workout lookup stays within the same program and session
+  ---
+  duration_ms: 0.267981
+  type: 'test'
+  ...
+# Subtest: interval streak follows the active program frequency
+ok 24 - interval streak follows the active program frequency
+  ---
+  duration_ms: 1.059589
+  type: 'test'
+  ...
+# Subtest: weekly streak counts consecutive weeks that reach their workout target
+ok 25 - weekly streak counts consecutive weeks that reach their workout target
+  ---
+  duration_ms: 1.017541
+  type: 'test'
+  ...
+# Subtest: backup exports and restores workouts, custom programs, and the active program
+ok 26 - backup exports and restores workouts, custom programs, and the active program
+  ---
+  duration_ms: 9.043284
+  type: 'test'
+  ...
+# Subtest: program-only backup adds programs without changing workout history or the active program
+ok 27 - program-only backup adds programs without changing workout history or the active program
+  ---
+  duration_ms: 22.191878
+  type: 'test'
+  ...
+# Subtest: storage still imports the legacy workout-array export format
+ok 28 - storage still imports the legacy workout-array export format
+  ---
+  duration_ms: 0.643612
+  type: 'test'
+  ...
+# Subtest: supplements persist daily intake and are included in full backups
+ok 29 - supplements persist daily intake and are included in full backups
+  ---
+  duration_ms: 2.229405
+  type: 'test'
+  ...
+# file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:334
+# if (document.readyState === 'loading') {
+# ^
+# ReferenceError: document is not defined
+#     at file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:334:1
+#     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+# Node.js v22.23.2
+# Subtest: tests/workout-schema.test.js
+not ok 9 - tests/workout-schema.test.js
+  ---
+  duration_ms: 51.227502
+  type: 'test'
+  location: '/home/runner/work/Gym_Tracker/Gym_Tracker/tests/workout-schema.test.js:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 28
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 266.89168
+Exit code: 1
+
+RESULT=failure
+Finished: 2026-08-21T15:34:02Z
