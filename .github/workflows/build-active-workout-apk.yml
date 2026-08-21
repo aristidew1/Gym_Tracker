@@ -7,6 +7,9 @@ on:
     paths:
       - 'scripts/apply-active-workout-update.py'
       - '.github/workflows/build-active-workout-apk.yml'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -51,6 +54,7 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Commit source update
+        if: github.event_name != 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
