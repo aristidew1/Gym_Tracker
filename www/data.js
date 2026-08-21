@@ -1,3 +1,5 @@
+import './active-workout-patch.js';
+
 // Compatibility entry point for the application. New code should import the
 // focused data modules directly when it only needs one responsibility.
 
