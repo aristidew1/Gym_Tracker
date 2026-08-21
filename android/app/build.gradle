@@ -17,6 +17,14 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Debug builds are a separate app so they can coexist with the Play Store install,
+            // regardless of signing key.
+            applicationIdSuffix ".test"
+            versionNameSuffix "-test"
+            resValue "string", "app_name", "Muscu Tracker Test"
+            resValue "string", "title_activity_main", "Muscu Tracker Test"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
