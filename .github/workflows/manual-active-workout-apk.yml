@@ -1,0 +1,71 @@
+name: Controlled active workout APK build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/apk-build-request.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: update/active-workout-timer
+          fetch-depth: 0
+
+      - name: Apply requested update
+        run: python3 scripts/apply-active-workout-update.py
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Sync Android
+        run: npm run sync:android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Commit verified sources to feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app.js index.html index.css i18n.js www/app.js www/index.html www/index.css www/i18n.js
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: compact timer and resumable active workout"
+            git push origin HEAD:update/active-workout-timer
+          fi
+
+      - name: Publish test APK prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete gym-tracker-active-workout-test --yes --cleanup-tag || true
+          gh release create gym-tracker-active-workout-test \
+            android/app/build/outputs/apk/debug/app-debug.apk#gym-tracker-active-workout-debug.apk \
+            --target update/active-workout-timer \
+            --title "Gym Tracker - active workout test" \
+            --notes "Debug APK: compact rest timer + resumable active workout while browsing the app." \
+            --prerelease
