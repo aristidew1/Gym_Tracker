@@ -1,4 +1,6 @@
-import './active-workout-patch.js';
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  import('./active-workout-patch.js');
+}
 
 // Compatibility entry point for the application. New code should import the
 // focused data modules directly when it only needs one responsibility.
