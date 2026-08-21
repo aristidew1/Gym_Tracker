@@ -1,20 +1,27 @@
 // Non-destructive live workout UX layer.
-// Loaded before app.js through data.js so it can preserve an in-progress workout
-// while the user temporarily browses the rest of the application.
+// Keeps a live workout in memory while the user browses the app and adds
+// compact/fullscreen modes to the rest countdown.
 
 const patchState = {
   liveWorkout: false,
   browsing: false,
   browsingView: 'home',
+  pendingLiveStart: false,
+  recordedEditPending: false,
   bannerInterval: null,
+  timerFullscreen: false,
 };
+
+function isFrench() {
+  return (document.documentElement.lang || navigator.language || 'fr').toLowerCase().startsWith('fr');
+}
 
 function injectActiveWorkoutStyles() {
   if (document.getElementById('active-workout-patch-styles')) return;
   const style = document.createElement('style');
   style.id = 'active-workout-patch-styles';
   style.textContent = `
-    /* Compact rest timer: fixed at the top, with layout space reserved below it. */
+    /* Compact rest timer. Space is reserved below it so it never covers workout content. */
     .rest-timer-overlay {
       position: fixed !important;
       top: calc(var(--safe-area-top) + 8px) !important;
@@ -33,12 +40,12 @@ function injectActiveWorkoutStyles() {
       align-items: center !important;
       justify-content: space-between !important;
       flex-direction: row !important;
-      gap: 10px !important;
+      gap: 8px !important;
       z-index: 120 !important;
       animation: none !important;
     }
 
-    html.rest-timer-running .view.active {
+    html.rest-timer-running:not(.rest-timer-fullscreen) .view.active {
       padding-top: 84px !important;
     }
 
@@ -66,15 +73,82 @@ function injectActiveWorkoutStyles() {
 
     .rest-timer-overlay .timer-controls {
       margin-left: auto !important;
-      gap: 7px !important;
+      gap: 6px !important;
     }
 
     .rest-timer-overlay .btn-timer {
       min-height: 40px !important;
-      padding: 8px 13px !important;
+      padding: 8px 11px !important;
       border-radius: 10px !important;
-      font-size: .78rem !important;
+      font-size: .76rem !important;
       white-space: nowrap !important;
+    }
+
+    .rest-timer-overlay .btn-timer-expand {
+      width: 40px !important;
+      min-width: 40px !important;
+      padding-inline: 0 !important;
+      font-size: 1.08rem !important;
+    }
+
+    /* Explicit fullscreen mode, enabled only by the user. */
+    .rest-timer-overlay.timer-fullscreen {
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
+      padding: max(24px, calc(var(--safe-area-top) + 16px)) 20px max(24px, calc(var(--safe-area-bottom) + 16px)) !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: rgba(7, 7, 13, .97) !important;
+      box-shadow: none !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      gap: 28px !important;
+      z-index: 180 !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .timer-circle {
+      flex: 0 0 240px !important;
+      width: 240px !important;
+      height: 240px !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .timer-circle .timer-bg,
+    .rest-timer-overlay.timer-fullscreen .timer-circle .timer-progress {
+      stroke-width: 8 !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .timer-display .timer-time {
+      font-size: 3.15rem !important;
+      line-height: 1 !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .timer-display .timer-label {
+      display: block !important;
+      margin-top: 8px !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .timer-controls {
+      margin-left: 0 !important;
+      justify-content: center !important;
+      gap: 10px !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .btn-timer {
+      min-height: 48px !important;
+      padding: 10px 16px !important;
+      font-size: .88rem !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .btn-timer-expand {
+      width: auto !important;
+      min-width: 48px !important;
+      padding-inline: 14px !important;
+      font-size: .82rem !important;
     }
 
     .active-workout-banner {
@@ -128,8 +202,16 @@ function injectActiveWorkoutStyles() {
       cursor: pointer;
     }
 
-    @media (max-width: 370px) {
-      .rest-timer-overlay .btn-timer { padding-inline: 9px !important; }
+    @media (max-width: 390px) {
+      .rest-timer-overlay:not(.timer-fullscreen) .btn-timer {
+        padding-inline: 8px !important;
+        font-size: .7rem !important;
+      }
+      .rest-timer-overlay:not(.timer-fullscreen) .btn-timer-expand {
+        width: 36px !important;
+        min-width: 36px !important;
+        padding-inline: 0 !important;
+      }
       .active-workout-banner-duration { display: none; }
     }
   `;
@@ -146,7 +228,7 @@ function ensureActiveWorkoutBanner() {
   banner.setAttribute('role', 'status');
   banner.innerHTML = `
     <div class="active-workout-banner-main">
-      <div class="active-workout-banner-kicker">Séance en cours</div>
+      <div class="active-workout-banner-kicker" id="active-workout-banner-kicker">Séance en cours</div>
       <div class="active-workout-banner-title" id="active-workout-banner-title">Séance</div>
     </div>
     <div class="active-workout-banner-duration" id="active-workout-banner-duration">00:00</div>
@@ -159,7 +241,22 @@ function ensureActiveWorkoutBanner() {
   else app?.prepend(banner);
 
   banner.querySelector('#active-workout-resume')?.addEventListener('click', resumeWorkout);
+  syncLocalizedPatchText();
   return banner;
+}
+
+function syncLocalizedPatchText() {
+  const french = isFrench();
+  const kicker = document.getElementById('active-workout-banner-kicker');
+  const resume = document.getElementById('active-workout-resume');
+  const back = document.getElementById('btn-back');
+  if (kicker) kicker.textContent = french ? 'Séance en cours' : 'Workout in progress';
+  if (resume) resume.textContent = french ? 'Reprendre' : 'Resume';
+  if (back && patchState.liveWorkout) {
+    back.setAttribute('aria-label', french ? "Parcourir l’app sans terminer la séance" : 'Browse the app without ending the workout');
+    back.title = french ? "Parcourir l’app" : 'Browse app';
+  }
+  syncTimerExpandButton();
 }
 
 function syncBannerText() {
@@ -219,30 +316,84 @@ function resumeWorkout() {
   patchState.browsing = false;
   setBannerVisible(false);
   setView('workout', { workout: true });
+  syncLocalizedPatchText();
 }
 
 function markWorkoutStarted() {
-  if (!document.getElementById('view-workout')?.classList.contains('active')) return;
+  patchState.pendingLiveStart = false;
+  patchState.recordedEditPending = false;
   patchState.liveWorkout = true;
   patchState.browsing = false;
   setBannerVisible(false);
+  syncLocalizedPatchText();
 }
 
 function clearLiveWorkout() {
   patchState.liveWorkout = false;
+  patchState.pendingLiveStart = false;
   patchState.browsing = false;
   setBannerVisible(false);
+  const back = document.getElementById('btn-back');
+  if (back) {
+    back.removeAttribute('title');
+    back.setAttribute('aria-label', isFrench() ? 'Retour' : 'Back');
+  }
+}
+
+function ensureTimerExpandButton() {
+  const controls = document.querySelector('#rest-timer-overlay .timer-controls');
+  if (!controls) return null;
+  let button = document.getElementById('btn-timer-expand');
+  if (button) return button;
+
+  button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'btn-timer-expand';
+  button.className = 'btn-timer secondary btn-timer-expand';
+  button.addEventListener('click', () => setTimerFullscreen(!patchState.timerFullscreen));
+  controls.appendChild(button);
+  syncTimerExpandButton();
+  return button;
+}
+
+function syncTimerExpandButton() {
+  const button = document.getElementById('btn-timer-expand');
+  if (!button) return;
+  const french = isFrench();
+  if (patchState.timerFullscreen) {
+    button.textContent = french ? 'Réduire' : 'Compact';
+    button.setAttribute('aria-label', french ? 'Réduire le compte à rebours' : 'Use compact countdown');
+    button.title = french ? 'Mode compact' : 'Compact mode';
+  } else {
+    button.textContent = '⛶';
+    button.setAttribute('aria-label', french ? 'Compte à rebours en plein écran' : 'Fullscreen countdown');
+    button.title = french ? 'Plein écran' : 'Fullscreen';
+  }
+}
+
+function setTimerFullscreen(enabled) {
+  const overlay = document.getElementById('rest-timer-overlay');
+  if (!overlay) return;
+  patchState.timerFullscreen = Boolean(enabled) && overlay.classList.contains('active');
+  overlay.classList.toggle('timer-fullscreen', patchState.timerFullscreen);
+  document.documentElement.classList.toggle('rest-timer-fullscreen', patchState.timerFullscreen);
+  syncTimerExpandButton();
 }
 
 function observeTimer() {
   const overlay = document.getElementById('rest-timer-overlay');
   if (!overlay) return;
-  const sync = () => document.documentElement.classList.toggle('rest-timer-running', overlay.classList.contains('active'));
+  ensureTimerExpandButton();
+  const sync = () => {
+    const running = overlay.classList.contains('active');
+    document.documentElement.classList.toggle('rest-timer-running', running);
+    if (!running && patchState.timerFullscreen) setTimerFullscreen(false);
+  };
   sync();
   new MutationObserver(sync).observe(overlay, { attributes: true, attributeFilter: ['class'] });
 }
 
-function observeWorkoutCompletion() {
+function observeWorkoutLifecycle() {
   const summary = document.getElementById('summary-overlay');
   const workoutView = document.getElementById('view-workout');
 
@@ -252,22 +403,44 @@ function observeWorkoutCompletion() {
     }).observe(summary, { attributes: true, attributeFilter: ['class'] });
   }
 
-  if (workoutView) {
-    new MutationObserver(() => {
-      // The patch itself hides the workout only while browsing. If the original
-      // app navigates away while we are not browsing (for example after
-      // confirming an empty workout), the live workout has genuinely ended.
-      if (patchState.liveWorkout && !patchState.browsing && !workoutView.classList.contains('active')) {
-        clearLiveWorkout();
-      }
-    }).observe(workoutView, { attributes: true, attributeFilter: ['class'] });
-  }
+  if (!workoutView) return;
+  new MutationObserver(() => {
+    const active = workoutView.classList.contains('active');
+
+    // A session card click marks a pending live start before app.js changes the
+    // view. Observing the actual view transition avoids the former microtask race.
+    if (active && patchState.pendingLiveStart && !patchState.recordedEditPending) {
+      markWorkoutStarted();
+      return;
+    }
+
+    // When our own browsing code hides the workout, keep it alive. If app.js
+    // hides it for another reason while we are not browsing, the session ended.
+    if (!active && patchState.liveWorkout && !patchState.browsing) {
+      clearLiveWorkout();
+    }
+  }).observe(workoutView, { attributes: true, attributeFilter: ['class'] });
 }
 
 function installNavigationGuards() {
   document.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    const sessionCard = target.closest('.session-card');
+    if (sessionCard) {
+      if (patchState.liveWorkout) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        resumeWorkout();
+        return;
+      }
+      // Set this synchronously. The MutationObserver will mark the workout live
+      // only after app.js has actually activated #view-workout.
+      patchState.pendingLiveStart = true;
+      patchState.recordedEditPending = false;
+      return;
+    }
 
     const back = target.closest('#btn-back');
     if (back && patchState.liveWorkout && !patchState.browsing) {
@@ -300,34 +473,29 @@ function installNavigationGuards() {
       event.stopImmediatePropagation();
       patchState.browsingView = 'supplements';
       setView('supplements');
-      return;
-    }
-
-    const sessionCard = target.closest('.session-card');
-    if (sessionCard) {
-      if (patchState.liveWorkout) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        resumeWorkout();
-        return;
-      }
-      queueMicrotask(markWorkoutStarted);
     }
   }, true);
 
-  // Do not let editing a historical workout replace a currently running one.
   window.addEventListener('workout:edit-requested', (event) => {
-    if (!patchState.liveWorkout) return;
-    event.stopImmediatePropagation();
-    resumeWorkout();
+    patchState.recordedEditPending = true;
+    patchState.pendingLiveStart = false;
+    if (patchState.liveWorkout) {
+      event.stopImmediatePropagation();
+      patchState.recordedEditPending = false;
+      resumeWorkout();
+    } else {
+      setTimeout(() => { patchState.recordedEditPending = false; }, 0);
+    }
   }, true);
+
+  window.addEventListener('language:changed', syncLocalizedPatchText);
 }
 
 function installPatch() {
   injectActiveWorkoutStyles();
   ensureActiveWorkoutBanner();
   observeTimer();
-  observeWorkoutCompletion();
+  observeWorkoutLifecycle();
   installNavigationGuards();
 }
 
