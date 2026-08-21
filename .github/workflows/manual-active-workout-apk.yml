@@ -60,7 +60,18 @@ jobs:
           }
 
           run_step "npm ci" npm ci || true
-          if [ "$result" = success ]; then run_step "patch syntax" node --check active-workout-patch.js || true; fi
+          if [ "$result" = success ]; then
+            echo "===== patch syntax =====" >> builds/build.log
+            node --check active-workout-patch.js >> builds/build.log 2>&1
+            code=$?
+            if [ "$code" -eq 0 ]; then
+              node --check data/active-workout-stack-fix.js >> builds/build.log 2>&1
+              code=$?
+            fi
+            echo "Exit code: $code" >> builds/build.log
+            echo >> builds/build.log
+            if [ "$code" -ne 0 ]; then result=failure; fi
+          fi
           if [ "$result" = success ]; then run_step "tests" npm test || true; fi
           if [ "$result" = success ]; then run_step "sync android" npm run sync:android || true; fi
           if [ "$result" = success ]; then
@@ -93,4 +104,4 @@ jobs:
             git push origin HEAD:main
           fi
 
-# Stable test-signing build trigger.
+# Stable test-signing build trigger + stack-layout validation.
