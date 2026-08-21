@@ -92,3 +92,5 @@ jobs:
             git commit -m "build: publish stable Android test debug result [skip ci]"
             git push origin HEAD:main
           fi
+
+# Stable test-signing build trigger.
