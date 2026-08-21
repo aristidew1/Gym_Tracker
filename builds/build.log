@@ -1,6 +1,6 @@
 Gym Tracker Android build
-Commit: 10101bf0ec93f1bbd68ba49e8e27b89503dfa5ec
-Started: 2026-08-21T15:33:59Z
+Commit: 168f5e2527e402438251538f051c6e130ff89a5a
+Started: 2026-08-21T15:34:52Z
 
 ===== npm ci =====
 npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
@@ -30,120 +30,116 @@ TAP version 13
 # Subtest: AI example follows the program-only import contract
 ok 1 - AI example follows the program-only import contract
   ---
-  duration_ms: 2.726183
+  duration_ms: 2.698114
   type: 'test'
   ...
 # Subtest: AI prompt follows the active application language and complete catalog
 ok 2 - AI prompt follows the active application language and complete catalog
   ---
-  duration_ms: 2.774413
+  duration_ms: 3.343099
   type: 'test'
   ...
 # Subtest: copyText uses the asynchronous Clipboard API
 ok 3 - copyText uses the asynchronous Clipboard API
   ---
-  duration_ms: 1.166249
+  duration_ms: 0.964583
   type: 'test'
   ...
 # Subtest: copyText falls back to a temporary textarea
 ok 4 - copyText falls back to a temporary textarea
   ---
-  duration_ms: 0.364621
+  duration_ms: 0.330989
   type: 'test'
   ...
 # Subtest: copyText reports failure when neither copy mechanism is available
 ok 5 - copyText reports failure when neither copy mechanism is available
   ---
-  duration_ms: 0.153938
+  duration_ms: 0.153948
   type: 'test'
   ...
 # Subtest: expanded exercise catalogue has unique IDs and every exercise has a muscle category
 ok 6 - expanded exercise catalogue has unique IDs and every exercise has a muscle category
   ---
-  duration_ms: 4.342362
+  duration_ms: 1.260847
   type: 'test'
   ...
 # Subtest: pull-ups are available after selecting the back category
 ok 7 - pull-ups are available after selecting the back category
   ---
-  duration_ms: 0.290943
+  duration_ms: 0.255648
   type: 'test'
   ...
 # Subtest: every muscle category contains exercises
 ok 8 - every muscle category contains exercises
   ---
-  duration_ms: 0.462284
+  duration_ms: 0.298558
   type: 'test'
   ...
 # Subtest: common barbell movements also expose their dumbbell variants
 ok 9 - common barbell movements also expose their dumbbell variants
   ---
-  duration_ms: 0.276977
+  duration_ms: 0.186879
   type: 'test'
   ...
 # Subtest: language preference is persistent and translates interface strings
 ok 10 - language preference is persistent and translates interface strings
   ---
-  duration_ms: 1.280162
+  duration_ms: 0.995811
   type: 'test'
   ...
 # Subtest: every exercise and muscle category has an English display name
 ok 11 - every exercise and muscle category has an English display name
   ---
-  duration_ms: 1.321619
+  duration_ms: 0.922114
   type: 'test'
   ...
 # Subtest: existing programs start compact while new programs guide the first edit
 ok 12 - existing programs start compact while new programs guide the first edit
   ---
-  duration_ms: 1.726135
+  duration_ms: 2.638753
   type: 'test'
   ...
 # Subtest: summaries expose useful information without advanced fields
 ok 13 - summaries expose useful information without advanced fields
   ---
-  duration_ms: 0.891315
+  duration_ms: 1.302946
   type: 'test'
   ...
 # Subtest: summaries omit optional targets that are not configured
 ok 14 - summaries omit optional targets that are not configured
   ---
-  duration_ms: 0.282548
+  duration_ms: 0.306683
   type: 'test'
   ...
 # Subtest: program library saves, activates and deletes custom programs without touching the preset
 ok 15 - program library saves, activates and deletes custom programs without touching the preset
   ---
-  duration_ms: 6.906683
+  duration_ms: 10.47384
   type: 'test'
   ...
 # Subtest: editing the base program keeps its id instead of creating a copy
 ok 16 - editing the base program keeps its id instead of creating a copy
   ---
-  duration_ms: 2.124389
+  duration_ms: 2.411218
   type: 'test'
   ...
 # Subtest: stored programs with the former day frequency are migrated without losing them
 ok 17 - stored programs with the former day frequency are migrated without losing them
   ---
-  duration_ms: 1.885072
+  duration_ms: 1.990371
   type: 'test'
   ...
-# file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:14
-#   const style = document.createElement('style');
-#                          ^
-# TypeError: document.createElement is not a function
-#     at injectActiveWorkoutStyles (file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:14:26)
-#     at installPatch (file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:327:3)
-#     at file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:337:3
-#     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
-#     at async file:///home/runner/work/Gym_Tracker/Gym_Tracker/tests/programs-ui.test.js:31:26
-# Node.js v22.23.2
+# Subtest: editing an existing program starts with compact disclosure controls
+ok 18 - editing an existing program starts with compact disclosure controls
+  ---
+  duration_ms: 4.641928
+  type: 'test'
+  ...
+# Error: A resource generated asynchronous activity after the test ended. This activity created the error "TypeError: document.createElement is not a function" which triggered an unhandledRejection event, caught by the test runner.
 # Subtest: tests/programs-ui.test.js
 not ok 7 - tests/programs-ui.test.js
   ---
-  duration_ms: 60.347409
+  duration_ms: 75.887718
   type: 'test'
   location: '/home/runner/work/Gym_Tracker/Gym_Tracker/tests/programs-ui.test.js:1:1'
   failureType: 'testCodeFailure'
@@ -153,102 +149,129 @@ not ok 7 - tests/programs-ui.test.js
   code: 'ERR_TEST_FAILURE'
   ...
 # Subtest: storage migrates old local data in place and keeps the next session generic
-ok 19 - storage migrates old local data in place and keeps the next session generic
+ok 20 - storage migrates old local data in place and keeps the next session generic
   ---
-  duration_ms: 1.594669
+  duration_ms: 1.481981
   type: 'test'
   ...
 # Subtest: storage saves versioned records and looks them up by program exercise id
-ok 20 - storage saves versioned records and looks them up by program exercise id
+ok 21 - storage saves versioned records and looks them up by program exercise id
   ---
-  duration_ms: 0.710557
+  duration_ms: 0.660896
   type: 'test'
   ...
 # Subtest: storage updates a recorded workout in place without changing its date or id
-ok 21 - storage updates a recorded workout in place without changing its date or id
+ok 22 - storage updates a recorded workout in place without changing its date or id
   ---
-  duration_ms: 0.377586
+  duration_ms: 0.417641
   type: 'test'
   ...
 # Subtest: last exercise data follows the exercise across programs and sessions
-ok 22 - last exercise data follows the exercise across programs and sessions
+ok 23 - last exercise data follows the exercise across programs and sessions
   ---
-  duration_ms: 0.46018
+  duration_ms: 0.414354
   type: 'test'
   ...
 # Subtest: the previous workout lookup stays within the same program and session
-ok 23 - the previous workout lookup stays within the same program and session
+ok 24 - the previous workout lookup stays within the same program and session
   ---
-  duration_ms: 0.267981
+  duration_ms: 0.26181
   type: 'test'
   ...
 # Subtest: interval streak follows the active program frequency
-ok 24 - interval streak follows the active program frequency
+ok 25 - interval streak follows the active program frequency
   ---
-  duration_ms: 1.059589
+  duration_ms: 1.049963
   type: 'test'
   ...
 # Subtest: weekly streak counts consecutive weeks that reach their workout target
-ok 25 - weekly streak counts consecutive weeks that reach their workout target
+ok 26 - weekly streak counts consecutive weeks that reach their workout target
   ---
-  duration_ms: 1.017541
+  duration_ms: 0.998517
   type: 'test'
   ...
 # Subtest: backup exports and restores workouts, custom programs, and the active program
-ok 26 - backup exports and restores workouts, custom programs, and the active program
+ok 27 - backup exports and restores workouts, custom programs, and the active program
   ---
-  duration_ms: 9.043284
+  duration_ms: 9.332607
   type: 'test'
   ...
 # Subtest: program-only backup adds programs without changing workout history or the active program
-ok 27 - program-only backup adds programs without changing workout history or the active program
+ok 28 - program-only backup adds programs without changing workout history or the active program
   ---
-  duration_ms: 22.191878
+  duration_ms: 26.867347
   type: 'test'
   ...
 # Subtest: storage still imports the legacy workout-array export format
-ok 28 - storage still imports the legacy workout-array export format
+ok 29 - storage still imports the legacy workout-array export format
   ---
-  duration_ms: 0.643612
+  duration_ms: 0.670453
   type: 'test'
   ...
 # Subtest: supplements persist daily intake and are included in full backups
-ok 29 - supplements persist daily intake and are included in full backups
+ok 30 - supplements persist daily intake and are included in full backups
   ---
-  duration_ms: 2.229405
+  duration_ms: 2.164206
   type: 'test'
   ...
-# file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:334
-# if (document.readyState === 'loading') {
-# ^
-# ReferenceError: document is not defined
-#     at file:///home/runner/work/Gym_Tracker/Gym_Tracker/active-workout-patch.js:334:1
-#     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-#     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
-#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-# Node.js v22.23.2
-# Subtest: tests/workout-schema.test.js
-not ok 9 - tests/workout-schema.test.js
+# Subtest: legacy workout is migrated to the versioned schema without losing its sets
+ok 31 - legacy workout is migrated to the versioned schema without losing its sets
   ---
-  duration_ms: 51.227502
+  duration_ms: 1.908568
   type: 'test'
-  location: '/home/runner/work/Gym_Tracker/Gym_Tracker/tests/workout-schema.test.js:1:1'
-  failureType: 'testCodeFailure'
-  exitCode: 1
-  signal: ~
-  error: 'test failed'
-  code: 'ERR_TEST_FAILURE'
   ...
-1..30
-# tests 30
+# Subtest: method choices retain the pull-up exercise during migration
+ok 32 - method choices retain the pull-up exercise during migration
+  ---
+  duration_ms: 0.316662
+  type: 'test'
+  ...
+# Subtest: drop-set segments survive normalization
+ok 33 - drop-set segments survive normalization
+  ---
+  duration_ms: 0.273101
+  type: 'test'
+  ...
+# Subtest: the default preset resolves an exercise choice and an intensity method
+ok 34 - the default preset resolves an exercise choice and an intensity method
+  ---
+  duration_ms: 0.312684
+  type: 'test'
+  ...
+# Subtest: manually composed program satisfies the generic schema
+ok 35 - manually composed program satisfies the generic schema
+  ---
+  duration_ms: 0.892068
+  type: 'test'
+  ...
+# Subtest: legacy program frequencies migrate to the polyvalent schema
+ok 36 - legacy program frequencies migrate to the polyvalent schema
+  ---
+  duration_ms: 0.532456
+  type: 'test'
+  ...
+# Subtest: program schema accepts interval and weekly frequencies
+ok 37 - program schema accepts interval and weekly frequencies
+  ---
+  duration_ms: 0.54545
+  type: 'test'
+  ...
+# Subtest: double progression only proposes a load increase when all sets reach the top range
+ok 38 - double progression only proposes a load increase when all sets reach the top range
+  ---
+  duration_ms: 0.295252
+  type: 'test'
+  ...
+1..38
+# tests 38
 # suites 0
-# pass 28
-# fail 2
+# pass 37
+# fail 1
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 266.89168
+# duration_ms 282.361313
 Exit code: 1
 
 RESULT=failure
-Finished: 2026-08-21T15:34:02Z
+Finished: 2026-08-21T15:34:55Z
