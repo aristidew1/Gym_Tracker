@@ -1,0 +1,69 @@
+name: Build active workout test APK
+
+on:
+  push:
+    branches:
+      - update/active-workout-timer
+    paths:
+      - 'scripts/apply-active-workout-update.py'
+      - '.github/workflows/build-active-workout-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: update/active-workout-timer
+          fetch-depth: 0
+
+      - name: Apply requested app update
+        run: python3 scripts/apply-active-workout-update.py
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Sync Capacitor Android project
+        run: npm run sync:android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Commit source update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app.js index.html index.css i18n.js www/app.js www/index.html www/index.css www/i18n.js
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: keep workout active while browsing"
+            git push origin HEAD:update/active-workout-timer
+          fi
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: gym-tracker-active-workout-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
