@@ -1,7 +1,7 @@
 Gym Tracker Android TEST build
 Package: fr.aris.gymtrack.test
-Commit: 535f207a43118e3e0bf22e2174642054a75e2458
-Started: 2026-08-21T15:47:15Z
+Commit: 1f6f9f442de03fd16020874743ba41123dd542a7
+Started: 2026-08-21T16:00:07Z
 
 ===== npm ci =====
 npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
@@ -31,223 +31,223 @@ TAP version 13
 # Subtest: AI example follows the program-only import contract
 ok 1 - AI example follows the program-only import contract
   ---
-  duration_ms: 1.954252
+  duration_ms: 2.457128
   type: 'test'
   ...
 # Subtest: AI prompt follows the active application language and complete catalog
 ok 2 - AI prompt follows the active application language and complete catalog
   ---
-  duration_ms: 2.513196
+  duration_ms: 3.274018
   type: 'test'
   ...
 # Subtest: copyText uses the asynchronous Clipboard API
 ok 3 - copyText uses the asynchronous Clipboard API
   ---
-  duration_ms: 1.421536
+  duration_ms: 0.916579
   type: 'test'
   ...
 # Subtest: copyText falls back to a temporary textarea
 ok 4 - copyText falls back to a temporary textarea
   ---
-  duration_ms: 0.472943
+  duration_ms: 0.308981
   type: 'test'
   ...
 # Subtest: copyText reports failure when neither copy mechanism is available
 ok 5 - copyText reports failure when neither copy mechanism is available
   ---
-  duration_ms: 0.21926
+  duration_ms: 0.139258
   type: 'test'
   ...
 # Subtest: expanded exercise catalogue has unique IDs and every exercise has a muscle category
 ok 6 - expanded exercise catalogue has unique IDs and every exercise has a muscle category
   ---
-  duration_ms: 1.665312
+  duration_ms: 1.324567
   type: 'test'
   ...
 # Subtest: pull-ups are available after selecting the back category
 ok 7 - pull-ups are available after selecting the back category
   ---
-  duration_ms: 0.28361
+  duration_ms: 0.256363
   type: 'test'
   ...
 # Subtest: every muscle category contains exercises
 ok 8 - every muscle category contains exercises
   ---
-  duration_ms: 0.522757
+  duration_ms: 0.452816
   type: 'test'
   ...
 # Subtest: common barbell movements also expose their dumbbell variants
 ok 9 - common barbell movements also expose their dumbbell variants
   ---
-  duration_ms: 0.307074
+  duration_ms: 0.251605
   type: 'test'
   ...
 # Subtest: language preference is persistent and translates interface strings
 ok 10 - language preference is persistent and translates interface strings
   ---
-  duration_ms: 1.395228
+  duration_ms: 0.93092
   type: 'test'
   ...
 # Subtest: every exercise and muscle category has an English display name
 ok 11 - every exercise and muscle category has an English display name
   ---
-  duration_ms: 1.45038
+  duration_ms: 0.926433
   type: 'test'
   ...
 # Subtest: existing programs start compact while new programs guide the first edit
 ok 12 - existing programs start compact while new programs guide the first edit
   ---
-  duration_ms: 1.749339
+  duration_ms: 2.676396
   type: 'test'
   ...
 # Subtest: summaries expose useful information without advanced fields
 ok 13 - summaries expose useful information without advanced fields
   ---
-  duration_ms: 0.964181
+  duration_ms: 1.205811
   type: 'test'
   ...
 # Subtest: summaries omit optional targets that are not configured
 ok 14 - summaries omit optional targets that are not configured
   ---
-  duration_ms: 0.215694
+  duration_ms: 0.507317
   type: 'test'
   ...
 # Subtest: program library saves, activates and deletes custom programs without touching the preset
 ok 15 - program library saves, activates and deletes custom programs without touching the preset
   ---
-  duration_ms: 8.689608
+  duration_ms: 8.232661
   type: 'test'
   ...
 # Subtest: editing the base program keeps its id instead of creating a copy
 ok 16 - editing the base program keeps its id instead of creating a copy
   ---
-  duration_ms: 2.438326
+  duration_ms: 3.021361
   type: 'test'
   ...
 # Subtest: stored programs with the former day frequency are migrated without losing them
 ok 17 - stored programs with the former day frequency are migrated without losing them
   ---
-  duration_ms: 2.173212
+  duration_ms: 2.610978
   type: 'test'
   ...
 # Subtest: editing an existing program starts with compact disclosure controls
 ok 18 - editing an existing program starts with compact disclosure controls
   ---
-  duration_ms: 4.920224
+  duration_ms: 4.105239
   type: 'test'
   ...
 # Subtest: storage migrates old local data in place and keeps the next session generic
 ok 19 - storage migrates old local data in place and keeps the next session generic
   ---
-  duration_ms: 1.99072
+  duration_ms: 1.396635
   type: 'test'
   ...
 # Subtest: storage saves versioned records and looks them up by program exercise id
 ok 20 - storage saves versioned records and looks them up by program exercise id
   ---
-  duration_ms: 0.86709
+  duration_ms: 0.700546
   type: 'test'
   ...
 # Subtest: storage updates a recorded workout in place without changing its date or id
 ok 21 - storage updates a recorded workout in place without changing its date or id
   ---
-  duration_ms: 0.514401
+  duration_ms: 0.349401
   type: 'test'
   ...
 # Subtest: last exercise data follows the exercise across programs and sessions
 ok 22 - last exercise data follows the exercise across programs and sessions
   ---
-  duration_ms: 0.670824
+  duration_ms: 0.454319
   type: 'test'
   ...
 # Subtest: the previous workout lookup stays within the same program and session
 ok 23 - the previous workout lookup stays within the same program and session
   ---
-  duration_ms: 0.336008
+  duration_ms: 0.247981
   type: 'test'
   ...
 # Subtest: interval streak follows the active program frequency
 ok 24 - interval streak follows the active program frequency
   ---
-  duration_ms: 1.026569
+  duration_ms: 1.029928
   type: 'test'
   ...
 # Subtest: weekly streak counts consecutive weeks that reach their workout target
 ok 25 - weekly streak counts consecutive weeks that reach their workout target
   ---
-  duration_ms: 1.015137
+  duration_ms: 0.977198
   type: 'test'
   ...
 # Subtest: backup exports and restores workouts, custom programs, and the active program
 ok 26 - backup exports and restores workouts, custom programs, and the active program
   ---
-  duration_ms: 10.429008
+  duration_ms: 9.670037
   type: 'test'
   ...
 # Subtest: program-only backup adds programs without changing workout history or the active program
 ok 27 - program-only backup adds programs without changing workout history or the active program
   ---
-  duration_ms: 22.948824
+  duration_ms: 21.775279
   type: 'test'
   ...
 # Subtest: storage still imports the legacy workout-array export format
 ok 28 - storage still imports the legacy workout-array export format
   ---
-  duration_ms: 0.686022
+  duration_ms: 0.804571
   type: 'test'
   ...
 # Subtest: supplements persist daily intake and are included in full backups
 ok 29 - supplements persist daily intake and are included in full backups
   ---
-  duration_ms: 2.226791
+  duration_ms: 2.433964
   type: 'test'
   ...
 # Subtest: legacy workout is migrated to the versioned schema without losing its sets
 ok 30 - legacy workout is migrated to the versioned schema without losing its sets
   ---
-  duration_ms: 1.967837
+  duration_ms: 1.75523
   type: 'test'
   ...
 # Subtest: method choices retain the pull-up exercise during migration
 ok 31 - method choices retain the pull-up exercise during migration
   ---
-  duration_ms: 0.344844
+  duration_ms: 0.399016
   type: 'test'
   ...
 # Subtest: drop-set segments survive normalization
 ok 32 - drop-set segments survive normalization
   ---
-  duration_ms: 0.324857
+  duration_ms: 0.269252
   type: 'test'
   ...
 # Subtest: the default preset resolves an exercise choice and an intensity method
 ok 33 - the default preset resolves an exercise choice and an intensity method
   ---
-  duration_ms: 0.315199
+  duration_ms: 0.293118
   type: 'test'
   ...
 # Subtest: manually composed program satisfies the generic schema
 ok 34 - manually composed program satisfies the generic schema
   ---
-  duration_ms: 0.911974
+  duration_ms: 0.925762
   type: 'test'
   ...
 # Subtest: legacy program frequencies migrate to the polyvalent schema
 ok 35 - legacy program frequencies migrate to the polyvalent schema
   ---
-  duration_ms: 1.136574
+  duration_ms: 0.526346
   type: 'test'
   ...
 # Subtest: program schema accepts interval and weekly frequencies
 ok 36 - program schema accepts interval and weekly frequencies
   ---
-  duration_ms: 0.526183
+  duration_ms: 0.520507
   type: 'test'
   ...
 # Subtest: double progression only proposes a load increase when all sets reach the top range
 ok 37 - double progression only proposes a load increase when all sets reach the top range
   ---
-  duration_ms: 0.38496
+  duration_ms: 0.279757
   type: 'test'
   ...
 1..37
@@ -258,7 +258,7 @@ ok 37 - double progression only proposes a load increase when all sets reach the
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 277.678087
+# duration_ms 276.364106
 Exit code: 0
 
 ===== sync android =====
@@ -271,16 +271,16 @@ Exit code: 0
 > node scripts/sync-web.js
 
 www synchronisé depuis les sources racines.
-✔ Copying web assets from www to android/app/src/main/assets/public in 7.63ms
-✔ Creating capacitor.config.json in android/app/src/main/assets in 584.12μs
-✔ copy android in 15.06ms
-✔ Updating Android plugins in 966.05μs
+✔ Copying web assets from www to android/app/src/main/assets/public in 6.81ms
+✔ Creating capacitor.config.json in android/app/src/main/assets in 532.01μs
+✔ copy android in 13.20ms
+✔ Updating Android plugins in 798.50μs
 [info] Found 3 Capacitor plugins for android:
        @capacitor/filesystem@8.1.2
        @capacitor/local-notifications@8.2.0
        @capacitor/share@8.0.1
-✔ update android in 25.22ms
-[info] Sync finished in 0.056s
+✔ update android in 22.87ms
+[info] Sync finished in 0.05s
 Exit code: 0
 
 ===== gradle assembleDebug =====
@@ -314,21 +314,21 @@ WARNING: Using flatDir should be avoided because it doesn't support any meta-dat
 > Task :capacitor-cordova-android-plugins:preDebugBuild UP-TO-DATE
 > Task :capacitor-filesystem:preBuild UP-TO-DATE
 > Task :capacitor-filesystem:preDebugBuild UP-TO-DATE
-> Task :capacitor-android:writeDebugAarMetadata
-> Task :capacitor-filesystem:writeDebugAarMetadata
 > Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
-> Task :app:javaPreCompileDebug
+> Task :capacitor-android:writeDebugAarMetadata
 > Task :capacitor-local-notifications:preBuild UP-TO-DATE
 > Task :capacitor-local-notifications:preDebugBuild UP-TO-DATE
-> Task :capacitor-local-notifications:writeDebugAarMetadata
+> Task :app:javaPreCompileDebug
+> Task :capacitor-filesystem:writeDebugAarMetadata
 > Task :capacitor-share:preBuild UP-TO-DATE
 > Task :capacitor-share:preDebugBuild UP-TO-DATE
+> Task :capacitor-local-notifications:writeDebugAarMetadata
 > Task :capacitor-share:writeDebugAarMetadata
 > Task :capacitor-android:processDebugNavigationResources
+> Task :app:checkDebugAarMetadata
 > Task :capacitor-cordova-android-plugins:processDebugNavigationResources
 > Task :capacitor-filesystem:processDebugNavigationResources
 > Task :capacitor-local-notifications:processDebugNavigationResources
-> Task :app:checkDebugAarMetadata
 > Task :capacitor-share:processDebugNavigationResources
 > Task :app:processDebugNavigationResources
 > Task :app:compileDebugNavigationResources
@@ -357,31 +357,31 @@ WARNING: Using flatDir should be avoided because it doesn't support any meta-dat
 > Task :capacitor-android:extractDeepLinksDebug
 > Task :capacitor-cordova-android-plugins:extractDeepLinksDebug
 > Task :capacitor-filesystem:extractDeepLinksDebug
-> Task :app:parseDebugLocalResources
 > Task :capacitor-android:processDebugManifest
-> Task :capacitor-cordova-android-plugins:processDebugManifest
 > Task :capacitor-filesystem:processDebugManifest
+> Task :capacitor-cordova-android-plugins:processDebugManifest
 > Task :capacitor-local-notifications:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
 > Task :capacitor-share:extractDeepLinksDebug
-> Task :capacitor-local-notifications:processDebugManifest
 > Task :capacitor-share:processDebugManifest
+> Task :capacitor-local-notifications:processDebugManifest
 > Task :capacitor-android:compileDebugLibraryResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :capacitor-cordova-android-plugins:compileDebugLibraryResources
 > Task :app:processDebugManifestForPackage
-> Task :capacitor-filesystem:compileDebugLibraryResources
+> Task :capacitor-cordova-android-plugins:compileDebugLibraryResources
 > Task :capacitor-android:parseDebugLocalResources
+> Task :capacitor-filesystem:compileDebugLibraryResources
 > Task :capacitor-cordova-android-plugins:parseDebugLocalResources
-> Task :capacitor-filesystem:parseDebugLocalResources
 > Task :capacitor-local-notifications:compileDebugLibraryResources
+> Task :capacitor-filesystem:parseDebugLocalResources
 > Task :capacitor-cordova-android-plugins:generateDebugRFile
-> Task :capacitor-filesystem:generateDebugRFile
 > Task :capacitor-android:generateDebugRFile
 > Task :capacitor-local-notifications:parseDebugLocalResources
+> Task :capacitor-filesystem:generateDebugRFile
 > Task :capacitor-share:compileDebugLibraryResources
-> Task :capacitor-android:javaPreCompileDebug
 > Task :capacitor-local-notifications:generateDebugRFile
+> Task :capacitor-android:javaPreCompileDebug
 > Task :capacitor-cordova-android-plugins:javaPreCompileDebug
 > Task :capacitor-share:parseDebugLocalResources
 
@@ -398,7 +398,6 @@ Note: Recompile with -Xlint:unchecked for details.
 > Task :capacitor-filesystem:javaPreCompileDebug
 > Task :capacitor-local-notifications:javaPreCompileDebug
 > Task :capacitor-share:javaPreCompileDebug
-> Task :app:mergeDebugShaders
 
 > Task :capacitor-local-notifications:compileDebugJavaWithJavac
 Note: /home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/local-notifications/android/src/main/java/com/capacitorjs/plugins/localnotifications/LocalNotificationsPlugin.java uses or overrides a deprecated API.
@@ -407,6 +406,7 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :capacitor-local-notifications:bundleLibCompileToJarDebug
 > Task :capacitor-share:compileDebugJavaWithJavac
 > Task :capacitor-share:bundleLibCompileToJarDebug
+> Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :capacitor-android:mergeDebugShaders
@@ -441,16 +441,16 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :capacitor-cordova-android-plugins:processDebugJavaRes NO-SOURCE
 > Task :capacitor-local-notifications:processDebugJavaRes NO-SOURCE
 > Task :capacitor-share:processDebugJavaRes NO-SOURCE
-> Task :capacitor-local-notifications:bundleLibRuntimeToDirDebug
 > Task :app:checkDebugDuplicateClasses
+> Task :capacitor-local-notifications:bundleLibRuntimeToDirDebug
 
 > Task :capacitor-filesystem:compileDebugKotlin
 w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/filesystem/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemPlugin.kt:335:31 'fun downloadFile(call: PluginCall): Unit' is deprecated. Use @capacitor/file-transfer plugin instead.
 w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/filesystem/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/LegacyFilesystemImplementation.kt:66:29 Java type mismatch: inferred type is 'String?', but 'String' was expected.
 
 > Task :capacitor-filesystem:compileDebugJavaWithJavac NO-SOURCE
-> Task :capacitor-filesystem:bundleLibRuntimeToJarDebug
 > Task :capacitor-filesystem:bundleLibCompileToJarDebug
+> Task :capacitor-filesystem:bundleLibRuntimeToJarDebug
 > Task :capacitor-filesystem:processDebugJavaRes
 
 > Task :app:compileDebugJavaWithJavac
@@ -481,8 +481,8 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :capacitor-share:mergeDebugNativeLibs NO-SOURCE
 > Task :capacitor-share:copyDebugJniLibsProjectOnly
 > Task :app:mergeDebugNativeLibs NO-SOURCE
-> Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:mergeDebugJavaResource
+> Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:mergeExtDexDebug
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
@@ -493,11 +493,11 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :capacitor-android:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-android:extractDebugAnnotations
 > Task :capacitor-android:extractDeepLinksForAarDebug
+> Task :capacitor-android:mergeDebugGeneratedProguardFiles
+> Task :capacitor-android:mergeDebugConsumerProguardFiles
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-> Task :capacitor-android:mergeDebugGeneratedProguardFiles
-> Task :capacitor-android:mergeDebugConsumerProguardFiles
 > Task :capacitor-android:prepareDebugArtProfile
 > Task :capacitor-android:prepareLintJarForPublish
 > Task :capacitor-android:mergeDebugJavaResource
@@ -514,8 +514,8 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :capacitor-cordova-android-plugins:prepareDebugArtProfile
 > Task :capacitor-cordova-android-plugins:prepareLintJarForPublish
 > Task :capacitor-cordova-android-plugins:mergeDebugJavaResource
-> Task :capacitor-cordova-android-plugins:syncDebugLibJars
 > Task :capacitor-filesystem:checkDebugAarMetadata
+> Task :capacitor-cordova-android-plugins:syncDebugLibJars
 > Task :capacitor-cordova-android-plugins:bundleDebugAar
 > Task :capacitor-cordova-android-plugins:assembleDebug
 > Task :capacitor-filesystem:stripDebugDebugSymbols NO-SOURCE
@@ -526,14 +526,14 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :capacitor-filesystem:mergeDebugConsumerProguardFiles
 > Task :capacitor-filesystem:prepareDebugArtProfile
 > Task :capacitor-filesystem:prepareLintJarForPublish
-> Task :capacitor-filesystem:mergeDebugJavaResource
+> Task :capacitor-local-notifications:stripDebugDebugSymbols NO-SOURCE
 > Task :capacitor-local-notifications:checkDebugAarMetadata
+> Task :capacitor-filesystem:mergeDebugJavaResource
+> Task :capacitor-local-notifications:copyDebugJniLibsProjectAndLocalJars
+> Task :capacitor-local-notifications:extractDebugAnnotations
 > Task :capacitor-filesystem:syncDebugLibJars
 > Task :capacitor-filesystem:bundleDebugAar
 > Task :capacitor-filesystem:assembleDebug
-> Task :capacitor-local-notifications:stripDebugDebugSymbols NO-SOURCE
-> Task :capacitor-local-notifications:copyDebugJniLibsProjectAndLocalJars
-> Task :capacitor-local-notifications:extractDebugAnnotations
 > Task :capacitor-local-notifications:extractDeepLinksForAarDebug
 > Task :capacitor-local-notifications:mergeDebugGeneratedProguardFiles
 > Task :capacitor-local-notifications:mergeDebugConsumerProguardFiles
@@ -559,9 +559,9 @@ Note: Recompile with -Xlint:deprecation for details.
 
 [Incubating] Problems report is available at: file:///home/runner/work/Gym_Tracker/Gym_Tracker/android/build/reports/problems/problems-report.html
 
-BUILD SUCCESSFUL in 1m 58s
+BUILD SUCCESSFUL in 2m 3s
 184 actionable tasks: 184 executed
 Exit code: 0
 
 RESULT=success
-Finished: 2026-08-21T15:49:19Z
+Finished: 2026-08-21T16:02:17Z
