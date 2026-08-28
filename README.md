@@ -1,6 +1,6 @@
 # Muscu Tracker
 
-Muscu Tracker is a web-based strength-training tracker packaged for Android with Capacitor. It supports workout logging, programs, exercise tracking, progression, statistics, rest timers, and native Android notifications.
+Muscu Tracker is a web-based strength-training tracker packaged for Android and iOS with Capacitor. It supports workout logging, programs, exercise tracking, progression, statistics, rest timers, and native Android notifications.
 
 ## Independent, AI-Assisted Development
 
@@ -13,7 +13,8 @@ My role is to direct the AI, validate the outcomes, and retain ownership of the 
 ## Requirements
 
 - Node.js (an LTS version is recommended)
-- Android Studio and an Android SDK, only required to build or install the Android application
+- Android Studio, an Android SDK, and a compatible JDK to build the Android application
+- Xcode on macOS to build the iOS application
 
 ## Installation
 
@@ -28,6 +29,7 @@ npm install
 | `npm test` | Runs the business-logic test suite. |
 | `npm run sync:web` | Copies the web source files to `www/`. |
 | `npm run sync:android` | Synchronizes the web source files, then the Capacitor Android project. |
+| `npm run sync:ios` | Synchronizes the web source files, then the Capacitor iOS project. |
 
 ## Project structure
 
@@ -38,6 +40,7 @@ npm install
 - `storage.js`: local persistence, imports, and exports.
 - `tests/`: automated Node.js tests.
 - `android/`: Capacitor Android project and native notification integration.
+- `ios/`: Capacitor iOS project.
 - `www/`: generated copy of the web source files used by Capacitor.
 
 ## Development workflow
@@ -53,6 +56,7 @@ Before a release, run:
 ```sh
 npm test
 npm run sync:android
+npm run sync:ios
 ```
 
 Node.js dependencies and Android build/cache files are not versioned. Recreate them with `npm install` and the synchronization or Android build commands.

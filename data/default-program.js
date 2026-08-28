@@ -55,8 +55,8 @@ const block = (id, name, presentation, executionMode, restBetweenRoundsSeconds, 
 export const DEFAULT_PROGRAM = {
   id: 'pullup_deadlift_cycle',
   schemaVersion: 4,
-  name: 'Cycle tractions et deadlift',
-  description: 'Cycle roulant A/B/C/D, un jour sur deux.',
+  name: 'Programme exemple — tractions & deadlift',
+  description: 'Exemple avancé A/B/C/D, un jour sur deux, à adapter à ton matériel et à tes objectifs.',
   trainingFrequency: { mode: 'interval', intervalDays: 2 },
   sessionOrder: ['A', 'B', 'C', 'D'],
   sessions: {

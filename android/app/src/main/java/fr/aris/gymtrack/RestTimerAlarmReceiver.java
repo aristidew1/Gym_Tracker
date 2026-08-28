@@ -4,9 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-public class NotificationDismissedReceiver extends BroadcastReceiver {
+/** Receives the system alarm that marks the end of a rest timer. */
+public final class RestTimerAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        PersistentNotificationService.repostAfterDismissal(context);
+        RestTimerNotificationManager.complete(context);
     }
 }

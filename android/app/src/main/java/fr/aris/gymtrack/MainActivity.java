@@ -17,7 +17,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PersistentNotificationPlugin.class);
         super.onCreate(savedInstanceState);
 
-        RestTimerNotificationService.createNotificationChannels(this);
+        RestTimerNotificationManager.createNotificationChannels(this);
         configureSystemBars();
     }
 

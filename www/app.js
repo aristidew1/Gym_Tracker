@@ -27,7 +27,10 @@ import {
   getProgramsImportSummary,
   importData,
   importProgramsData,
-  getWorkouts
+  getWorkouts,
+  clearActiveWorkoutDraft,
+  getActiveWorkoutDraft,
+  saveActiveWorkoutDraft,
 } from './storage.js';
 import { addSupplement, deleteSupplement, getSupplementStatus, getSupplements, getTakenSupplementIds, toggleSupplementTaken } from './supplements.js';
 import { initCalendar, openWorkoutDate, renderCalendar } from './calendar.js';
@@ -39,10 +42,12 @@ import {
   startRestTimerNotification,
   updateNotification,
 } from './notifications.js';
-import { initPrograms, renderPrograms } from './programs.js';
-import { getActiveProgram, getProgramById } from './services/program-storage.js';
+import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
+import { getActiveProgram, getProgramById, setActiveProgram } from './services/program-storage.js';
 import { buildAiProgramPrompt } from './services/ai-program-template.js';
 import { copyText } from './services/clipboard.js';
+import { formatLocalDate, localDateToDayNumber } from './services/date-utils.js';
+import { escapeHtml } from './services/html.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
 
 // ============================================
@@ -65,6 +70,23 @@ const state = {
   timerEndsAt: null,
   confirmCallback: null,
 };
+
+const ONBOARDING_KEY = 'muscu_onboarding_completed';
+const THEME_KEY = 'muscu_theme';
+
+function getTheme() {
+  return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+}
+
+function setTheme(theme) {
+  const selectedTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.classList.toggle('light-theme', selectedTheme === 'light');
+  document.documentElement.style.colorScheme = selectedTheme;
+  localStorage.setItem(THEME_KEY, selectedTheme);
+  window.dispatchEvent(new Event('themechange'));
+}
+
+setTheme(getTheme());
 
 function getWorkoutProgram() {
   const program = getProgramById(state.activeProgramId);
@@ -121,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initSelectPicker();
   initNotifications();
   initPrograms();
+  initOnboarding();
+  initWorkoutDraftPersistence();
+  restoreActiveWorkoutDraft();
   window.addEventListener('workout:edit-requested', (event) => {
     const workout = getWorkouts().find((item) => item.id === event.detail?.workoutId);
     if (workout) startRecordedWorkoutEdit(workout);
@@ -146,6 +171,90 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+function shouldShowOnboarding() {
+  if (localStorage.getItem(ONBOARDING_KEY) === 'true') return false;
+  const summary = getExportSummary();
+  return summary.workouts === 0
+    && summary.programs === 0
+    && summary.supplements === 0
+    && !summary.baseProgramCustomized;
+}
+
+function completeOnboarding() {
+  localStorage.setItem(ONBOARDING_KEY, 'true');
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay?.classList.remove('active');
+  overlay?.setAttribute('aria-hidden', 'true');
+}
+
+const FEATURE_TOUR_STEPS = [
+  { mark: '🗂️', title: 'tourProgramTitle', description: 'tourProgramDescription' },
+  { mark: '✅', title: 'tourWorkoutTitle', description: 'tourWorkoutDescription' },
+  { mark: '⏱️', title: 'tourRestTitle', description: 'tourRestDescription' },
+  { mark: '📈', title: 'tourProgressTitle', description: 'tourProgressDescription' },
+];
+
+function startFeatureTour(onComplete = () => {}) {
+  const overlay = document.getElementById('feature-tour-overlay');
+  if (!overlay) return onComplete();
+  let step = 0;
+
+  const renderStep = () => {
+    const current = FEATURE_TOUR_STEPS[step];
+    overlay.querySelector('#feature-tour-mark').textContent = current.mark;
+    overlay.querySelector('#feature-tour-step').textContent = t('tourStep', { current: step + 1, total: FEATURE_TOUR_STEPS.length });
+    overlay.querySelector('#feature-tour-title').textContent = t(current.title);
+    overlay.querySelector('#feature-tour-description').textContent = t(current.description);
+    overlay.querySelector('#feature-tour-progress').style.setProperty('--tour-progress', `${((step + 1) / FEATURE_TOUR_STEPS.length) * 100}%`);
+    overlay.querySelector('#btn-feature-tour-next').textContent = t(step === FEATURE_TOUR_STEPS.length - 1 ? 'tourDone' : 'tourNext');
+  };
+  const finishTour = () => {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    onComplete();
+  };
+
+  overlay.querySelector('#btn-feature-tour-skip').onclick = finishTour;
+  overlay.querySelector('#btn-feature-tour-next').onclick = () => {
+    if (step === FEATURE_TOUR_STEPS.length - 1) return finishTour();
+    step += 1;
+    renderStep();
+  };
+  renderStep();
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+function initOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay || !shouldShowOnboarding()) return;
+
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  overlay.querySelector('[data-onboarding-action="create"]')?.addEventListener('click', () => {
+    completeOnboarding();
+    startFeatureTour(() => {
+      doNavigate('programs');
+      openNewProgramEditor();
+    });
+  });
+  overlay.querySelector('[data-onboarding-action="example"]')?.addEventListener('click', () => {
+    setActiveProgram('pullup_deadlift_cycle');
+    completeOnboarding();
+    doNavigate('home');
+    startFeatureTour();
+  });
+  overlay.querySelector('[data-onboarding-action="import"]')?.addEventListener('click', () => {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.getElementById('btn-import-programs')?.click();
+  });
+  window.addEventListener('programs:imported', () => {
+    completeOnboarding();
+    startFeatureTour(() => doNavigate('programs'));
+  }, { once: true });
+}
 
 // ============================================
 // NAVIGATION
@@ -390,15 +499,14 @@ function renderHome() {
     const lastWorkout = getLastWorkout(sessionId, program.id);
     let lastInfo = '';
     if (lastWorkout) {
-      const d = new Date(lastWorkout.date);
-      const days = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+      const days = localDateToDayNumber(new Date()) - localDateToDayNumber(lastWorkout.date);
       lastInfo = days === 0 ? t('today') : days === 1 ? t('yesterday') : t('daysAgo', { count: days });
     }
 
     card.innerHTML = `
-      <div class="card-icon">${session.icon}</div>
-      <div class="card-title">${localizeText(session.name)}</div>
-      <div class="card-subtitle">${localizeText(session.subtitle)}</div>
+      <div class="card-icon">${escapeHtml(session.icon)}</div>
+      <div class="card-title">${escapeHtml(localizeText(session.name))}</div>
+      <div class="card-subtitle">${escapeHtml(localizeText(session.subtitle))}</div>
       <div class="session-card-footer">
         ${lastInfo ? `<span class="card-badge card-last-workout">${lastInfo}</span>` : ''}
         ${sessionId === nextSession ? `<span class="card-badge card-next">${t('next')}</span>` : ''}
@@ -471,7 +579,7 @@ function renderSupplements() {
       <h2>${t('mySupplements')}</h2>
       ${supplements.length ? supplements.map((item) => {
         const dose = [item.dose, item.unit].filter(Boolean).join(' ');
-        return `<div class="supplement-row"><div><strong>${escapeHtml(item.name)}</strong>${dose ? `<span>${escapeHtml(dose)} ${t('perDay')}</span>` : ''}</div><button class="supplement-delete-btn" type="button" data-supplement-id="${item.id}">${t('remove')}</button></div>`;
+        return `<div class="supplement-row"><div><strong>${escapeHtml(item.name)}</strong>${dose ? `<span>${escapeHtml(dose)} ${t('perDay')}</span>` : ''}</div><button class="supplement-delete-btn" type="button" data-supplement-id="${escapeHtml(item.id)}">${t('remove')}</button></div>`;
       }).join('') : `<p class="supplements-empty">${t('supplementsEmpty')}</p>`}
     </section>`;
   container.querySelector('#supplement-form').addEventListener('submit', (event) => {
@@ -507,6 +615,13 @@ function initWorkoutControls() {
 
   document.getElementById('btn-finish').addEventListener('click', () => {
     finishWorkout();
+  });
+
+  document.getElementById('btn-workout-discard').addEventListener('click', () => {
+    showConfirm(t('discardWorkout'), t('discardWorkoutConfirm'), () => {
+      cleanupWorkout();
+      doNavigate('home');
+    });
   });
 
   document.getElementById('btn-workout-edit').addEventListener('click', toggleWorkoutEditor);
@@ -545,12 +660,6 @@ function initWorkoutControls() {
     document.getElementById('summary-overlay').classList.remove('active');
     doNavigate('home');
   });
-}
-
-function escapeHtml(value = '') {
-  return String(value).replace(/[&<>'"]/g, (character) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  })[character]);
 }
 
 function makeWorkoutEditId(prefix) {
@@ -757,6 +866,8 @@ function startSession(sessionId) {
   // Render choices first, then exercises
   renderChoices();
   renderExercises();
+  persistActiveWorkout();
+  window.dispatchEvent(new Event('workout:started'));
 }
 
 function buildRecordedWorkoutSession(workout) {
@@ -867,6 +978,78 @@ function cleanupWorkout() {
   document.getElementById('rest-timer-overlay').classList.remove('active');
   document.getElementById('btn-workout-edit').classList.remove('active');
   document.getElementById('btn-finish').textContent = t('finish');
+  clearActiveWorkoutDraft();
+}
+
+let workoutDraftSaveTimeout = null;
+
+function persistActiveWorkout() {
+  if (!state.workoutSession || !state.activeSessionId) return;
+  saveActiveWorkoutDraft({
+    activeSessionId: state.activeSessionId,
+    activeProgramId: state.activeProgramId,
+    workoutSession: state.workoutSession,
+    editingWorkout: state.editingWorkout,
+    choices: state.choices,
+    exerciseSets: state.exerciseSets,
+    workoutStartTime: state.workoutStartTime,
+    timerEndsAt: state.timerEndsAt,
+    timerTotal: state.timerTotal,
+  });
+}
+
+function scheduleActiveWorkoutSave() {
+  if (!state.workoutSession) return;
+  clearTimeout(workoutDraftSaveTimeout);
+  workoutDraftSaveTimeout = setTimeout(persistActiveWorkout, 150);
+}
+
+function initWorkoutDraftPersistence() {
+  document.addEventListener('input', (event) => {
+    if (event.target.closest('#view-workout')) scheduleActiveWorkoutSave();
+  });
+  document.addEventListener('change', (event) => {
+    if (event.target.closest('#view-workout')) scheduleActiveWorkoutSave();
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#view-workout')) scheduleActiveWorkoutSave();
+  });
+  window.addEventListener('pagehide', persistActiveWorkout);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistActiveWorkout();
+  });
+}
+
+function restoreActiveWorkoutDraft() {
+  const draft = getActiveWorkoutDraft();
+  if (!draft) return;
+
+  state.activeSessionId = draft.activeSessionId;
+  state.activeProgramId = draft.activeProgramId;
+  state.workoutSession = draft.workoutSession;
+  state.editingWorkout = draft.editingWorkout || null;
+  state.choices = draft.choices || {};
+  state.exerciseSets = draft.exerciseSets || {};
+  state.workoutStartTime = Number(draft.workoutStartTime) || Date.now();
+  state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
+
+  const session = state.workoutSession;
+  document.documentElement.style.setProperty('--session-color-rgb', session.colorRgb || '77, 124, 255');
+  document.getElementById('workout-title').textContent = localizeText(session.name);
+  const subtitle = document.getElementById('workout-subtitle');
+  subtitle.textContent = localizeText(session.subtitle);
+  subtitle.hidden = !session.subtitle;
+
+  clearInterval(state.durationInterval);
+  state.durationInterval = setInterval(updateDuration, 1000);
+  updateDuration();
+  doNavigate('workout');
+  renderChoices();
+  renderExercises();
+  window.dispatchEvent(new Event('workout:started'));
+
+  const remaining = Math.max(0, Math.ceil((Number(draft.timerEndsAt) - Date.now()) / 1000));
+  if (remaining > 0) startRestTimer(remaining, session.color);
 }
 
 // ============================================
@@ -901,7 +1084,7 @@ function renderChoices() {
         btn.className = 'choice-btn';
         btn.style.setProperty('--session-color-rgb', session.colorRgb);
         if (option.description) {
-          btn.innerHTML = `${option.name}<span class="choice-desc">${option.description}</span>`;
+          btn.innerHTML = `${escapeHtml(option.name)}<span class="choice-desc">${escapeHtml(option.description)}</span>`;
         } else {
           btn.textContent = option.name;
         }
@@ -950,8 +1133,8 @@ function renderExercises() {
     const header = document.createElement('div');
     header.className = 'block-header';
     header.innerHTML = `
-      <span class="block-type-badge ${block.presentation.badgeClass}">${localizeText(block.presentation.label)}</span>
-      <span class="block-name">${localizeText(block.name)}</span>
+      <span class="block-type-badge ${escapeHtml(block.presentation.badgeClass)}">${escapeHtml(localizeText(block.presentation.label))}</span>
+      <span class="block-name">${escapeHtml(localizeText(block.name))}</span>
       <span class="block-rest">⏱ ${formatRestTime(block.restBetweenRoundsSeconds)}</span>
     `;
 
@@ -1023,7 +1206,7 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
   headerDiv.className = 'exercise-card-header';
   headerDiv.innerHTML = `
     <div>
-      <div class="exercise-name">${displayName}</div>
+      <div class="exercise-name">${escapeHtml(displayName)}</div>
       <div class="exercise-target">${targets.targetSets} × ${targets.targetRepsMin}-${targets.targetRepsMax} ${t('reps')}</div>
     </div>
     ${prevText ? `<div class="exercise-prev">${prevText}</div>` : ''}
@@ -1366,6 +1549,7 @@ function startRestTimer(seconds, color) {
   refreshRestTimer();
 
   state.timerInterval = setInterval(refreshRestTimer, 250);
+  persistActiveWorkout();
 }
 
 function refreshRestTimer() {
@@ -1398,6 +1582,7 @@ function stopRestTimer({ completed = false } = {}) {
   if (completed) finishRestTimerNotification();
   else dismissRestTimerNotification();
   document.getElementById('rest-timer-overlay').classList.remove('active');
+  persistActiveWorkout();
 }
 
 // ============================================
@@ -1650,6 +1835,10 @@ function initSettings() {
   languageSelect.value = getLanguage();
   languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
 
+  const themeSelect = document.getElementById('settings-theme');
+  themeSelect.value = getTheme();
+  themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
+
   // Open/close settings
   btnOpen.addEventListener('click', () => {
     overlay.classList.add('active');
@@ -1680,7 +1869,7 @@ function initSettings() {
       return;
     }
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = formatLocalDate();
     const fileName = `muscu_tracker_${dateStr}.json`;
 
     // Native Android: use Filesystem + Share
@@ -1734,7 +1923,7 @@ function initSettings() {
       return;
     }
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = formatLocalDate();
     const fileName = `muscu_tracker_programmes_${dateStr}.json`;
 
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -1796,7 +1985,10 @@ function initSettings() {
         }
 
         const current = getExportSummary();
-        const hasCurrentData = current.workouts > 0 || current.programs > 0;
+        const hasCurrentData = current.workouts > 0
+          || current.programs > 0
+          || current.supplements > 0
+          || current.baseProgramCustomized;
 
         if (hasCurrentData) {
           showConfirm(
@@ -1862,6 +2054,7 @@ function initSettings() {
               return;
             }
             showToast(t('importedPrograms'), 'success');
+            window.dispatchEvent(new Event('programs:imported'));
             renderHome();
             renderPrograms();
             refreshStatsSelector();

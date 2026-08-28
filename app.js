@@ -27,7 +27,11 @@ import {
   getProgramsImportSummary,
   importData,
   importProgramsData,
-  getWorkouts
+  getWorkouts,
+  getNewPersonalRecords,
+  clearActiveWorkoutDraft,
+  getActiveWorkoutDraft,
+  saveActiveWorkoutDraft,
 } from './storage.js';
 import { addSupplement, deleteSupplement, getSupplementStatus, getSupplements, getTakenSupplementIds, toggleSupplementTaken } from './supplements.js';
 import { initCalendar, openWorkoutDate, renderCalendar } from './calendar.js';
@@ -39,10 +43,12 @@ import {
   startRestTimerNotification,
   updateNotification,
 } from './notifications.js';
-import { initPrograms, renderPrograms } from './programs.js';
-import { getActiveProgram, getProgramById } from './services/program-storage.js';
+import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
+import { getActiveProgram, getProgramById, setActiveProgram } from './services/program-storage.js';
 import { buildAiProgramPrompt } from './services/ai-program-template.js';
 import { copyText } from './services/clipboard.js';
+import { formatLocalDate, localDateToDayNumber } from './services/date-utils.js';
+import { escapeHtml } from './services/html.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
 
 // ============================================
@@ -63,8 +69,50 @@ const state = {
   timerTotal: 0,
   timerRemaining: 0,
   timerEndsAt: null,
+  workoutNote: '',
+  exerciseNotes: {},
   confirmCallback: null,
 };
+
+const ONBOARDING_KEY = 'muscu_onboarding_completed';
+const THEME_KEY = 'muscu_theme';
+const ACCESSIBILITY_KEY = 'muscu_accessibility';
+
+function getAccessibilityPreferences() {
+  try {
+    return {
+      textSize: 'normal', highContrast: false, reducedMotion: false, haptics: true, keepScreenAwake: false,
+      ...JSON.parse(localStorage.getItem(ACCESSIBILITY_KEY) || '{}'),
+    };
+  } catch { return { textSize: 'normal', highContrast: false, reducedMotion: false, haptics: true, keepScreenAwake: false }; }
+}
+
+function setAccessibilityPreferences(next) {
+  localStorage.setItem(ACCESSIBILITY_KEY, JSON.stringify(next));
+  applyAccessibilityPreferences(next);
+}
+
+function applyAccessibilityPreferences(preferences = getAccessibilityPreferences()) {
+  const root = document.documentElement;
+  root.dataset.textSize = ['normal', 'large', 'xlarge'].includes(preferences.textSize) ? preferences.textSize : 'normal';
+  root.classList.toggle('high-contrast', Boolean(preferences.highContrast));
+  root.classList.toggle('reduce-motion', Boolean(preferences.reducedMotion));
+}
+
+function getTheme() {
+  return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+}
+
+function setTheme(theme) {
+  const selectedTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.classList.toggle('light-theme', selectedTheme === 'light');
+  document.documentElement.style.colorScheme = selectedTheme;
+  localStorage.setItem(THEME_KEY, selectedTheme);
+  window.dispatchEvent(new Event('themechange'));
+}
+
+setTheme(getTheme());
+applyAccessibilityPreferences();
 
 function getWorkoutProgram() {
   const program = getProgramById(state.activeProgramId);
@@ -121,6 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initSelectPicker();
   initNotifications();
   initPrograms();
+  initOnboarding();
+  initWorkoutDraftPersistence();
+  restoreActiveWorkoutDraft();
   window.addEventListener('workout:edit-requested', (event) => {
     const workout = getWorkouts().find((item) => item.id === event.detail?.workoutId);
     if (workout) startRecordedWorkoutEdit(workout);
@@ -146,6 +197,90 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+function shouldShowOnboarding() {
+  if (localStorage.getItem(ONBOARDING_KEY) === 'true') return false;
+  const summary = getExportSummary();
+  return summary.workouts === 0
+    && summary.programs === 0
+    && summary.supplements === 0
+    && !summary.baseProgramCustomized;
+}
+
+function completeOnboarding() {
+  localStorage.setItem(ONBOARDING_KEY, 'true');
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay?.classList.remove('active');
+  overlay?.setAttribute('aria-hidden', 'true');
+}
+
+const FEATURE_TOUR_STEPS = [
+  { mark: '🗂️', title: 'tourProgramTitle', description: 'tourProgramDescription' },
+  { mark: '✅', title: 'tourWorkoutTitle', description: 'tourWorkoutDescription' },
+  { mark: '⏱️', title: 'tourRestTitle', description: 'tourRestDescription' },
+  { mark: '📈', title: 'tourProgressTitle', description: 'tourProgressDescription' },
+];
+
+function startFeatureTour(onComplete = () => {}) {
+  const overlay = document.getElementById('feature-tour-overlay');
+  if (!overlay) return onComplete();
+  let step = 0;
+
+  const renderStep = () => {
+    const current = FEATURE_TOUR_STEPS[step];
+    overlay.querySelector('#feature-tour-mark').textContent = current.mark;
+    overlay.querySelector('#feature-tour-step').textContent = t('tourStep', { current: step + 1, total: FEATURE_TOUR_STEPS.length });
+    overlay.querySelector('#feature-tour-title').textContent = t(current.title);
+    overlay.querySelector('#feature-tour-description').textContent = t(current.description);
+    overlay.querySelector('#feature-tour-progress').style.setProperty('--tour-progress', `${((step + 1) / FEATURE_TOUR_STEPS.length) * 100}%`);
+    overlay.querySelector('#btn-feature-tour-next').textContent = t(step === FEATURE_TOUR_STEPS.length - 1 ? 'tourDone' : 'tourNext');
+  };
+  const finishTour = () => {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    onComplete();
+  };
+
+  overlay.querySelector('#btn-feature-tour-skip').onclick = finishTour;
+  overlay.querySelector('#btn-feature-tour-next').onclick = () => {
+    if (step === FEATURE_TOUR_STEPS.length - 1) return finishTour();
+    step += 1;
+    renderStep();
+  };
+  renderStep();
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+function initOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay || !shouldShowOnboarding()) return;
+
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  overlay.querySelector('[data-onboarding-action="create"]')?.addEventListener('click', () => {
+    completeOnboarding();
+    startFeatureTour(() => {
+      doNavigate('programs');
+      openNewProgramEditor();
+    });
+  });
+  overlay.querySelector('[data-onboarding-action="example"]')?.addEventListener('click', () => {
+    setActiveProgram('pullup_deadlift_cycle');
+    completeOnboarding();
+    doNavigate('home');
+    startFeatureTour();
+  });
+  overlay.querySelector('[data-onboarding-action="import"]')?.addEventListener('click', () => {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.getElementById('btn-import-programs')?.click();
+  });
+  window.addEventListener('programs:imported', () => {
+    completeOnboarding();
+    startFeatureTour(() => doNavigate('programs'));
+  }, { once: true });
+}
 
 // ============================================
 // NAVIGATION
@@ -390,15 +525,14 @@ function renderHome() {
     const lastWorkout = getLastWorkout(sessionId, program.id);
     let lastInfo = '';
     if (lastWorkout) {
-      const d = new Date(lastWorkout.date);
-      const days = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+      const days = localDateToDayNumber(new Date()) - localDateToDayNumber(lastWorkout.date);
       lastInfo = days === 0 ? t('today') : days === 1 ? t('yesterday') : t('daysAgo', { count: days });
     }
 
     card.innerHTML = `
-      <div class="card-icon">${session.icon}</div>
-      <div class="card-title">${localizeText(session.name)}</div>
-      <div class="card-subtitle">${localizeText(session.subtitle)}</div>
+      <div class="card-icon">${escapeHtml(session.icon)}</div>
+      <div class="card-title">${escapeHtml(localizeText(session.name))}</div>
+      <div class="card-subtitle">${escapeHtml(localizeText(session.subtitle))}</div>
       <div class="session-card-footer">
         ${lastInfo ? `<span class="card-badge card-last-workout">${lastInfo}</span>` : ''}
         ${sessionId === nextSession ? `<span class="card-badge card-next">${t('next')}</span>` : ''}
@@ -471,7 +605,7 @@ function renderSupplements() {
       <h2>${t('mySupplements')}</h2>
       ${supplements.length ? supplements.map((item) => {
         const dose = [item.dose, item.unit].filter(Boolean).join(' ');
-        return `<div class="supplement-row"><div><strong>${escapeHtml(item.name)}</strong>${dose ? `<span>${escapeHtml(dose)} ${t('perDay')}</span>` : ''}</div><button class="supplement-delete-btn" type="button" data-supplement-id="${item.id}">${t('remove')}</button></div>`;
+        return `<div class="supplement-row"><div><strong>${escapeHtml(item.name)}</strong>${dose ? `<span>${escapeHtml(dose)} ${t('perDay')}</span>` : ''}</div><button class="supplement-delete-btn" type="button" data-supplement-id="${escapeHtml(item.id)}">${t('remove')}</button></div>`;
       }).join('') : `<p class="supplements-empty">${t('supplementsEmpty')}</p>`}
     </section>`;
   container.querySelector('#supplement-form').addEventListener('submit', (event) => {
@@ -507,6 +641,13 @@ function initWorkoutControls() {
 
   document.getElementById('btn-finish').addEventListener('click', () => {
     finishWorkout();
+  });
+
+  document.getElementById('btn-workout-discard').addEventListener('click', () => {
+    showConfirm(t('discardWorkout'), t('discardWorkoutConfirm'), () => {
+      cleanupWorkout();
+      doNavigate('home');
+    });
   });
 
   document.getElementById('btn-workout-edit').addEventListener('click', toggleWorkoutEditor);
@@ -545,12 +686,6 @@ function initWorkoutControls() {
     document.getElementById('summary-overlay').classList.remove('active');
     doNavigate('home');
   });
-}
-
-function escapeHtml(value = '') {
-  return String(value).replace(/[&<>'"]/g, (character) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  })[character]);
 }
 
 function makeWorkoutEditId(prefix) {
@@ -715,6 +850,8 @@ function startSession(sessionId) {
   state.activeProgramId = program.id;
   state.choices = {};
   state.exerciseSets = {};
+  state.workoutNote = '';
+  state.exerciseNotes = {};
   state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
   state.editingWorkout = null;
   state.workoutStartTime = Date.now();
@@ -757,6 +894,8 @@ function startSession(sessionId) {
   // Render choices first, then exercises
   renderChoices();
   renderExercises();
+  persistActiveWorkout();
+  window.dispatchEvent(new Event('workout:started'));
 }
 
 function buildRecordedWorkoutSession(workout) {
@@ -813,6 +952,8 @@ function startRecordedWorkoutEdit(workout) {
   state.editingWorkout = structuredClone(workout);
   state.choices = { ...(workout.choices || {}) };
   state.exerciseSets = {};
+  state.workoutNote = workout.note || '';
+  state.exerciseNotes = Object.fromEntries(session.blocks[0].items.map((item, index) => [item.id, workout.exercises[index]?.note || '']));
   session.blocks[0].items.forEach((item, index) => {
     state.exerciseSets[item.id] = (workout.exercises[index]?.sets || []).map((set) => ({
       weight: Number(set.weight) || 0,
@@ -861,12 +1002,90 @@ function cleanupWorkout() {
   state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
   state.editingWorkout = null;
   state.exerciseSets = {};
+  state.workoutNote = '';
+  state.exerciseNotes = {};
   state.choices = {};
   state.workoutStartTime = null;
   dismissRestTimerNotification();
   document.getElementById('rest-timer-overlay').classList.remove('active');
   document.getElementById('btn-workout-edit').classList.remove('active');
   document.getElementById('btn-finish').textContent = t('finish');
+  clearActiveWorkoutDraft();
+}
+
+let workoutDraftSaveTimeout = null;
+
+function persistActiveWorkout() {
+  if (!state.workoutSession || !state.activeSessionId) return;
+  saveActiveWorkoutDraft({
+    activeSessionId: state.activeSessionId,
+    activeProgramId: state.activeProgramId,
+    workoutSession: state.workoutSession,
+    editingWorkout: state.editingWorkout,
+    choices: state.choices,
+    exerciseSets: state.exerciseSets,
+    workoutNote: state.workoutNote,
+    exerciseNotes: state.exerciseNotes,
+    workoutStartTime: state.workoutStartTime,
+    timerEndsAt: state.timerEndsAt,
+    timerTotal: state.timerTotal,
+  });
+}
+
+function scheduleActiveWorkoutSave() {
+  if (!state.workoutSession) return;
+  clearTimeout(workoutDraftSaveTimeout);
+  workoutDraftSaveTimeout = setTimeout(persistActiveWorkout, 150);
+}
+
+function initWorkoutDraftPersistence() {
+  document.addEventListener('input', (event) => {
+    if (event.target.closest('#view-workout')) scheduleActiveWorkoutSave();
+  });
+  document.addEventListener('change', (event) => {
+    if (event.target.closest('#view-workout')) scheduleActiveWorkoutSave();
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#view-workout')) scheduleActiveWorkoutSave();
+  });
+  window.addEventListener('pagehide', persistActiveWorkout);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistActiveWorkout();
+  });
+}
+
+function restoreActiveWorkoutDraft() {
+  const draft = getActiveWorkoutDraft();
+  if (!draft) return;
+
+  state.activeSessionId = draft.activeSessionId;
+  state.activeProgramId = draft.activeProgramId;
+  state.workoutSession = draft.workoutSession;
+  state.editingWorkout = draft.editingWorkout || null;
+  state.choices = draft.choices || {};
+  state.exerciseSets = draft.exerciseSets || {};
+  state.workoutNote = draft.workoutNote || '';
+  state.exerciseNotes = draft.exerciseNotes || {};
+  state.workoutStartTime = Number(draft.workoutStartTime) || Date.now();
+  state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
+
+  const session = state.workoutSession;
+  document.documentElement.style.setProperty('--session-color-rgb', session.colorRgb || '77, 124, 255');
+  document.getElementById('workout-title').textContent = localizeText(session.name);
+  const subtitle = document.getElementById('workout-subtitle');
+  subtitle.textContent = localizeText(session.subtitle);
+  subtitle.hidden = !session.subtitle;
+
+  clearInterval(state.durationInterval);
+  state.durationInterval = setInterval(updateDuration, 1000);
+  updateDuration();
+  doNavigate('workout');
+  renderChoices();
+  renderExercises();
+  window.dispatchEvent(new Event('workout:started'));
+
+  const remaining = Math.max(0, Math.ceil((Number(draft.timerEndsAt) - Date.now()) / 1000));
+  if (remaining > 0) startRestTimer(remaining, session.color);
 }
 
 // ============================================
@@ -901,7 +1120,7 @@ function renderChoices() {
         btn.className = 'choice-btn';
         btn.style.setProperty('--session-color-rgb', session.colorRgb);
         if (option.description) {
-          btn.innerHTML = `${option.name}<span class="choice-desc">${option.description}</span>`;
+          btn.innerHTML = `${escapeHtml(option.name)}<span class="choice-desc">${escapeHtml(option.description)}</span>`;
         } else {
           btn.textContent = option.name;
         }
@@ -942,6 +1161,14 @@ function renderExercises() {
     container.appendChild(toolbar);
   }
 
+  const sessionNote = document.createElement('label');
+  sessionNote.className = 'workout-note-field';
+  sessionNote.innerHTML = `<span>${t('workoutNote')}</span><textarea rows="2" maxlength="1000" placeholder="${t('workoutNotePlaceholder')}"></textarea>`;
+  const sessionNoteInput = sessionNote.querySelector('textarea');
+  sessionNoteInput.value = state.workoutNote;
+  sessionNoteInput.addEventListener('input', () => { state.workoutNote = sessionNoteInput.value; });
+  container.appendChild(sessionNote);
+
   for (const block of session.blocks) {
     const blockDiv = document.createElement('div');
     blockDiv.className = 'exercise-block';
@@ -950,8 +1177,8 @@ function renderExercises() {
     const header = document.createElement('div');
     header.className = 'block-header';
     header.innerHTML = `
-      <span class="block-type-badge ${block.presentation.badgeClass}">${localizeText(block.presentation.label)}</span>
-      <span class="block-name">${localizeText(block.name)}</span>
+      <span class="block-type-badge ${escapeHtml(block.presentation.badgeClass)}">${escapeHtml(localizeText(block.presentation.label))}</span>
+      <span class="block-name">${escapeHtml(localizeText(block.name))}</span>
       <span class="block-rest">⏱ ${formatRestTime(block.restBetweenRoundsSeconds)}</span>
     `;
 
@@ -1023,7 +1250,7 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
   headerDiv.className = 'exercise-card-header';
   headerDiv.innerHTML = `
     <div>
-      <div class="exercise-name">${displayName}</div>
+      <div class="exercise-name">${escapeHtml(displayName)}</div>
       <div class="exercise-target">${targets.targetSets} × ${targets.targetRepsMin}-${targets.targetRepsMax} ${t('reps')}</div>
     </div>
     ${prevText ? `<div class="exercise-prev">${prevText}</div>` : ''}
@@ -1061,6 +1288,14 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
     noteDiv.textContent = note;
     card.appendChild(noteDiv);
   }
+
+  const personalNote = document.createElement('label');
+  personalNote.className = 'exercise-personal-note';
+  personalNote.innerHTML = `<span>${t('exerciseNote')}</span><textarea rows="2" maxlength="500" placeholder="${t('exerciseNotePlaceholder')}"></textarea>`;
+  const personalNoteInput = personalNote.querySelector('textarea');
+  personalNoteInput.value = state.exerciseNotes[exercise.id] || '';
+  personalNoteInput.addEventListener('input', () => { state.exerciseNotes[exercise.id] = personalNoteInput.value; });
+  card.appendChild(personalNote);
 
   // Initialize sets if not already (undefined means first render)
   if (state.exerciseSets[exercise.id] === undefined) {
@@ -1366,6 +1601,7 @@ function startRestTimer(seconds, color) {
   refreshRestTimer();
 
   state.timerInterval = setInterval(refreshRestTimer, 250);
+  persistActiveWorkout();
 }
 
 function refreshRestTimer() {
@@ -1375,7 +1611,7 @@ function refreshRestTimer() {
   if (state.timerRemaining <= 0) {
     stopRestTimer({ completed: true });
     // Vibrate if supported
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (getAccessibilityPreferences().haptics && navigator.vibrate) navigator.vibrate([200, 100, 200]);
     return;
   }
 
@@ -1398,6 +1634,7 @@ function stopRestTimer({ completed = false } = {}) {
   if (completed) finishRestTimerNotification();
   else dismissRestTimerNotification();
   document.getElementById('rest-timer-overlay').classList.remove('active');
+  persistActiveWorkout();
 }
 
 // ============================================
@@ -1449,9 +1686,10 @@ function finishWorkout() {
         exerciseId: resolvedExercise.exerciseId,
         exerciseName: resolvedExercise.name,
         selectionId: state.choices[exercise.id] || null,
-        intensityTechnique: resolvedExercise.intensityTechnique,
-        prescription: resolvedExercise.prescription,
-        sets: validSets
+      intensityTechnique: resolvedExercise.intensityTechnique,
+      prescription: resolvedExercise.prescription,
+      note: (state.exerciseNotes[exercise.id] || '').trim(),
+      sets: validSets
       });
     }
   }
@@ -1496,13 +1734,14 @@ function finishWorkout() {
     return;
   }
 
-  saveWorkout(workout);
+  const personalRecords = getNewPersonalRecords(exercises);
+  saveWorkout({ ...workout, note: state.workoutNote.trim() });
 
   // Update persistent notification after saving
   updateNotification();
 
   // Show summary
-  showSummary(session, exercises, durationMs, previousWorkout);
+  showSummary(session, exercises, durationMs, previousWorkout, personalRecords);
   cleanupWorkout();
 }
 
@@ -1517,7 +1756,7 @@ function syncInputValues() {
   // The change events on inputs already update state, so this is mainly a safety check
 }
 
-function showSummary(session, exercises, durationMs, previousWorkout = null) {
+function showSummary(session, exercises, durationMs, previousWorkout = null, personalRecords = []) {
   const overlay = document.getElementById('summary-overlay');
   const sessionInfo = document.getElementById('summary-session');
   const statsContainer = document.getElementById('summary-stats');
@@ -1559,6 +1798,10 @@ function showSummary(session, exercises, durationMs, previousWorkout = null) {
     `;
   } else {
     comparisonContainer.innerHTML = `<p class="summary-first-workout">${t('firstWorkoutOfSession')}</p>`;
+  }
+
+  if (personalRecords.length) {
+    comparisonContainer.insertAdjacentHTML('beforeend', `<div class="personal-records"><h3>🏆 ${t('personalRecords')}</h3>${personalRecords.slice(0, 4).map((record) => `<div class="personal-record"><strong>${escapeHtml(record.exerciseName)}</strong><span>${record.type === 'weight' ? t('recordWeight', { value: formatMetric(record.value) }) : t('recordReps', { value: formatMetric(record.value) })}</span></div>`).join('')}</div>`);
   }
 
   overlay.classList.add('active');
@@ -1650,6 +1893,10 @@ function initSettings() {
   languageSelect.value = getLanguage();
   languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
 
+  const themeSelect = document.getElementById('settings-theme');
+  themeSelect.value = getTheme();
+  themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
+
   // Open/close settings
   btnOpen.addEventListener('click', () => {
     overlay.classList.add('active');
@@ -1680,7 +1927,7 @@ function initSettings() {
       return;
     }
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = formatLocalDate();
     const fileName = `muscu_tracker_${dateStr}.json`;
 
     // Native Android: use Filesystem + Share
@@ -1734,7 +1981,7 @@ function initSettings() {
       return;
     }
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = formatLocalDate();
     const fileName = `muscu_tracker_programmes_${dateStr}.json`;
 
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -1796,7 +2043,10 @@ function initSettings() {
         }
 
         const current = getExportSummary();
-        const hasCurrentData = current.workouts > 0 || current.programs > 0;
+        const hasCurrentData = current.workouts > 0
+          || current.programs > 0
+          || current.supplements > 0
+          || current.baseProgramCustomized;
 
         if (hasCurrentData) {
           showConfirm(
@@ -1862,6 +2112,7 @@ function initSettings() {
               return;
             }
             showToast(t('importedPrograms'), 'success');
+            window.dispatchEvent(new Event('programs:imported'));
             renderHome();
             renderPrograms();
             refreshStatsSelector();

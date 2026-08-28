@@ -16,6 +16,12 @@ Pour synchroniser également le projet Android :
 npm run sync:android
 ```
 
+Pour synchroniser le projet iOS avant une compilation Xcode :
+
+```sh
+npm run sync:ios
+```
+
 Les vérifications de la logique métier se lancent avec :
 
 ```sh

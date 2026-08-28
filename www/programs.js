@@ -14,6 +14,7 @@ import {
   formatPrescriptionSummary,
   toggleDisclosure,
 } from './services/program-builder-view.js';
+import { escapeHtml } from './services/html.js';
 
 const SESSION_COLORS = ['#4d7cff', '#ff8a3d', '#ff4d6a', '#3ddc84', '#e7c65c', '#45c4d9'];
 const PARAMETER_LABELS = {
@@ -27,7 +28,6 @@ const ui = {
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function makeId(prefix) { return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`; }
-function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
 function byId(items, id) { return items.find((item) => item.id === id); }
 function hexToRgb(hex) { const value = hex.replace('#', ''); return `${parseInt(value.slice(0, 2), 16)}, ${parseInt(value.slice(2, 4), 16)}, ${parseInt(value.slice(4, 6), 16)}`; }
 function formatFrequency(frequency) {
@@ -67,6 +67,10 @@ function createSession(index = 0) {
 export function createBlankProgram() {
   const session = createSession(0);
   return { id: '', schemaVersion: 4, name: t('newProgram'), description: '', goal: 'custom', experienceLevel: 'intermediate', sessionDurationMinutes: null, trainingFrequency: { mode: 'interval', intervalDays: 2 }, sessionOrder: [session.id], sessions: { [session.id]: session } };
+}
+
+export function openNewProgramEditor() {
+  openEditor(createBlankProgram(), { isNew: true });
 }
 
 function getContainer() { return document.getElementById('programs-content'); }

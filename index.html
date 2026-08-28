@@ -61,6 +61,7 @@
           <div class="workout-timer-display" id="workout-duration">00:00</div>
         </div>
         <button class="btn-workout-edit" id="btn-workout-edit" title="Éditer la séance" data-i18n-title="editWorkout" data-i18n-aria-label="editWorkout" aria-label="Éditer la séance">✎</button>
+        <button class="btn-workout-discard" id="btn-workout-discard" title="Abandonner la séance" data-i18n-title="discardWorkout" data-i18n-aria-label="discardWorkout" aria-label="Abandonner la séance">🗑</button>
         <button class="btn-finish" id="btn-finish" data-i18n="finish">Terminer</button>
       </div>
 
@@ -226,6 +227,23 @@
         </div>
 
         <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="appearance">Apparence</h3>
+          <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-label" data-i18n="theme">Thème</div></div>
+            <select class="settings-select" id="settings-theme"><option value="dark" data-i18n="themeDark">Sombre</option><option value="light" data-i18n="themeLight">Clair</option></select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="accessibility">Accessibilité et confort</h3>
+          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-label" data-i18n="textSize">Taille du texte</div><div class="settings-row-desc" data-i18n="textSizeDesc">Agrandis l’interface sans changer les données.</div></div><select class="settings-select" id="settings-text-size"><option value="normal" data-i18n="textSizeNormal">Normale</option><option value="large" data-i18n="textSizeLarge">Grande</option><option value="xlarge" data-i18n="textSizeXLarge">Très grande</option></select></div>
+          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-label" data-i18n="highContrast">Contraste renforcé</div></div><button class="settings-toggle" id="btn-high-contrast-toggle" aria-pressed="false"><span class="toggle-track"><span class="toggle-thumb"></span></span></button></div>
+          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-label" data-i18n="reduceMotion">Réduire les animations</div></div><button class="settings-toggle" id="btn-reduce-motion-toggle" aria-pressed="false"><span class="toggle-track"><span class="toggle-thumb"></span></span></button></div>
+          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-label" data-i18n="hapticFeedback">Vibration en fin de repos</div><div class="settings-row-desc" data-i18n="hapticFeedbackDesc">Disponible seulement sur les appareils compatibles.</div></div><button class="settings-toggle" id="btn-haptics-toggle" aria-pressed="true"><span class="toggle-track"><span class="toggle-thumb"></span></span></button></div>
+          <div class="settings-row"><div class="settings-row-info"><div class="settings-row-label" data-i18n="keepScreenAwake">Garder l’écran allumé</div><div class="settings-row-desc" data-i18n="keepScreenAwakeDesc">Uniquement pendant une séance active.</div></div><button class="settings-toggle" id="btn-wake-lock-toggle" aria-pressed="false"><span class="toggle-track"><span class="toggle-thumb"></span></span></button></div>
+        </div>
+
+        <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="notifications">🔔 Notifications</h3>
           <div class="settings-row">
             <div class="settings-row-info">
@@ -302,9 +320,36 @@
             rel="noopener noreferrer"
             data-i18n="privacyPolicy"
           >Politique de confidentialité</a>
-          <span class="settings-version">Muscu Tracker v1.0</span>
+          <span class="settings-version">Muscu Tracker v1.2</span>
         </div>
       </div>
+    </div>
+
+    <div class="onboarding-overlay" id="onboarding-overlay" aria-hidden="true">
+      <section class="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+        <div class="onboarding-mark" aria-hidden="true">🏋️</div>
+        <h1 id="onboarding-title" data-i18n="onboardingTitle">Bienvenue dans Muscu Tracker</h1>
+        <p data-i18n="onboardingDescription">Choisis comment démarrer. Tu pourras tout modifier ensuite.</p>
+        <div class="onboarding-actions">
+          <button type="button" class="onboarding-option primary" data-onboarding-action="create"><strong data-i18n="onboardingCreate">Créer mon programme</strong><span data-i18n="onboardingCreateDesc">Pars d’un programme vierge et configure chaque séance.</span></button>
+          <button type="button" class="onboarding-option" data-onboarding-action="example"><strong data-i18n="onboardingExample">Utiliser le programme exemple</strong><span data-i18n="onboardingExampleDesc">Un cycle avancé tractions &amp; deadlift à adapter.</span></button>
+          <button type="button" class="onboarding-option" data-onboarding-action="import"><strong data-i18n="onboardingImport">Importer un programme</strong><span data-i18n="onboardingImportDesc">Ajoute un programme depuis une sauvegarde JSON.</span></button>
+        </div>
+      </section>
+    </div>
+
+    <div class="feature-tour-overlay" id="feature-tour-overlay" aria-hidden="true">
+      <section class="feature-tour-card" role="dialog" aria-modal="true" aria-labelledby="feature-tour-title">
+        <div class="feature-tour-progress" id="feature-tour-progress" aria-hidden="true"></div>
+        <div class="feature-tour-mark" id="feature-tour-mark" aria-hidden="true">🏋️</div>
+        <p class="feature-tour-step" id="feature-tour-step"></p>
+        <h1 id="feature-tour-title"></h1>
+        <p id="feature-tour-description"></p>
+        <div class="feature-tour-actions">
+          <button type="button" class="feature-tour-skip" id="btn-feature-tour-skip" data-i18n="tourSkip">Passer le guide</button>
+          <button type="button" class="btn-finish" id="btn-feature-tour-next"></button>
+        </div>
+      </section>
     </div>
 
     <!-- ============ BOTTOM NAVIGATION ============ -->

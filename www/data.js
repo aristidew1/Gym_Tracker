@@ -3,7 +3,8 @@ if (
   && typeof document.addEventListener === 'function'
   && typeof document.createElement === 'function'
 ) {
-  import('./active-workout-patch.js');
+  import('./active-workout-patch.js')
+    .then(() => import('./data/active-workout-stack-fix.js'));
 }
 
 // Compatibility entry point for the application. New code should import the

@@ -10,7 +10,7 @@ public class NotificationBootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
             || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
-            PersistentNotificationService.restore(context);
+            PersistentNotificationManager.restore(context);
         }
     }
 }

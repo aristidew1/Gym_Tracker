@@ -137,6 +137,8 @@ export function restorePrograms(programs, activeProgramId) {
   const migratedPrograms = migratePrograms(programs).programs;
   if (migratedPrograms.some((program) => (
     !program
+    || typeof program.id !== 'string'
+    || !program.id.trim()
     || validateProgram(program).length > 0
   ))) return false;
   if (new Set(migratedPrograms.map((program) => program.id)).size !== migratedPrograms.length) return false;
@@ -157,7 +159,10 @@ export function appendPrograms(programs) {
   if (!Array.isArray(programs)) return false;
   const migratedPrograms = migratePrograms(programs).programs;
   if (migratedPrograms.some((program) => (
-    !program || validateProgram(program).length > 0
+    !program
+    || typeof program.id !== 'string'
+    || !program.id.trim()
+    || validateProgram(program).length > 0
   ))) return false;
 
   const existingNames = new Set(getPrograms().map((program) => normalizeProgramName(program.name)));

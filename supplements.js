@@ -1,5 +1,7 @@
 // Daily supplement tracking, kept separate from workout records.
 
+import { formatLocalDate } from './services/date-utils.js';
+
 const SUPPLEMENTS_KEY = 'muscu_supplements';
 const SUPPLEMENT_LOG_KEY = 'muscu_supplement_log';
 
@@ -13,8 +15,7 @@ function read(key, fallback) {
 }
 
 function today() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return formatLocalDate();
 }
 
 function createId() {

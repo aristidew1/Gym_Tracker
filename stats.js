@@ -11,10 +11,18 @@ import {
 } from './data.js';
 import { getActiveProgram } from './services/program-storage.js';
 import { getLanguage } from './i18n.js';
+import { parseLocalDate } from './services/date-utils.js';
 
 let weightChart = null;
 let repsChart = null;
 let initialized = false;
+
+function getChartTheme() {
+  const light = document.documentElement.classList.contains('light-theme');
+  return light
+    ? { grid: 'rgba(37, 51, 82, 0.12)', ticks: 'rgba(37, 51, 82, 0.7)' }
+    : { grid: 'rgba(255,255,255,0.05)', ticks: 'rgba(255,255,255,0.4)' };
+}
 
 function hexToRgb(hex) {
   const normalized = hex.replace('#', '');
@@ -25,7 +33,7 @@ function hexToRgb(hex) {
 }
 
 function formatDate(dateString) {
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -109,6 +117,8 @@ export function initStats() {
     updateCharts();
   });
 
+  window.addEventListener('themechange', updateCharts);
+
   updateCharts();
 }
 
@@ -127,7 +137,8 @@ export function updateCharts() {
   if (period > 0) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - period);
-    history = history.filter((entry) => new Date(entry.date) >= cutoff);
+    cutoff.setHours(0, 0, 0, 0);
+    history = history.filter((entry) => parseLocalDate(entry.date) >= cutoff);
   }
 
   if (!history.length || !window.Chart) {
@@ -145,9 +156,10 @@ export function updateCharts() {
   const labels = history.map((entry) => formatDate(entry.date));
   const maxWeights = history.map((entry) => Math.max(0, ...(entry.sets || []).map((set) => Number(set.weight) || 0)));
   const totalReps = history.map((entry) => (entry.sets || []).reduce((sum, set) => sum + (Number(set.reps) || 0), 0));
+  const chartTheme = getChartTheme();
   const sharedScale = {
-    grid: { color: 'rgba(255,255,255,0.05)' },
-    ticks: { color: 'rgba(255,255,255,0.4)', font: { family: 'Inter', size: 10 } },
+    grid: { color: chartTheme.grid },
+    ticks: { color: chartTheme.ticks, font: { family: 'Inter', size: 10 } },
   };
   const plugins = { legend: { display: false }, tooltip: { titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } } };
 

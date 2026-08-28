@@ -18,8 +18,10 @@ import {
   restorePrograms,
 } from './services/program-storage.js';
 import { getSupplementsBackup, restoreSupplementsBackup } from './supplements.js';
+import { localDateToDayNumber, parseLocalDate } from './services/date-utils.js';
 
 const STORAGE_KEY = 'muscu_workouts';
+const ACTIVE_WORKOUT_KEY = 'muscu_active_workout';
 const EXPORT_FORMAT = 'muscu-tracker-backup';
 const EXPORT_VERSION = 3;
 const PROGRAM_EXPORT_FORMAT = 'muscu-tracker-programs';
@@ -49,6 +51,32 @@ function readStoredWorkouts() {
 
 export function getWorkouts() {
   return readStoredWorkouts();
+}
+
+// Kept separately from history: an interrupted session is not a completed workout.
+export function saveActiveWorkoutDraft(draft) {
+  try {
+    if (!draft || typeof draft !== 'object') return;
+    localStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify({ ...draft, savedAt: new Date().toISOString() }));
+  } catch (error) {
+    console.warn('Impossible de sauvegarder la séance en cours.', error);
+  }
+}
+
+export function getActiveWorkoutDraft() {
+  try {
+    const raw = localStorage.getItem(ACTIVE_WORKOUT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    return draft?.workoutSession && draft?.activeSessionId ? draft : null;
+  } catch (error) {
+    console.warn('Impossible de restaurer la séance en cours.', error);
+    return null;
+  }
+}
+
+export function clearActiveWorkoutDraft() {
+  localStorage.removeItem(ACTIVE_WORKOUT_KEY);
 }
 
 export function saveWorkout(workout) {
@@ -96,7 +124,7 @@ export function getLastWorkout(sessionId, programId = null) {
 
 export function getWorkoutsByMonth(year, month) {
   return getWorkouts().filter((workout) => {
-    const date = new Date(workout.date);
+    const date = parseLocalDate(workout.date);
     return date.getFullYear() === year && date.getMonth() === month;
   });
 }
@@ -169,13 +197,52 @@ export function getLastExerciseDataByExerciseId(exerciseId) {
   return null;
 }
 
+function getExerciseBestSet(exercise) {
+  const sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+  return sets.reduce((best, set) => ({
+    maxWeight: Math.max(best.maxWeight, Number(set?.weight) || 0),
+    maxReps: Math.max(best.maxReps, Number(set?.reps) || 0),
+  }), { maxWeight: 0, maxReps: 0 });
+}
+
+// Records are calculated from local workout history. Nothing new is collected
+// or sent to a server, and editing/deleting a workout automatically updates them.
+export function getNewPersonalRecords(exercises) {
+  const previousBests = new Map();
+  getWorkouts().forEach((workout) => {
+    (workout.exercises || []).forEach((exercise) => {
+      if (!exercise.exerciseId) return;
+      const previous = previousBests.get(exercise.exerciseId) || { maxWeight: 0, maxReps: 0, hasHistory: false };
+      const current = getExerciseBestSet(exercise);
+      previousBests.set(exercise.exerciseId, {
+        maxWeight: Math.max(previous.maxWeight, current.maxWeight),
+        maxReps: Math.max(previous.maxReps, current.maxReps),
+        hasHistory: true,
+      });
+    });
+  });
+
+  return (exercises || []).flatMap((exercise) => {
+    if (!exercise?.exerciseId) return [];
+    const current = getExerciseBestSet(exercise);
+    const previous = previousBests.get(exercise.exerciseId);
+    if (current.maxWeight <= 0 && current.maxReps <= 0) return [];
+    const name = exercise.exerciseName || getExerciseDisplayName(exercise.exerciseId);
+    if (!previous) {
+      return [{ exerciseId: exercise.exerciseId, exerciseName: name, type: current.maxWeight > 0 ? 'weight' : 'reps', value: current.maxWeight || current.maxReps, first: true }];
+    }
+    if (current.maxWeight > previous.maxWeight && current.maxWeight > 0) {
+      return [{ exerciseId: exercise.exerciseId, exerciseName: name, type: 'weight', value: current.maxWeight, first: false }];
+    }
+    if (current.maxReps > previous.maxReps) {
+      return [{ exerciseId: exercise.exerciseId, exerciseName: name, type: 'reps', value: current.maxReps, first: false }];
+    }
+    return [];
+  });
+}
+
 function dateToDayNumber(dateValue) {
-  if (typeof dateValue === 'string') {
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateValue);
-    if (match) return Math.floor(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000);
-  }
-  const date = new Date(dateValue);
-  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+  return localDateToDayNumber(dateValue);
 }
 
 function getIntervalStreak(workouts, intervalDays, todayDay) {
@@ -222,7 +289,7 @@ export function getStats(program = DEFAULT_PROGRAM, now = new Date()) {
   if (workouts.length === 0) return { totalWorkouts: 0, streak: 0, streakUnit, thisMonth: 0 };
 
   const thisMonth = workouts.filter((workout) => {
-    const date = new Date(workout.date);
+    const date = parseLocalDate(workout.date);
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   }).length;
   const programWorkouts = workouts.filter((workout) => workout.programId === program?.id);
@@ -267,6 +334,7 @@ function parseImportData(jsonString) {
     const workoutsInput = isLegacyExport ? raw : raw?.workouts;
     if (!Array.isArray(workoutsInput)) return null;
     if (!isLegacyExport && raw.format !== EXPORT_FORMAT) return null;
+    if (!isLegacyExport && (!Number.isInteger(raw.version) || raw.version < 2 || raw.version > EXPORT_VERSION)) return null;
     if (!isLegacyExport && (!Array.isArray(raw.programs) || typeof raw.activeProgramId !== 'string')) return null;
 
     const { workouts } = migrateWorkouts(workoutsInput);
@@ -275,6 +343,7 @@ function parseImportData(jsonString) {
     const programs = isLegacyExport ? null : migratePrograms(raw.programs).programs;
     if (programs && (
       programs.some((program) => !program || validateProgram(program).length > 0)
+      || programs.some((program) => typeof program.id !== 'string' || !program.id.trim())
       || new Set(programs.map((program) => program.id)).size !== programs.length
       || !programs.some((program) => program.id === raw.activeProgramId)
     )) return null;
@@ -296,6 +365,7 @@ function parseProgramsImportData(jsonString) {
     const raw = JSON.parse(jsonString);
     if (
       raw?.format !== PROGRAM_EXPORT_FORMAT
+      || raw.version !== PROGRAM_EXPORT_VERSION
       || !Array.isArray(raw.programs)
       || typeof raw.activeProgramId !== 'string'
     ) return null;
@@ -303,6 +373,7 @@ function parseProgramsImportData(jsonString) {
     const programs = migratePrograms(raw.programs).programs;
     if (
       programs.some((program) => !program || validateProgram(program).length > 0)
+      || programs.some((program) => typeof program.id !== 'string' || !program.id.trim())
       || new Set(programs.map((program) => program.id)).size !== programs.length
       || !programs.some((program) => program.id === raw.activeProgramId)
     ) return null;
@@ -314,9 +385,16 @@ function parseProgramsImportData(jsonString) {
 }
 
 export function getExportSummary() {
+  const storedPrograms = getPrograms();
+  const baseProgramCustomized = storedPrograms.some((program) => (
+    program.id === DEFAULT_PROGRAM.id
+    && JSON.stringify({ ...program, builtIn: undefined }) !== JSON.stringify({ ...DEFAULT_PROGRAM, builtIn: undefined })
+  ));
   return {
     workouts: getWorkouts().length,
     programs: getCustomPrograms().length,
+    supplements: getSupplementsBackup().supplements.length,
+    baseProgramCustomized,
   };
 }
 

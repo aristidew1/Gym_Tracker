@@ -1,6 +1,6 @@
 // Non-destructive live workout UX layer.
-// Keeps a live workout in memory while the user browses the app and adds
-// compact/fullscreen modes to the rest countdown.
+// Keeps a live workout in memory while the user browses the app. Each rest
+// countdown opens fullscreen first and can then be explicitly reduced.
 
 const patchState = {
   liveWorkout: false,
@@ -151,6 +151,14 @@ function injectActiveWorkoutStyles() {
       font-size: .82rem !important;
     }
 
+    html.light-theme .rest-timer-overlay:not(.timer-fullscreen) {
+      background: rgba(255, 255, 255, .97) !important;
+      box-shadow: 0 10px 28px rgba(38, 52, 82, .16) !important;
+    }
+    html.light-theme .rest-timer-overlay.timer-fullscreen {
+      background: rgba(244, 246, 251, .98) !important;
+    }
+
     .active-workout-banner {
       display: none;
       align-items: center;
@@ -164,6 +172,15 @@ function injectActiveWorkoutStyles() {
     }
 
     .active-workout-banner.visible { display: flex; }
+
+    /* Immediate safe slot for the compact timer. The stack measurement layer
+       refines this offset afterwards, but this default prevents the banner
+       from ever flashing underneath the timer when Back is tapped right after
+       the reduction button. */
+    html.rest-timer-running:not(.rest-timer-fullscreen) .active-workout-banner.visible {
+      margin-top: max(88px, calc(var(--safe-area-top) + 82px));
+    }
+
     .active-workout-banner-main { min-width: 0; flex: 1; }
     .active-workout-banner-kicker {
       color: var(--text-secondary);
@@ -384,10 +401,18 @@ function observeTimer() {
   const overlay = document.getElementById('rest-timer-overlay');
   if (!overlay) return;
   ensureTimerExpandButton();
+  let wasRunning = false;
   const sync = () => {
     const running = overlay.classList.contains('active');
+
+    // A new rest period should be immersive by default, as it was before the
+    // compact timer was introduced. `wasRunning` means a user reduction stays
+    // reduced for the rest of this same countdown.
+    if (running && !wasRunning) setTimerFullscreen(true);
+
     document.documentElement.classList.toggle('rest-timer-running', running);
     if (!running && patchState.timerFullscreen) setTimerFullscreen(false);
+    wasRunning = running;
   };
   sync();
   new MutationObserver(sync).observe(overlay, { attributes: true, attributeFilter: ['class'] });
@@ -488,6 +513,8 @@ function installNavigationGuards() {
     }
   }, true);
 
+  window.addEventListener('workout:started', markWorkoutStarted);
+
   window.addEventListener('language:changed', syncLocalizedPatchText);
 }
 
@@ -497,6 +524,14 @@ function installPatch() {
   observeTimer();
   observeWorkoutLifecycle();
   installNavigationGuards();
+
+  // A restored workout may already be visible before this asynchronously
+  // loaded module installs its event listeners. Treat that visible view as a
+  // live session so the Back button opens browsing instead of the abandon
+  // confirmation.
+  if (document.getElementById('view-workout')?.classList.contains('active')) {
+    markWorkoutStarted();
+  }
 }
 
 if (document.readyState === 'loading') {

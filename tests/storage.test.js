@@ -38,6 +38,19 @@ test('storage saves versioned records and looks them up by program exercise id',
   assert.equal(storage.getLastExerciseData('press_main', 'one').exerciseId, 'barbell_bench_press');
 });
 
+test('an interrupted workout draft is separate from completed workout history', () => {
+  values.clear();
+  storage.saveActiveWorkoutDraft({
+    activeSessionId: 'A', activeProgramId: 'custom', workoutSession: { id: 'A', name: 'Séance A' },
+    exerciseSets: { press: [{ weight: 40, reps: 8, done: true }] },
+  });
+
+  assert.equal(storage.getWorkouts().length, 0);
+  assert.equal(storage.getActiveWorkoutDraft().exerciseSets.press[0].weight, 40);
+  storage.clearActiveWorkoutDraft();
+  assert.equal(storage.getActiveWorkoutDraft(), null);
+});
+
 test('storage updates a recorded workout in place without changing its date or id', () => {
   values.clear();
   const saved = storage.saveWorkout({
@@ -204,4 +217,30 @@ test('supplements persist daily intake and are included in full backups', () => 
   assert.deepEqual(supplements.getTakenSupplementIds(date), [creatine.id]);
   assert.equal(supplements.getSupplementStatus(date).complete, false);
   assert.equal(supplements.getSupplements()[1].id, omega.id);
+});
+
+test('backup summary includes supplements and edits to the built-in program', () => {
+  values.clear();
+  supplements.addSupplement({ name: 'Créatine' });
+  assert.deepEqual(storage.getExportSummary(), {
+    workouts: 0, programs: 0, supplements: 1, baseProgramCustomized: false,
+  });
+
+  const editedBase = structuredClone(DEFAULT_PROGRAM);
+  editedBase.name = 'Mon programme principal';
+  programs.saveProgram(editedBase);
+  assert.equal(storage.getExportSummary().baseProgramCustomized, true);
+});
+
+test('versioned imports reject unsupported future backup versions', () => {
+  values.clear();
+  const fullBackup = JSON.parse(storage.exportData());
+  fullBackup.version += 1;
+  assert.equal(storage.getImportSummary(JSON.stringify(fullBackup)), null);
+  assert.equal(storage.importData(JSON.stringify(fullBackup)), false);
+
+  const programsBackup = JSON.parse(storage.exportProgramsData());
+  programsBackup.version += 1;
+  assert.equal(storage.getProgramsImportSummary(JSON.stringify(programsBackup)), null);
+  assert.equal(storage.importProgramsData(JSON.stringify(programsBackup)), false);
 });

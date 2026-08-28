@@ -6,6 +6,7 @@ import { getNextSession, getLastWorkout, getWorkouts } from './storage.js';
 import { getActiveProgram } from './services/program-storage.js';
 import { getSupplementStatus } from './supplements.js';
 import { localizeText, t } from './i18n.js';
+import { localDateToDayNumber } from './services/date-utils.js';
 
 const NOTIFICATION_TAG = 'muscu-daily-status';
 const REST_TIMER_NOTIFICATION_TAG = 'muscu-rest-timer';
@@ -71,18 +72,27 @@ export async function initNotifications() {
       let granted = false;
 
       if (native) {
-        // The native plugin handles permission request internally in show()
-        granted = true;
+        try {
+          const permission = native.requestPermissions
+            ? await native.requestPermissions()
+            : { display: 'granted' };
+          granted = permission?.display === 'granted';
+        } catch (error) {
+          console.warn('Unable to request native notification permission:', error);
+        }
       } else {
-        const permission = await Notification.requestPermission();
-        granted = (permission === 'granted');
+        try {
+          const permission = await Notification.requestPermission();
+          granted = permission === 'granted';
+        } catch (error) {
+          console.warn('Unable to request notification permission:', error);
+        }
       }
 
       if (granted) {
-        notificationsEnabled = true;
-        localStorage.setItem('muscu_notif_enabled', 'true');
         if (!native) await registerSW();
-        await showDailyNotification();
+        notificationsEnabled = await showDailyNotification();
+        localStorage.setItem('muscu_notif_enabled', String(notificationsEnabled));
         updateNotifButton(btn);
       }
     }
@@ -90,11 +100,17 @@ export async function initNotifications() {
 
   // If already enabled, show/update notification
   if (notificationsEnabled) {
+    let displayed = false;
     if (native) {
-      await showDailyNotification();
+      displayed = await showDailyNotification();
     } else if (Notification.permission === 'granted') {
       await registerSW();
-      await showDailyNotification();
+      displayed = await showDailyNotification();
+    }
+    if (!displayed) {
+      notificationsEnabled = false;
+      localStorage.setItem('muscu_notif_enabled', 'false');
+      updateNotifButton(btn);
     }
   }
 }
@@ -186,8 +202,8 @@ export async function finishRestTimerNotification() {
   restTimerInterval = null;
 
   if (!restTimerNotificationsEnabled) return;
-  // Android's foreground service owns the countdown and emits its completion
-  // notification even when the WebView is in the background.
+  // Android's alarm owns the completion notification even when the WebView is
+  // in the background.
   if (getNativePlugin()?.startRestTimer) return;
   if (!swRegistration || Notification.permission !== 'granted') return;
 
@@ -263,14 +279,15 @@ async function showDailyNotification() {
     try {
       const result = await native.show({ title, body });
       console.log('[Notif] Native show result:', result);
+      return true;
     } catch (err) {
       console.error('[Notif] Native persistent notification failed:', err);
+      return false;
     }
-    return;
   }
 
   // Web fallback
-  if (!swRegistration) return;
+  if (!swRegistration) return false;
   try {
     await swRegistration.showNotification(title, {
       body,
@@ -279,8 +296,10 @@ async function showDailyNotification() {
       silent: true,
       renotify: false,
     });
+    return true;
   } catch (err) {
     console.warn('Web notification failed:', err);
+    return false;
   }
 }
 
@@ -308,6 +327,28 @@ async function cancelNotification() {
 // STATUS CALCULATION
 // ============================================
 
+export function getWeeklyRecommendation(workouts, sessionsPerWeek, now = new Date()) {
+  const target = Math.min(7, Math.max(1, Number(sessionsPerWeek) || 3));
+  const todayDay = localDateToDayNumber(now);
+  const weekStart = todayDay - ((todayDay + 3) % 7);
+  const dayIndex = todayDay - weekStart;
+  const completedThisWeek = workouts.filter((workout) => {
+    const day = localDateToDayNumber(workout.date);
+    return day >= weekStart && day <= todayDay;
+  });
+  const completedToday = completedThisWeek.some((workout) => localDateToDayNumber(workout.date) === todayDay);
+
+  if (completedThisWeek.length >= target) {
+    return { completedToday, dueToday: false, daysUntilNext: 7 - dayIndex };
+  }
+
+  const plannedDays = Array.from({ length: target }, (_, index) => Math.floor(index * 7 / target));
+  let nextPlannedDay = plannedDays[completedThisWeek.length];
+  if (completedToday) nextPlannedDay = Math.max(nextPlannedDay, dayIndex + 1);
+  const daysUntilNext = Math.max(0, nextPlannedDay - dayIndex);
+  return { completedToday, dueToday: daysUntilNext === 0, daysUntilNext };
+}
+
 function getDailyStatus() {
   const program = getActiveProgram();
   const workouts = getWorkouts().filter((workout) => workout.programId === program.id);
@@ -322,25 +363,25 @@ function getDailyStatus() {
     workoutStatus = { title: t('workoutToday', { name: localizeText(session.name) }), body: localizeText(session.subtitle) };
   } else {
     const sorted = [...workouts].sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
-    const lastDate = new Date(sorted[0].date);
-    lastDate.setHours(0, 0, 0, 0);
-    const daysDiff = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
-    const frequencyDays = program.trainingFrequency?.mode === 'weekly'
-      ? Math.ceil(7 / (program.trainingFrequency.sessionsPerWeek || 3))
-      : program.trainingFrequency?.intervalDays || 2;
+    const daysDiff = localDateToDayNumber(today) - localDateToDayNumber(sorted[0].date);
     const lastSessionId = sorted[0].sessionId || sorted[0].sessionType;
     const lastIndex = order.indexOf(lastSessionId);
     const nextType = order[(lastIndex === -1 ? 0 : lastIndex + 1) % order.length];
     const nextSession = program.sessions[nextType];
-    if (daysDiff >= frequencyDays) {
+    const weeklyRecommendation = program.trainingFrequency?.mode === 'weekly'
+      ? getWeeklyRecommendation(workouts, program.trainingFrequency.sessionsPerWeek, today)
+      : null;
+    const frequencyDays = program.trainingFrequency?.intervalDays || 2;
+    const dueToday = weeklyRecommendation?.dueToday ?? daysDiff >= frequencyDays;
+    if (dueToday) {
       workoutStatus = { title: t('workoutToday', { name: localizeText(nextSession.name) }), body: localizeText(nextSession.subtitle) };
     } else {
-      const daysUntilNext = frequencyDays - daysDiff;
+      const daysUntilNext = weeklyRecommendation?.daysUntilNext ?? frequencyDays - daysDiff;
       const nextLabel = daysUntilNext === 1
         ? t('tomorrowWorkout', { name: localizeText(nextSession.name) })
         : t('nextWorkoutInDays', { count: daysUntilNext, name: localizeText(nextSession.name) });
       workoutStatus = {
-        title: daysDiff === 0 ? t('workoutCompletedToday') : t('restToday'),
+        title: (weeklyRecommendation?.completedToday ?? daysDiff === 0) ? t('workoutCompletedToday') : t('restToday'),
         body: `${nextLabel} — ${localizeText(nextSession.subtitle)}`,
       };
     }
@@ -364,6 +405,7 @@ function updateNotifButton(btn) {
   } else {
     btn.classList.remove('active');
   }
+  btn.setAttribute('aria-pressed', String(notificationsEnabled));
 }
 
 function updateRestTimerNotifButton(btn) {

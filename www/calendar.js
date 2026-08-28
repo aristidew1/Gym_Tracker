@@ -7,6 +7,7 @@ import { getActiveProgram, getProgramById } from './services/program-storage.js'
 import { getExerciseDisplayName } from './data.js';
 import { getLanguage, localizeText, t } from './i18n.js';
 import { getSupplementStatus } from './supplements.js';
+import { escapeHtml } from './services/html.js';
 
 // ── Internal navigation state ───────────────────────────────────────────────
 const now = new Date();
@@ -213,7 +214,7 @@ export function showDayDetail(dateStr) {
     // ── Header ────────────────────────────────────────────────────────────
     html += `
       <div class="calendar-detail-header">
-        <h3>${localizeText(sessionName)}${sessionSubtitle ? ' — ' + localizeText(sessionSubtitle) : ''}</h3>
+        <h3>${escapeHtml(localizeText(sessionName))}${sessionSubtitle ? ` — ${escapeHtml(localizeText(sessionSubtitle))}` : ''}</h3>
         <span class="detail-date">${formattedDate}</span>
       </div>`;
 
@@ -231,8 +232,8 @@ export function showDayDetail(dateStr) {
 
         html += `
       <div class="detail-exercise">
-        <span class="detail-ex-name">${getExerciseDisplayName(ex.exerciseId, ex.exerciseName)}</span>
-        <span class="detail-ex-data">${setsStr}</span>
+        <span class="detail-ex-name">${escapeHtml(getExerciseDisplayName(ex.exerciseId, ex.exerciseName))}</span>
+        <span class="detail-ex-data">${escapeHtml(setsStr)}</span>
       </div>`;
       });
     }
@@ -240,8 +241,8 @@ export function showDayDetail(dateStr) {
     // ── Workout actions ───────────────────────────────────────────────────
     html += `
       <div class="calendar-workout-actions">
-        <button class="btn-edit-recorded-workout" data-id="${workout.id}">✎ ${t('editRecordedWorkout')}</button>
-        <button class="btn-delete-workout" data-id="${workout.id}">${t('deleteRecordedWorkout')}</button>
+        <button class="btn-edit-recorded-workout" data-id="${escapeHtml(workout.id)}">✎ ${t('editRecordedWorkout')}</button>
+        <button class="btn-delete-workout" data-id="${escapeHtml(workout.id)}">${t('deleteRecordedWorkout')}</button>
       </div>`;
   });
 

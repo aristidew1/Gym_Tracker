@@ -30,7 +30,7 @@ public class PersistentNotificationPlugin extends Plugin {
     @Override
     public void load() {
         Log.d(TAG, "PersistentNotificationPlugin loaded");
-        PersistentNotificationService.createNotificationChannel(getContext());
+        PersistentNotificationManager.createNotificationChannel(getContext());
     }
 
     @PluginMethod
@@ -72,7 +72,7 @@ public class PersistentNotificationPlugin extends Plugin {
         Log.d(TAG, "doShow: title=" + title + " body=" + body);
 
         try {
-            PersistentNotificationService.start(getContext(), title, body);
+            PersistentNotificationManager.show(getContext(), title, body);
             Log.d(TAG, "Persistent foreground notification started");
             call.resolve();
         } catch (RuntimeException exception) {
@@ -83,7 +83,7 @@ public class PersistentNotificationPlugin extends Plugin {
 
     @PluginMethod
     public void cancel(PluginCall call) {
-        PersistentNotificationService.stop(getContext());
+        PersistentNotificationManager.cancel(getContext());
         Log.d(TAG, "Persistent foreground notification stopped");
         call.resolve();
     }
@@ -110,7 +110,7 @@ public class PersistentNotificationPlugin extends Plugin {
 
     private void doStartRestTimer(PluginCall call) {
         try {
-            RestTimerNotificationService.start(
+            RestTimerNotificationManager.start(
                 getContext(),
                 // Capacitor decodes JavaScript integer values as Integer, not
                 // Long. Reading it as a Long made every rest timer fall back
@@ -130,7 +130,7 @@ public class PersistentNotificationPlugin extends Plugin {
 
     @PluginMethod
     public void stopRestTimer(PluginCall call) {
-        RestTimerNotificationService.cancel(getContext());
+        RestTimerNotificationManager.cancel(getContext());
         call.resolve();
     }
 
