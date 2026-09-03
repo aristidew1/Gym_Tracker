@@ -15,6 +15,8 @@ import {
   toggleDisclosure,
 } from './services/program-builder-view.js';
 import { escapeHtml } from './services/html.js';
+import { exportProgramData } from './storage.js';
+import { formatLocalDate } from './services/date-utils.js';
 
 const SESSION_COLORS = ['#4d7cff', '#ff8a3d', '#ff4d6a', '#3ddc84', '#e7c65c', '#45c4d9'];
 const PARAMETER_LABELS = {
@@ -38,6 +40,60 @@ function formatFrequency(frequency) {
   }
   const days = frequency?.intervalDays || 2;
   return days === 1 ? t('everyDay') : t('everyDays', { count: days });
+}
+
+export function getProgramMenuPlacement({ menuHeight, spaceAbove, spaceBelow }) {
+  return menuHeight > spaceBelow && spaceAbove > spaceBelow ? 'up' : 'down';
+}
+
+function positionProgramActionMenu(card) {
+  const menu = card?.querySelector('.program-action-menu');
+  if (!menu) return;
+  card.classList.remove('actions-open-up');
+  const cardRect = card.getBoundingClientRect();
+  const menuHeight = menu.getBoundingClientRect().height;
+  const placement = getProgramMenuPlacement({
+    menuHeight,
+    spaceAbove: cardRect.top - 12,
+    spaceBelow: window.innerHeight - cardRect.bottom - 12,
+  });
+  card.classList.toggle('actions-open-up', placement === 'up');
+}
+
+function makeProgramFileName(program) {
+  const slug = String(program.name || 'programme')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase() || 'programme';
+  return `muscu_tracker_${slug}_${formatLocalDate()}.json`;
+}
+
+async function shareProgram(programId) {
+  const program = getPrograms().find((entry) => entry.id === programId);
+  const data = exportProgramData(programId);
+  if (!program || !data) throw new Error(t('programNotFound'));
+  const fileName = makeProgramFileName(program);
+
+  if (window.Capacitor?.isNativePlatform()) {
+    const Filesystem = window.Capacitor.Plugins.Filesystem;
+    const Share = window.Capacitor.Plugins.Share;
+    const result = await Filesystem.writeFile({ path: fileName, data, directory: 'CACHE', encoding: 'utf8' });
+    await Share.share({
+      title: localizeText(program.name),
+      text: t('shareProgram'),
+      url: result.uri,
+      dialogTitle: t('shareProgram'),
+    });
+    return;
+  }
+
+  const file = new File([data], fileName, { type: 'application/json' });
+  if (!navigator.share || (navigator.canShare && !navigator.canShare({ files: [file] }))) {
+    throw new Error(t('shareUnavailable'));
+  }
+  await navigator.share({ title: localizeText(program.name), files: [file] });
 }
 
 function defaultPrescription() {
@@ -130,7 +186,7 @@ export function renderPrograms() {
 function renderProgramCard(program, activeId) {
   const active = program.id === activeId;
   const sessionCount = program.sessionOrder.length;
-  const actions = `${active ? '' : `<button data-action="activate" data-program-id="${escapeHtml(program.id)}">▶ ${t('activate')}</button>`}<button data-action="duplicate" data-program-id="${escapeHtml(program.id)}">⧉ ${t('duplicate')}</button><button data-action="edit" data-program-id="${escapeHtml(program.id)}">✎ ${t('edit')}</button>${program.builtIn ? '' : `<button class="danger" data-action="delete" data-program-id="${escapeHtml(program.id)}">⌫ ${t('delete')}</button>`}`;
+  const actions = `${active ? '' : `<button data-action="activate" data-program-id="${escapeHtml(program.id)}">▶ ${t('activate')}</button>`}<button data-action="duplicate" data-program-id="${escapeHtml(program.id)}">⧉ ${t('duplicate')}</button><button data-action="edit" data-program-id="${escapeHtml(program.id)}">✎ ${t('edit')}</button><button class="program-share-action" data-action="share" data-program-id="${escapeHtml(program.id)}">↗ ${t('shareProgram')}</button><button class="danger" data-action="delete" data-program-id="${escapeHtml(program.id)}">⌫ ${t('delete')}</button>`;
   return `<article class="program-card ${active ? 'active-program' : ''}">
     <div class="program-card-accent" style="background:${escapeHtml(program.sessions[program.sessionOrder[0]]?.color || '#4d7cff')}"></div>
     <div class="program-card-main"><div class="program-card-title-row"><h2>${escapeHtml(localizeText(program.name))}</h2>${active ? `<span class="active-pill">${t('active')}</span>` : ''}</div><p>${escapeHtml(localizeText(program.description) || `${sessionCount} ${t('workouts').toLowerCase()}`)}</p><span class="program-meta">${sessionCount} ${t('workouts').toLowerCase()} · ${escapeHtml(formatFrequency(program.trainingFrequency))} · ${escapeHtml(program.goal === 'custom' ? t('custom') : t(program.goal || 'custom'))}</span></div>
@@ -406,7 +462,7 @@ function toggleEditorDisclosure(action, button) {
   renderEditor();
 }
 
-function handleClick(event) {
+async function handleClick(event) {
   const button = event.target.closest('[data-action]');
   if (!button) return;
   const action = button.dataset.action;
@@ -416,14 +472,21 @@ function handleClick(event) {
       const card = button.closest('.program-card');
       const willOpen = !card?.classList.contains('actions-open');
       getContainer().querySelectorAll('.program-card.actions-open').forEach((entry) => entry.classList.remove('actions-open'));
-      if (willOpen) card?.classList.add('actions-open');
+      if (willOpen && card) {
+        card.classList.add('actions-open');
+        positionProgramActionMenu(card);
+      }
       return;
     }
     if (action === 'programs-back') { ui.screen = 'list'; ui.editing = null; renderPrograms(); resetDocumentScroll(); }
     if (action === 'activate') setActiveProgram(button.dataset.programId);
     if (action === 'duplicate') openEditor(duplicateProgram(button.dataset.programId));
     if (action === 'edit') { const program = getPrograms().find((entry) => entry.id === button.dataset.programId); if (program) openEditor(program); }
-    if (action === 'delete' && window.confirm(t('programDeleteConfirm'))) deleteProgram(button.dataset.programId);
+    if (action === 'share') await shareProgram(button.dataset.programId);
+    if (action === 'delete') {
+      const program = getPrograms().find((entry) => entry.id === button.dataset.programId);
+      if (program && window.confirm(t('programDeleteConfirm', { name: program.name }))) deleteProgram(program.id);
+    }
     if (action === 'editor-save') { syncEditor(); const saved = saveProgram(ui.editing); setActiveProgram(saved.id); ui.screen = 'list'; renderPrograms(); resetDocumentScroll(); }
     if (action === 'editor-undo') undoEditor();
     if (action === 'editor-redo') redoEditor();

@@ -4,6 +4,7 @@ import { t } from '../i18n.js';
 
 const PROGRAMS_KEY = 'muscu_programs';
 const ACTIVE_PROGRAM_KEY = 'muscu_active_program_id';
+const BASE_PROGRAM_DELETED_KEY = 'muscu_base_program_deleted';
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -62,8 +63,9 @@ function makeUniqueProgramName(name, existingNames) {
 export function getPrograms() {
   const storedPrograms = readStoredPrograms();
   const savedBaseProgram = storedPrograms.find((program) => program.id === DEFAULT_PROGRAM.id);
+  const baseProgramDeleted = localStorage.getItem(BASE_PROGRAM_DELETED_KEY) === 'true';
   return [
-    { ...clone(savedBaseProgram || DEFAULT_PROGRAM), builtIn: true },
+    ...(baseProgramDeleted ? [] : [{ ...clone(savedBaseProgram || DEFAULT_PROGRAM), builtIn: true }]),
     ...storedPrograms
       .filter((program) => program.id !== DEFAULT_PROGRAM.id)
       .map((program) => ({ ...clone(program), builtIn: false })),
@@ -82,11 +84,11 @@ export function getProgramById(id) {
 
 export function getActiveProgramId() {
   const savedId = localStorage.getItem(ACTIVE_PROGRAM_KEY);
-  return getProgramById(savedId)?.id || DEFAULT_PROGRAM.id;
+  return getProgramById(savedId)?.id || getPrograms()[0]?.id || null;
 }
 
 export function getActiveProgram() {
-  return getProgramById(getActiveProgramId()) || { ...clone(DEFAULT_PROGRAM), builtIn: true };
+  return getProgramById(getActiveProgramId());
 }
 
 export function saveProgram(program) {
@@ -104,6 +106,7 @@ export function saveProgram(program) {
     programs[index] = next;
   }
   writeStoredPrograms(programs);
+  if (next.id === DEFAULT_PROGRAM.id) localStorage.removeItem(BASE_PROGRAM_DELETED_KEY);
   emitChange();
   return clone(next);
 }
@@ -119,10 +122,17 @@ export function duplicateProgram(id) {
 }
 
 export function deleteProgram(id) {
-  if (id === DEFAULT_PROGRAM.id) throw new Error(t('baseProgramDelete'));
+  const availablePrograms = getPrograms();
+  if (!availablePrograms.some((program) => program.id === id)) throw new Error(t('programNotFound'));
+  if (availablePrograms.length === 1) throw new Error(t('lastProgramDelete'));
   const programs = readStoredPrograms().filter((program) => program.id !== id);
   writeStoredPrograms(programs);
-  if (localStorage.getItem(ACTIVE_PROGRAM_KEY) === id) localStorage.setItem(ACTIVE_PROGRAM_KEY, DEFAULT_PROGRAM.id);
+  if (id === DEFAULT_PROGRAM.id) localStorage.setItem(BASE_PROGRAM_DELETED_KEY, 'true');
+  if (localStorage.getItem(ACTIVE_PROGRAM_KEY) === id || !getProgramById(localStorage.getItem(ACTIVE_PROGRAM_KEY))) {
+    const fallbackId = getPrograms()[0]?.id;
+    if (fallbackId) localStorage.setItem(ACTIVE_PROGRAM_KEY, fallbackId);
+    else localStorage.removeItem(ACTIVE_PROGRAM_KEY);
+  }
   emitChange();
 }
 
@@ -145,9 +155,13 @@ export function restorePrograms(programs, activeProgramId) {
 
   const nextPrograms = clone(migratedPrograms);
   writeStoredPrograms(nextPrograms);
-  const activeExists = activeProgramId === DEFAULT_PROGRAM.id
-    || nextPrograms.some((program) => program.id === activeProgramId);
-  localStorage.setItem(ACTIVE_PROGRAM_KEY, activeExists ? activeProgramId : DEFAULT_PROGRAM.id);
+  const includesBaseProgram = nextPrograms.some((program) => program.id === DEFAULT_PROGRAM.id);
+  localStorage.setItem(BASE_PROGRAM_DELETED_KEY, String(!includesBaseProgram));
+  const availablePrograms = getPrograms();
+  const activeExists = availablePrograms.some((program) => program.id === activeProgramId);
+  const fallbackId = availablePrograms[0]?.id;
+  if (activeExists || fallbackId) localStorage.setItem(ACTIVE_PROGRAM_KEY, activeExists ? activeProgramId : fallbackId);
+  else localStorage.removeItem(ACTIVE_PROGRAM_KEY);
   emitChange();
   return true;
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { DEFAULT_PROGRAM, getResolvedExercise } from '../data/default-program.js';
-import { getNextPrescription } from '../services/progression-engine.js';
+import { getNextPrescription, getProgressionProximity } from '../services/progression-engine.js';
 import { migrateProgram, migrateWorkout, validateProgram, validateWorkout } from '../models/workout-schema.js';
 import { createBlankProgram } from '../programs.js';
 
@@ -84,4 +84,38 @@ test('double progression only proposes a load increase when all sets reach the t
   });
   assert.equal(result.changed, true);
   assert.equal(result.prescription.suggestedLoadIncrement, 2.5);
+});
+
+test('progression proximity flags an exercise one set away from the top of its rep range', () => {
+  const proximity = getProgressionProximity({
+    prescription: { setCount: 4, repetitionRange: { min: 8, max: 12 } },
+    progressionRule: 'double_progression',
+    workoutHistory: [{ sets: [{ reps: 12, completed: true }, { reps: 12, completed: true }, { reps: 12, completed: true }, { reps: 10, completed: true }] }],
+  });
+  assert.deepEqual(proximity, { ready: false, setsAtMax: 3, setCount: 4, repMax: 12 });
+});
+
+test('progression proximity marks an exercise ready once every set reaches the top of its rep range', () => {
+  const proximity = getProgressionProximity({
+    prescription: { setCount: 2, repetitionRange: { min: 8, max: 12 } },
+    progressionRule: 'double_progression',
+    workoutHistory: [{ sets: [{ reps: 12, completed: true }, { reps: 12, completed: true }] }],
+  });
+  assert.deepEqual(proximity, { ready: true, setsAtMax: 2, setCount: 2, repMax: 12 });
+});
+
+test('progression proximity ignores exercises still more than one set away or without double progression', () => {
+  const farFromCap = getProgressionProximity({
+    prescription: { setCount: 4, repetitionRange: { min: 8, max: 12 } },
+    progressionRule: 'double_progression',
+    workoutHistory: [{ sets: [{ reps: 12, completed: true }, { reps: 9, completed: true }, { reps: 8, completed: true }, { reps: 10, completed: true }] }],
+  });
+  assert.equal(farFromCap, null);
+
+  const noRule = getProgressionProximity({
+    prescription: { setCount: 2, repetitionRange: { min: 8, max: 12 } },
+    progressionRule: null,
+    workoutHistory: [{ sets: [{ reps: 12, completed: true }, { reps: 12, completed: true }] }],
+  });
+  assert.equal(noRule, null);
 });

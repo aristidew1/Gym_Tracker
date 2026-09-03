@@ -19,6 +19,7 @@ import {
 } from './services/program-storage.js';
 import { getSupplementsBackup, restoreSupplementsBackup } from './supplements.js';
 import { localDateToDayNumber, parseLocalDate } from './services/date-utils.js';
+import { getProgressionProximity } from './services/progression-engine.js';
 
 const STORAGE_KEY = 'muscu_workouts';
 const ACTIVE_WORKOUT_KEY = 'muscu_active_workout';
@@ -167,7 +168,7 @@ export function getTrackedExercises() {
 }
 
 export function getNextSession(program = DEFAULT_PROGRAM) {
-  const order = program.sessionOrder || [];
+  const order = program?.sessionOrder || [];
   if (order.length === 0) return null;
   const workouts = getWorkouts()
     .filter((workout) => !workout.programId || workout.programId === program.id)
@@ -239,6 +240,72 @@ export function getNewPersonalRecords(exercises) {
     }
     return [];
   });
+}
+
+// All-time bests per exercise, independent of any single workout. Powers the
+// Stats overview so records stay visible without having to hunt for them.
+export function getAllTimePersonalRecords() {
+  const bests = new Map();
+  [...getWorkouts()]
+    .sort((a, b) => new Date(a.savedAt || a.date) - new Date(b.savedAt || b.date))
+    .forEach((workout) => {
+      (workout.exercises || []).forEach((exercise) => {
+        if (!exercise.exerciseId) return;
+        const current = getExerciseBestSet(exercise);
+        if (current.maxWeight <= 0 && current.maxReps <= 0) return;
+        const name = exercise.exerciseName || getExerciseDisplayName(exercise.exerciseId);
+        const entry = bests.get(exercise.exerciseId) || {
+          exerciseId: exercise.exerciseId, exerciseName: name, maxWeight: 0, maxWeightDate: null, maxReps: 0, maxRepsDate: null,
+        };
+        entry.exerciseName = name;
+        if (current.maxWeight > entry.maxWeight) {
+          entry.maxWeight = current.maxWeight;
+          entry.maxWeightDate = workout.date;
+        }
+        if (current.maxReps > entry.maxReps) {
+          entry.maxReps = current.maxReps;
+          entry.maxRepsDate = workout.date;
+        }
+        bests.set(exercise.exerciseId, entry);
+      });
+    });
+
+  return [...bests.values()]
+    .map((entry) => (entry.maxWeight > 0
+      ? { exerciseId: entry.exerciseId, exerciseName: entry.exerciseName, type: 'weight', value: entry.maxWeight, date: entry.maxWeightDate }
+      : { exerciseId: entry.exerciseId, exerciseName: entry.exerciseName, type: 'reps', value: entry.maxReps, date: entry.maxRepsDate }))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+// Exercises whose last logged workout is at most one set away from hitting
+// the top of its rep range under double progression — i.e. about to unlock
+// (or already ready for) a load increase.
+export function getProgressionCandidates() {
+  const latestByExercise = new Map();
+  [...getWorkouts()]
+    .sort((a, b) => new Date(a.savedAt || a.date) - new Date(b.savedAt || b.date))
+    .forEach((workout) => {
+      (workout.exercises || []).forEach((exercise) => {
+        if (!exercise.exerciseId || !exercise.prescription?.repetitionRange) return;
+        latestByExercise.set(exercise.exerciseId, {
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName || getExerciseDisplayName(exercise.exerciseId),
+          prescription: exercise.prescription,
+          sets: exercise.sets,
+        });
+      });
+    });
+
+  return [...latestByExercise.values()]
+    .flatMap((entry) => {
+      const proximity = getProgressionProximity({
+        prescription: entry.prescription,
+        progressionRule: entry.prescription.progressionRuleId,
+        workoutHistory: [{ sets: entry.sets }],
+      });
+      return proximity ? [{ exerciseId: entry.exerciseId, exerciseName: entry.exerciseName, ...proximity }] : [];
+    })
+    .sort((a, b) => Number(b.ready) - Number(a.ready) || b.setsAtMax - a.setsAtMax);
 }
 
 function dateToDayNumber(dateValue) {
@@ -323,6 +390,19 @@ export function exportProgramsData() {
     exportedAt: new Date().toISOString(),
     programs,
     activeProgramId: getActiveProgramId(),
+  }, null, 2);
+}
+
+export function exportProgramData(programId) {
+  const program = getPrograms().find((entry) => entry.id === programId);
+  if (!program) return null;
+  const { builtIn, ...exportedProgram } = program;
+  return JSON.stringify({
+    format: PROGRAM_EXPORT_FORMAT,
+    version: PROGRAM_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    programs: [exportedProgram],
+    activeProgramId: exportedProgram.id,
   }, null, 2);
 }
 

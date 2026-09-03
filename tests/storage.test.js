@@ -188,6 +188,16 @@ test('program-only backup adds programs without changing workout history or the 
   assert.ok(programs.getPrograms().some((program) => program.name === 'Programme sans séances (2)'));
 });
 
+test('a single program can be exported for sharing', () => {
+  values.clear();
+  const exported = JSON.parse(storage.exportProgramData(DEFAULT_PROGRAM.id));
+  assert.equal(exported.format, 'muscu-tracker-programs');
+  assert.equal(exported.programs.length, 1);
+  assert.equal(exported.programs[0].id, DEFAULT_PROGRAM.id);
+  assert.equal(exported.activeProgramId, DEFAULT_PROGRAM.id);
+  assert.equal('workouts' in exported, false);
+});
+
 test('storage still imports the legacy workout-array export format', () => {
   values.clear();
   const legacyExport = JSON.stringify([{
@@ -230,6 +240,56 @@ test('backup summary includes supplements and edits to the built-in program', ()
   editedBase.name = 'Mon programme principal';
   programs.saveProgram(editedBase);
   assert.equal(storage.getExportSummary().baseProgramCustomized, true);
+});
+
+test('all-time personal records track the best set ever logged per exercise, dated when it was first reached', () => {
+  values.clear();
+  storage.saveWorkout({
+    programId: 'custom', sessionId: 'one', date: '2026-01-05',
+    exercises: [{ programExerciseId: 'bench', exerciseId: 'barbell_bench_press', exerciseName: 'Développé couché', sets: [{ weight: 80, reps: 8, completed: true }] }],
+  });
+  storage.saveWorkout({
+    programId: 'custom', sessionId: 'one', date: '2026-02-05',
+    exercises: [{ programExerciseId: 'bench', exerciseId: 'barbell_bench_press', exerciseName: 'Développé couché', sets: [{ weight: 85, reps: 6, completed: true }] }],
+  });
+  storage.saveWorkout({
+    programId: 'custom', sessionId: 'one', date: '2026-03-05',
+    exercises: [{ programExerciseId: 'bench', exerciseId: 'barbell_bench_press', exerciseName: 'Développé couché', sets: [{ weight: 82, reps: 10, completed: true }] }],
+  });
+
+  const records = storage.getAllTimePersonalRecords();
+  assert.deepEqual(records, [
+    { exerciseId: 'barbell_bench_press', exerciseName: 'Développé couché', type: 'weight', value: 85, date: '2026-02-05' },
+  ]);
+});
+
+test('progression candidates surface exercises within one set of the top of their rep range', () => {
+  values.clear();
+  storage.saveWorkout({
+    programId: 'custom', sessionId: 'one', date: '2026-01-01',
+    exercises: [
+      {
+        programExerciseId: 'squat', exerciseId: 'barbell_back_squat', exerciseName: 'Squat',
+        prescription: { setCount: 4, repetitionRange: { min: 3, max: 5 }, progressionRuleId: 'double_progression' },
+        sets: [{ reps: 5, completed: true }, { reps: 5, completed: true }, { reps: 5, completed: true }, { reps: 4, completed: true }],
+      },
+      {
+        programExerciseId: 'curl', exerciseId: 'dumbbell_curl', exerciseName: 'Curl haltères',
+        prescription: { setCount: 3, repetitionRange: { min: 8, max: 12 }, progressionRuleId: 'double_progression' },
+        sets: [{ reps: 10, completed: true }, { reps: 9, completed: true }, { reps: 8, completed: true }],
+      },
+      {
+        programExerciseId: 'plank', exerciseId: 'plank', exerciseName: 'Gainage',
+        prescription: { setCount: 2, repetitionRange: { min: 30, max: 60 }, progressionRuleId: null },
+        sets: [{ reps: 60, completed: true }, { reps: 60, completed: true }],
+      },
+    ],
+  });
+
+  const candidates = storage.getProgressionCandidates();
+  assert.deepEqual(candidates, [
+    { exerciseId: 'barbell_back_squat', exerciseName: 'Squat', ready: false, setsAtMax: 3, setCount: 4, repMax: 5 },
+  ]);
 });
 
 test('versioned imports reject unsupported future backup versions', () => {

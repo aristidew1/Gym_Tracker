@@ -1,6 +1,6 @@
 // Non-destructive live workout UX layer.
 // Keeps a live workout in memory while the user browses the app. Each rest
-// countdown opens fullscreen first and can then be explicitly reduced.
+// countdown stays compact while the user trains and can be expanded on demand.
 
 const patchState = {
   liveWorkout: false,
@@ -45,8 +45,15 @@ function injectActiveWorkoutStyles() {
       animation: none !important;
     }
 
+    /* 84px is a first-frame fallback for before data/active-workout-stack-fix.js
+       measures the timer's real height (it grows with the text-size accessibility
+       setting or a long duration string) and refines this via the CSS variable. */
     html.rest-timer-running:not(.rest-timer-fullscreen) .view.active {
-      padding-top: 84px !important;
+      padding-top: var(--workout-timer-view-offset, 84px) !important;
+    }
+
+    html.rest-timer-running .btn-rest-timer {
+      display: none !important;
     }
 
     .rest-timer-overlay .timer-circle {
@@ -145,10 +152,10 @@ function injectActiveWorkoutStyles() {
     }
 
     .rest-timer-overlay.timer-fullscreen .btn-timer-expand {
-      width: auto !important;
+      width: 48px !important;
       min-width: 48px !important;
-      padding-inline: 14px !important;
-      font-size: .82rem !important;
+      padding-inline: 0 !important;
+      font-size: 1.08rem !important;
     }
 
     html.light-theme .rest-timer-overlay:not(.timer-fullscreen) {
@@ -320,12 +327,25 @@ function setView(viewName, { workout = false } = {}) {
   document.body.scrollTop = 0;
 }
 
+// setView() only toggles which .view element is visible: it deliberately
+// avoids app.js's doNavigate(), which would overwrite state.currentView
+// (still 'workout' while a session is minimized) and misfire the "leave
+// workout" confirmation. That means the target screen's own data render
+// never runs through any of these browsing-navigation paths, leaving it
+// exactly as the static markup declares it — most visibly an empty
+// #supplements-content, since that view has no server-rendered fallback.
+// Ask app.js to render it explicitly instead.
+function requestViewRender(viewName) {
+  window.dispatchEvent(new CustomEvent('browsing:view-render-requested', { detail: { view: viewName } }));
+}
+
 function browseAwayFromWorkout(viewName = 'home') {
   if (!patchState.liveWorkout) return;
   patchState.browsing = true;
   patchState.browsingView = viewName;
   setView(viewName);
   setBannerVisible(true);
+  requestViewRender(viewName);
 }
 
 function resumeWorkout() {
@@ -378,9 +398,9 @@ function syncTimerExpandButton() {
   if (!button) return;
   const french = isFrench();
   if (patchState.timerFullscreen) {
-    button.textContent = french ? 'Réduire' : 'Compact';
-    button.setAttribute('aria-label', french ? 'Réduire le compte à rebours' : 'Use compact countdown');
-    button.title = french ? 'Mode compact' : 'Compact mode';
+    button.textContent = '↙';
+    button.setAttribute('aria-label', french ? 'Revenir au minuteur compact' : 'Return to compact timer');
+    button.title = french ? 'Minuteur compact' : 'Compact timer';
   } else {
     button.textContent = '⛶';
     button.setAttribute('aria-label', french ? 'Compte à rebours en plein écran' : 'Fullscreen countdown');
@@ -405,10 +425,9 @@ function observeTimer() {
   const sync = () => {
     const running = overlay.classList.contains('active');
 
-    // A new rest period should be immersive by default, as it was before the
-    // compact timer was introduced. `wasRunning` means a user reduction stays
-    // reduced for the rest of this same countdown.
-    if (running && !wasRunning) setTimerFullscreen(true);
+    // A new rest period must not interrupt the workout. Fullscreen remains an
+    // explicit choice through the expand button.
+    if (running && !wasRunning) setTimerFullscreen(false);
 
     document.documentElement.classList.toggle('rest-timer-running', running);
     if (!running && patchState.timerFullscreen) setTimerFullscreen(false);
@@ -482,6 +501,7 @@ function installNavigationGuards() {
       const view = navButton.dataset.view || 'home';
       patchState.browsingView = view;
       setView(view);
+      requestViewRender(view);
       return;
     }
 
@@ -490,6 +510,7 @@ function installNavigationGuards() {
       event.stopImmediatePropagation();
       patchState.browsingView = 'home';
       setView('home');
+      requestViewRender('home');
       return;
     }
 
@@ -498,6 +519,7 @@ function installNavigationGuards() {
       event.stopImmediatePropagation();
       patchState.browsingView = 'supplements';
       setView('supplements');
+      requestViewRender('supplements');
     }
   }, true);
 

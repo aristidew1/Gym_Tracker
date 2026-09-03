@@ -28,6 +28,7 @@ import {
   importData,
   importProgramsData,
   getWorkouts,
+  getNewPersonalRecords,
   clearActiveWorkoutDraft,
   getActiveWorkoutDraft,
   saveActiveWorkoutDraft,
@@ -43,11 +44,14 @@ import {
   updateNotification,
 } from './notifications.js';
 import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
-import { getActiveProgram, getProgramById, setActiveProgram } from './services/program-storage.js';
+import { getActiveProgram, getProgramById, restorePrograms, saveProgram, setActiveProgram } from './services/program-storage.js';
+import { getOnboardingProgramTemplate } from './data/onboarding-programs.js';
 import { buildAiProgramPrompt } from './services/ai-program-template.js';
 import { copyText } from './services/clipboard.js';
 import { formatLocalDate, localDateToDayNumber } from './services/date-utils.js';
 import { escapeHtml } from './services/html.js';
+import { insertNotePrompt } from './services/note-editor.js';
+import { getExerciseCompletionState, getWorkoutCompletionProgress } from './services/workout-progress.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
 
 // ============================================
@@ -68,11 +72,82 @@ const state = {
   timerTotal: 0,
   timerRemaining: 0,
   timerEndsAt: null,
+  workoutNote: '',
+  exerciseNotes: {},
+  openNoteEditors: new Set(),
   confirmCallback: null,
 };
 
 const ONBOARDING_KEY = 'muscu_onboarding_completed';
 const THEME_KEY = 'muscu_theme';
+const ACCESSIBILITY_KEY = 'muscu_accessibility';
+const SEEN_PROGRAM_NOTES_KEY = 'muscu_seen_program_notes';
+
+function getSeenProgramNotes() {
+  try {
+    const value = JSON.parse(localStorage.getItem(SEEN_PROGRAM_NOTES_KEY));
+    return Array.isArray(value) ? new Set(value) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function markProgramNoteSeen(noteKey) {
+  const seen = getSeenProgramNotes();
+  if (seen.has(noteKey)) return;
+  seen.add(noteKey);
+  localStorage.setItem(SEEN_PROGRAM_NOTES_KEY, JSON.stringify([...seen]));
+}
+
+function getAccessibilityPreferences() {
+  try {
+    return {
+      textSize: 'normal', highContrast: false, reducedMotion: false, haptics: true, keepScreenAwake: false,
+      ...JSON.parse(localStorage.getItem(ACCESSIBILITY_KEY) || '{}'),
+    };
+  } catch { return { textSize: 'normal', highContrast: false, reducedMotion: false, haptics: true, keepScreenAwake: false }; }
+}
+
+function setAccessibilityPreferences(next) {
+  localStorage.setItem(ACCESSIBILITY_KEY, JSON.stringify(next));
+  applyAccessibilityPreferences(next);
+  void syncWorkoutWakeLock(next);
+}
+
+function applyAccessibilityPreferences(preferences = getAccessibilityPreferences()) {
+  const root = document.documentElement;
+  root.dataset.textSize = ['normal', 'large', 'xlarge'].includes(preferences.textSize) ? preferences.textSize : 'normal';
+  root.classList.toggle('high-contrast', Boolean(preferences.highContrast));
+  root.classList.toggle('reduce-motion', Boolean(preferences.reducedMotion));
+}
+
+let workoutWakeLock = null;
+
+async function syncWorkoutWakeLock(preferences = getAccessibilityPreferences()) {
+  const shouldStayAwake = Boolean(preferences.keepScreenAwake)
+    && Boolean(state.workoutSession)
+    && document.visibilityState !== 'hidden';
+
+  if (!shouldStayAwake) {
+    if (workoutWakeLock) {
+      const lock = workoutWakeLock;
+      workoutWakeLock = null;
+      try { await lock.release(); } catch { /* The system may already have released it. */ }
+    }
+    return;
+  }
+
+  if (workoutWakeLock || !navigator.wakeLock?.request) return;
+  try {
+    const lock = await navigator.wakeLock.request('screen');
+    workoutWakeLock = lock;
+    lock.addEventListener('release', () => {
+      if (workoutWakeLock === lock) workoutWakeLock = null;
+    });
+  } catch (error) {
+    console.warn('[Accessibility] Unable to keep the screen awake:', error);
+  }
+}
 
 function getTheme() {
   return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
@@ -87,6 +162,7 @@ function setTheme(theme) {
 }
 
 setTheme(getTheme());
+applyAccessibilityPreferences();
 
 function getWorkoutProgram() {
   const program = getProgramById(state.activeProgramId);
@@ -102,6 +178,81 @@ function getWorkoutProgram() {
 
 function getCurrentWorkoutSession() {
   return state.workoutSession;
+}
+
+function fitNoteTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 96), 180)}px`;
+}
+
+function createNoteComposer({ id, title, placeholder, value, previousValue = '', maxLength, icon, onInput }) {
+  const composer = document.createElement('details');
+  composer.className = 'note-composer';
+  composer.open = state.openNoteEditors.has(id);
+  const previousNote = String(previousValue || '').trim();
+
+  const renderValueState = () => {
+    const textarea = composer.querySelector('textarea');
+    const currentValue = textarea.value;
+    const hasContent = Boolean(currentValue.trim());
+    composer.classList.toggle('has-content', hasContent);
+    composer.querySelector('.note-composer-preview').textContent = hasContent
+      ? currentValue.trim().replace(/\s+/g, ' ')
+      : previousNote
+        ? t('previousNotePreview', { note: previousNote.replace(/\s+/g, ' ') })
+        : t('noteEmptyHint');
+    composer.querySelector('.note-composer-state').textContent = t(hasContent ? 'noteSaved' : 'noteAdd');
+    composer.querySelector('.note-composer-count').textContent = `${currentValue.length}/${maxLength}`;
+    fitNoteTextarea(textarea);
+  };
+
+  composer.innerHTML = `
+    <summary class="note-composer-summary">
+      <span class="note-composer-icon" aria-hidden="true">${icon}</span>
+      <span class="note-composer-heading"><strong>${escapeHtml(title)}</strong><span class="note-composer-preview"></span></span>
+      <span class="note-composer-state"></span>
+      <span class="note-composer-chevron" aria-hidden="true">⌄</span>
+    </summary>
+    <div class="note-composer-body">
+      ${previousNote ? `<div class="note-previous"><span><strong>${escapeHtml(t('previousNote'))}</strong><span>${escapeHtml(previousNote)}</span></span><button type="button" data-use-previous-note>${escapeHtml(t('reuseNote'))}</button></div>` : ''}
+      <textarea maxlength="${maxLength}" placeholder="${escapeHtml(placeholder)}" autocapitalize="sentences"></textarea>
+      <div class="note-composer-prompts" aria-label="${escapeHtml(t('noteQuickPrompts'))}">
+        ${['Technique', 'Pain', 'Equipment', 'Progress'].map((name) => `<button type="button" data-note-prompt="notePrompt${name}">＋ ${escapeHtml(t(`notePrompt${name}`))}</button>`).join('')}
+      </div>
+      <div class="note-composer-footer"><span><span class="note-save-dot" aria-hidden="true"></span>${escapeHtml(t('noteAutoSave'))}</span><span class="note-composer-count"></span></div>
+    </div>`;
+
+  const textarea = composer.querySelector('textarea');
+  textarea.value = value || '';
+  textarea.addEventListener('input', () => {
+    onInput(textarea.value);
+    renderValueState();
+  });
+  textarea.addEventListener('focus', () => {
+    setTimeout(() => composer.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250);
+  });
+  composer.querySelectorAll('[data-note-prompt]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const prompt = `${t(button.dataset.notePrompt)} : `;
+      const result = insertNotePrompt(textarea.value, prompt, textarea.selectionStart, textarea.selectionEnd, maxLength);
+      textarea.value = result.value;
+      textarea.focus();
+      textarea.setSelectionRange(result.cursor, result.cursor);
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+  composer.querySelector('[data-use-previous-note]')?.addEventListener('click', () => {
+    textarea.value = previousNote.slice(0, maxLength);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  });
+  composer.addEventListener('toggle', () => {
+    if (composer.open) state.openNoteEditors.add(id);
+    else state.openNoteEditors.delete(id);
+  });
+  requestAnimationFrame(renderValueState);
+  return composer;
 }
 
 // ============================================
@@ -149,6 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('workout:edit-requested', (event) => {
     const workout = getWorkouts().find((item) => item.id === event.detail?.workoutId);
     if (workout) startRecordedWorkoutEdit(workout);
+  });
+  window.addEventListener('supplements:updated', () => {
+    renderHomeSupplements();
+    updateNotification();
   });
   window.addEventListener('language:changed', () => {
     renderHome();
@@ -226,12 +381,42 @@ function startFeatureTour(onComplete = () => {}) {
   overlay.setAttribute('aria-hidden', 'false');
 }
 
+function openOnboardingOverlay() {
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay?.classList.add('active');
+  overlay?.setAttribute('aria-hidden', 'false');
+}
+
+function closeOnboardingOverlay() {
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay?.classList.remove('active');
+  overlay?.setAttribute('aria-hidden', 'true');
+}
+
+function skipOnboarding() {
+  // A skip leaves the user with no program at all: the home screen then
+  // invites them to create or pick one whenever they're ready, instead of
+  // forcing a choice up front.
+  restorePrograms([], null);
+  completeOnboarding();
+  doNavigate('home');
+}
+
 function initOnboarding() {
   const overlay = document.getElementById('onboarding-overlay');
-  if (!overlay || !shouldShowOnboarding()) return;
+  if (!overlay) return;
 
-  overlay.classList.add('active');
-  overlay.setAttribute('aria-hidden', 'false');
+  overlay.querySelectorAll('[data-onboarding-program]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const template = getOnboardingProgramTemplate(button.dataset.onboardingProgram);
+      if (!template) return;
+      const saved = saveProgram(template);
+      setActiveProgram(saved.id);
+      completeOnboarding();
+      doNavigate('home');
+      startFeatureTour();
+    });
+  });
   overlay.querySelector('[data-onboarding-action="create"]')?.addEventListener('click', () => {
     completeOnboarding();
     startFeatureTour(() => {
@@ -239,21 +424,23 @@ function initOnboarding() {
       openNewProgramEditor();
     });
   });
-  overlay.querySelector('[data-onboarding-action="example"]')?.addEventListener('click', () => {
-    setActiveProgram('pullup_deadlift_cycle');
-    completeOnboarding();
-    doNavigate('home');
-    startFeatureTour();
-  });
   overlay.querySelector('[data-onboarding-action="import"]')?.addEventListener('click', () => {
-    overlay.classList.remove('active');
-    overlay.setAttribute('aria-hidden', 'true');
+    closeOnboardingOverlay();
     document.getElementById('btn-import-programs')?.click();
   });
+  document.getElementById('btn-onboarding-skip')?.addEventListener('click', skipOnboarding);
   window.addEventListener('programs:imported', () => {
     completeOnboarding();
     startFeatureTour(() => doNavigate('programs'));
   }, { once: true });
+
+  document.getElementById('btn-home-empty-create')?.addEventListener('click', () => {
+    doNavigate('programs');
+    openNewProgramEditor();
+  });
+  document.getElementById('btn-home-empty-explore')?.addEventListener('click', openOnboardingOverlay);
+
+  if (shouldShowOnboarding()) openOnboardingOverlay();
 }
 
 // ============================================
@@ -308,6 +495,16 @@ function doNavigate(viewName) {
   app.style.paddingBottom = viewName === 'workout' ? '16px' : '';
 
   // Refresh data when navigating
+  refreshViewData(viewName);
+
+  // Views share one document scroll position. Without resetting it, switching
+  // from a scrolled screen could open the next screen with its header clipped.
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
+function refreshViewData(viewName) {
   if (viewName === 'home') renderHome();
   if (viewName === 'calendar') {
     const now = new Date();
@@ -316,13 +513,14 @@ function doNavigate(viewName) {
   if (viewName === 'stats') updateCharts();
   if (viewName === 'programs') renderPrograms();
   if (viewName === 'supplements') renderSupplements();
-
-  // Views share one document scroll position. Without resetting it, switching
-  // from a scrolled screen could open the next screen with its header clipped.
-  window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
 }
+
+// active-workout-patch.js switches views directly (bypassing doNavigate) while
+// a workout is minimized, to avoid clobbering state.currentView. It asks for
+// the resulting screen's data render through this event instead.
+window.addEventListener('browsing:view-render-requested', (event) => {
+  refreshViewData(event.detail?.view);
+});
 
 // ============================================
 // DARK SELECT PICKER
@@ -466,6 +664,26 @@ function initSelectPicker() {
 // ============================================
 function renderHome() {
   const program = getActiveProgram();
+  const emptyState = document.getElementById('home-empty-state');
+  const homeStats = document.getElementById('home-stats');
+  const nextSessionHint = document.getElementById('next-session-hint');
+  const grid = document.getElementById('session-grid');
+
+  if (!program) {
+    emptyState.setAttribute('aria-hidden', 'false');
+    homeStats.style.display = 'none';
+    nextSessionHint.style.display = 'none';
+    grid.style.display = 'none';
+    grid.innerHTML = '';
+    renderHomeSupplements();
+    return;
+  }
+
+  emptyState.setAttribute('aria-hidden', 'true');
+  homeStats.style.display = '';
+  nextSessionHint.style.display = '';
+  grid.style.display = '';
+
   // Update stats
   const stats = getStats(program);
   document.getElementById('stat-total').textContent = stats.totalWorkouts;
@@ -481,7 +699,6 @@ function renderHome() {
   renderHomeSupplements();
 
   // Session cards
-  const grid = document.getElementById('session-grid');
   grid.innerHTML = '';
 
   for (const sessionId of program.sessionOrder) {
@@ -591,20 +808,47 @@ function renderSupplements() {
     }
   });
   container.querySelectorAll('[data-supplement-id]').forEach((button) => button.addEventListener('click', () => {
-    deleteSupplement(button.dataset.supplementId);
-    renderSupplements();
-    renderHomeSupplements();
-    updateNotification();
-    const now = new Date();
-    renderCalendar(now.getFullYear(), now.getMonth());
+    const supplement = supplements.find((item) => item.id === button.dataset.supplementId);
+    if (!supplement) return;
+    showConfirm(t('remove'), t('deleteSupplementConfirm', { name: supplement.name }), () => {
+      deleteSupplement(supplement.id);
+      renderSupplements();
+      renderHomeSupplements();
+      updateNotification();
+      const now = new Date();
+      renderCalendar(now.getFullYear(), now.getMonth());
+    });
   }));
 }
 
 // ============================================
 // WORKOUT SESSION
 // ============================================
+function setWorkoutActionsOpen(open) {
+  const trigger = document.getElementById('btn-workout-more');
+  const menu = document.getElementById('workout-actions-menu');
+  if (!trigger || !menu) return;
+  trigger.setAttribute('aria-expanded', String(open));
+  menu.hidden = !open;
+}
+
 function initWorkoutControls() {
   const exercisesContainer = document.getElementById('workout-exercises');
+  const actions = document.querySelector('.workout-actions');
+
+  document.getElementById('btn-workout-more').addEventListener('click', (event) => {
+    event.stopPropagation();
+    const open = document.getElementById('btn-workout-more').getAttribute('aria-expanded') !== 'true';
+    setWorkoutActionsOpen(open);
+    if (open && event.detail === 0) document.getElementById('btn-workout-edit').focus();
+  });
+  actions.addEventListener('click', (event) => event.stopPropagation());
+  document.addEventListener('click', () => setWorkoutActionsOpen(false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    setWorkoutActionsOpen(false);
+    document.getElementById('btn-workout-more').focus();
+  });
 
   document.getElementById('btn-back').addEventListener('click', () => {
     confirmLeaveWorkout(() => {
@@ -618,13 +862,18 @@ function initWorkoutControls() {
   });
 
   document.getElementById('btn-workout-discard').addEventListener('click', () => {
-    showConfirm(t('discardWorkout'), t('discardWorkoutConfirm'), () => {
+    setWorkoutActionsOpen(false);
+    const name = localizeText(getCurrentWorkoutSession()?.name || t('workouts'));
+    showConfirm(t('discardWorkout'), t('discardWorkoutConfirm', { name }), () => {
       cleanupWorkout();
       doNavigate('home');
     });
   });
 
-  document.getElementById('btn-workout-edit').addEventListener('click', toggleWorkoutEditor);
+  document.getElementById('btn-workout-edit').addEventListener('click', () => {
+    setWorkoutActionsOpen(false);
+    toggleWorkoutEditor();
+  });
   exercisesContainer.addEventListener('click', (event) => {
     const actionButton = event.target.closest('[data-workout-editor-action]');
     const action = actionButton?.dataset.workoutEditorAction;
@@ -824,6 +1073,9 @@ function startSession(sessionId) {
   state.activeProgramId = program.id;
   state.choices = {};
   state.exerciseSets = {};
+  state.workoutNote = '';
+  state.exerciseNotes = {};
+  state.openNoteEditors.clear();
   state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
   state.editingWorkout = null;
   state.workoutStartTime = Date.now();
@@ -868,6 +1120,7 @@ function startSession(sessionId) {
   renderExercises();
   persistActiveWorkout();
   window.dispatchEvent(new Event('workout:started'));
+  void syncWorkoutWakeLock();
 }
 
 function buildRecordedWorkoutSession(workout) {
@@ -924,6 +1177,9 @@ function startRecordedWorkoutEdit(workout) {
   state.editingWorkout = structuredClone(workout);
   state.choices = { ...(workout.choices || {}) };
   state.exerciseSets = {};
+  state.workoutNote = workout.note || '';
+  state.exerciseNotes = Object.fromEntries(session.blocks[0].items.map((item, index) => [item.id, workout.exercises[index]?.note || '']));
+  state.openNoteEditors.clear();
   session.blocks[0].items.forEach((item, index) => {
     state.exerciseSets[item.id] = (workout.exercises[index]?.sets || []).map((set) => ({
       weight: Number(set.weight) || 0,
@@ -946,6 +1202,7 @@ function startRecordedWorkoutEdit(workout) {
   doNavigate('workout');
   renderChoices();
   renderExercises();
+  void syncWorkoutWakeLock();
 }
 
 function formatRecordedDuration(workout) {
@@ -972,10 +1229,15 @@ function cleanupWorkout() {
   state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
   state.editingWorkout = null;
   state.exerciseSets = {};
+  state.workoutNote = '';
+  state.exerciseNotes = {};
+  state.openNoteEditors.clear();
   state.choices = {};
   state.workoutStartTime = null;
+  void syncWorkoutWakeLock();
   dismissRestTimerNotification();
   document.getElementById('rest-timer-overlay').classList.remove('active');
+  setWorkoutActionsOpen(false);
   document.getElementById('btn-workout-edit').classList.remove('active');
   document.getElementById('btn-finish').textContent = t('finish');
   clearActiveWorkoutDraft();
@@ -992,6 +1254,8 @@ function persistActiveWorkout() {
     editingWorkout: state.editingWorkout,
     choices: state.choices,
     exerciseSets: state.exerciseSets,
+    workoutNote: state.workoutNote,
+    exerciseNotes: state.exerciseNotes,
     workoutStartTime: state.workoutStartTime,
     timerEndsAt: state.timerEndsAt,
     timerTotal: state.timerTotal,
@@ -1017,6 +1281,7 @@ function initWorkoutDraftPersistence() {
   window.addEventListener('pagehide', persistActiveWorkout);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') persistActiveWorkout();
+    void syncWorkoutWakeLock();
   });
 }
 
@@ -1030,6 +1295,9 @@ function restoreActiveWorkoutDraft() {
   state.editingWorkout = draft.editingWorkout || null;
   state.choices = draft.choices || {};
   state.exerciseSets = draft.exerciseSets || {};
+  state.workoutNote = draft.workoutNote || '';
+  state.exerciseNotes = draft.exerciseNotes || {};
+  state.openNoteEditors.clear();
   state.workoutStartTime = Number(draft.workoutStartTime) || Date.now();
   state.workoutEditor = { active: false, blockId: null, exerciseId: null, category: 'back' };
 
@@ -1047,6 +1315,7 @@ function restoreActiveWorkoutDraft() {
   renderChoices();
   renderExercises();
   window.dispatchEvent(new Event('workout:started'));
+  void syncWorkoutWakeLock();
 
   const remaining = Math.max(0, Math.ceil((Number(draft.timerEndsAt) - Date.now()) / 1000));
   if (remaining > 0) startRestTimer(remaining, session.color);
@@ -1125,6 +1394,16 @@ function renderExercises() {
     container.appendChild(toolbar);
   }
 
+  container.appendChild(createNoteComposer({
+    id: 'workout',
+    title: t('workoutNote'),
+    placeholder: t('workoutNotePlaceholder'),
+    value: state.workoutNote,
+    maxLength: 1000,
+    icon: '✦',
+    onInput: (value) => { state.workoutNote = value; },
+  }));
+
   for (const block of session.blocks) {
     const blockDiv = document.createElement('div');
     blockDiv.className = 'exercise-block';
@@ -1173,11 +1452,63 @@ function renderExercises() {
 
     container.appendChild(blockDiv);
   }
+
+  const bottomBar = document.createElement('div');
+  bottomBar.className = 'workout-bottom-bar';
+  bottomBar.appendChild(createNoteComposer({
+    id: 'workout-bottom',
+    title: t('workoutNote'),
+    placeholder: t('workoutNotePlaceholder'),
+    value: state.workoutNote,
+    maxLength: 1000,
+    icon: '✦',
+    onInput: (value) => { state.workoutNote = value; },
+  }));
+  const finishButton = document.createElement('button');
+  finishButton.type = 'button';
+  finishButton.className = 'btn-finish block';
+  finishButton.id = 'btn-finish-bottom';
+  finishButton.textContent = document.getElementById('btn-finish').textContent;
+  finishButton.addEventListener('click', () => finishWorkout());
+  bottomBar.appendChild(finishButton);
+  container.appendChild(bottomBar);
+
+  updateWorkoutProgress();
+}
+
+function updateWorkoutProgress() {
+  const progressElement = document.getElementById('workout-progress');
+  const session = getCurrentWorkoutSession();
+  if (!progressElement || !session) return;
+  const progress = getWorkoutCompletionProgress(session, state.exerciseSets, state.choices);
+  progressElement.textContent = t('workoutProgress', progress);
+  document.querySelectorAll('.exercise-card[data-exercise-id]').forEach((card) => {
+    updateExerciseCardStatus(card, state.exerciseSets[card.dataset.exerciseId]);
+  });
+}
+
+function updateExerciseCardStatus(card, sets) {
+  const statusElement = card.querySelector('[data-exercise-progress]');
+  if (!statusElement) return;
+  const progress = getExerciseCompletionState(sets);
+  card.classList.toggle('is-complete', progress.completed);
+  card.classList.toggle('is-skipped', progress.skipped);
+  if (progress.skipped) {
+    statusElement.textContent = t('exerciseSkippedStatus');
+  } else if (progress.completed) {
+    statusElement.textContent = `✓ ${t('exerciseCompleted')}`;
+  } else {
+    statusElement.textContent = t('exerciseSetProgress', {
+      completed: progress.completedSets,
+      total: progress.totalSets,
+    });
+  }
 }
 
 function createExerciseCard(exercise, block, session, autoTimer = true) {
   const card = document.createElement('div');
   card.className = 'exercise-card';
+  card.dataset.exerciseId = exercise.id;
   card.style.setProperty('--session-color-rgb', session.colorRgb);
 
   const resolvedExercise = getResolvedExercise(exercise, state.choices[exercise.id]);
@@ -1207,7 +1538,10 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
   headerDiv.innerHTML = `
     <div>
       <div class="exercise-name">${escapeHtml(displayName)}</div>
-      <div class="exercise-target">${targets.targetSets} × ${targets.targetRepsMin}-${targets.targetRepsMax} ${t('reps')}</div>
+      <div class="exercise-card-meta">
+        <span class="exercise-target">${targets.targetSets} × ${targets.targetRepsMin}-${targets.targetRepsMax} ${t('reps')}</span>
+        <span class="exercise-set-progress" data-exercise-progress aria-live="polite"></span>
+      </div>
     </div>
     ${prevText ? `<div class="exercise-prev">${prevText}</div>` : ''}
   `;
@@ -1236,12 +1570,25 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
     card.appendChild(techniqueDiv);
   }
 
-  // Note
+  // Note — shown in full the first time this exact instruction is seen for
+  // this exercise, then collapsed on later workouts so it doesn't clutter
+  // the screen once it's been read.
   const note = resolvedExercise.note;
   if (note) {
-    const noteDiv = document.createElement('div');
+    const noteKey = `${exercise.id}::${note}`;
+    const alreadySeen = getSeenProgramNotes().has(noteKey);
+    const noteDiv = document.createElement('details');
     noteDiv.className = 'exercise-note';
-    noteDiv.textContent = note;
+    noteDiv.open = !alreadySeen;
+    noteDiv.innerHTML = `
+      <summary class="exercise-note-summary">
+        <span class="exercise-note-icon" aria-hidden="true">◎</span>
+        <strong>${escapeHtml(t('programInstruction'))}</strong>
+        <span class="exercise-note-chevron" aria-hidden="true">▾</span>
+      </summary>
+      <p class="exercise-note-text">${escapeHtml(note)}</p>
+    `;
+    if (!alreadySeen) markProgramNoteSeen(noteKey);
     card.appendChild(noteDiv);
   }
 
@@ -1271,6 +1618,7 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
   }
 
   const sets = state.exerciseSets[exercise.id];
+  updateExerciseCardStatus(card, sets);
 
   // ── Skipped state: all sets deleted ──
   if (sets.length === 0) {
@@ -1385,6 +1733,7 @@ function createSetRow(exerciseId, index, set, restTime, session, autoTimer = tru
   weightInput.min = 0;
   weightInput.step = 0.5;
   weightInput.inputMode = 'decimal';
+  weightInput.enterKeyHint = 'next';
   weightInput.addEventListener('input', (e) => {
     state.exerciseSets[exerciseId][index].weight = parseFloat(e.target.value) || 0;
   });
@@ -1405,6 +1754,7 @@ function createSetRow(exerciseId, index, set, restTime, session, autoTimer = tru
   repsInput.placeholder = 'reps';
   repsInput.min = 0;
   repsInput.inputMode = 'numeric';
+  repsInput.enterKeyHint = 'next';
   repsInput.addEventListener('input', (e) => {
     state.exerciseSets[exerciseId][index].reps = parseInt(e.target.value) || 0;
   });
@@ -1412,9 +1762,15 @@ function createSetRow(exerciseId, index, set, restTime, session, autoTimer = tru
   row.appendChild(repsGroup);
 
   // Check button
-  const checkBtn = document.createElement('div');
+  enhanceSetInput(weightInput);
+  enhanceSetInput(repsInput);
+
+  const checkBtn = document.createElement('button');
+  checkBtn.type = 'button';
   checkBtn.className = 'set-check' + (set.done ? ' checked' : '');
-  checkBtn.innerHTML = set.done ? '✓' : '○';
+  checkBtn.textContent = '✓';
+  checkBtn.setAttribute('aria-pressed', String(set.done));
+  checkBtn.setAttribute('aria-label', t(set.done ? 'markSetIncomplete' : 'markSetComplete', { number: index + 1 }));
   checkBtn.addEventListener('click', () => {
     set.done = !set.done;
     // Update the inputs with current values before toggling
@@ -1422,7 +1778,9 @@ function createSetRow(exerciseId, index, set, restTime, session, autoTimer = tru
     state.exerciseSets[exerciseId][index].reps = parseInt(repsInput.value) || 0;
     row.classList.toggle('completed', set.done);
     checkBtn.classList.toggle('checked', set.done);
-    checkBtn.innerHTML = set.done ? '✓' : '○';
+    checkBtn.setAttribute('aria-pressed', String(set.done));
+    checkBtn.setAttribute('aria-label', t(set.done ? 'markSetIncomplete' : 'markSetComplete', { number: index + 1 }));
+    updateWorkoutProgress();
 
     // Auto-start rest timer when completing a set
     // For supersets: only after the LAST exercise in the block
@@ -1433,6 +1791,19 @@ function createSetRow(exerciseId, index, set, restTime, session, autoTimer = tru
   row.appendChild(checkBtn);
 
   return row;
+}
+
+function enhanceSetInput(input) {
+  input.addEventListener('focus', () => requestAnimationFrame(() => input.select()));
+  input.addEventListener('click', () => input.select());
+  input.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const inputs = [...input.closest('.sets-container')?.querySelectorAll('.set-input') || []];
+    const nextInput = inputs[inputs.indexOf(input) + 1];
+    if (nextInput) nextInput.focus();
+    else input.blur();
+  });
 }
 
 function createWorkoutSet(weight, reps, dropCount, technique) {
@@ -1464,6 +1835,7 @@ function createDropRow(exerciseId, setIndex, segmentIndex, segment, parentSet, r
   weightInput.min = 0;
   weightInput.step = 0.5;
   weightInput.inputMode = 'decimal';
+  weightInput.enterKeyHint = 'next';
   weightInput.addEventListener('input', () => { segment.weight = parseFloat(weightInput.value) || 0; });
   weightGroup.appendChild(weightInput);
   row.appendChild(weightGroup);
@@ -1477,18 +1849,27 @@ function createDropRow(exerciseId, setIndex, segmentIndex, segment, parentSet, r
   repsInput.placeholder = 'reps';
   repsInput.min = 0;
   repsInput.inputMode = 'numeric';
+  repsInput.enterKeyHint = 'next';
   repsInput.addEventListener('input', () => { segment.reps = parseInt(repsInput.value, 10) || 0; });
   repsGroup.appendChild(repsInput);
   row.appendChild(repsGroup);
 
-  const check = document.createElement('div');
+  enhanceSetInput(weightInput);
+  enhanceSetInput(repsInput);
+
+  const check = document.createElement('button');
+  check.type = 'button';
   check.className = 'set-check' + (segment.done ? ' checked' : '');
-  check.innerHTML = segment.done ? '✓' : '○';
+  check.textContent = '✓';
+  check.setAttribute('aria-pressed', String(segment.done));
+  check.setAttribute('aria-label', t(segment.done ? 'markDropIncomplete' : 'markDropComplete', { number: segmentIndex + 1 }));
   check.addEventListener('click', () => {
     segment.done = !segment.done;
     row.classList.toggle('completed', segment.done);
     check.classList.toggle('checked', segment.done);
-    check.innerHTML = segment.done ? '✓' : '○';
+    check.setAttribute('aria-pressed', String(segment.done));
+    check.setAttribute('aria-label', t(segment.done ? 'markDropIncomplete' : 'markDropComplete', { number: segmentIndex + 1 }));
+    updateWorkoutProgress();
     if (segment.done && autoTimer && parentSet.done && parentSet.segments.every((item) => item.done)) {
       startRestTimer(restTime, session.color);
     }
@@ -1559,7 +1940,7 @@ function refreshRestTimer() {
   if (state.timerRemaining <= 0) {
     stopRestTimer({ completed: true });
     // Vibrate if supported
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (getAccessibilityPreferences().haptics && navigator.vibrate) navigator.vibrate([200, 100, 200]);
     return;
   }
 
@@ -1588,7 +1969,7 @@ function stopRestTimer({ completed = false } = {}) {
 // ============================================
 // FINISH WORKOUT
 // ============================================
-function finishWorkout() {
+function finishWorkout({ incompleteConfirmed = false } = {}) {
   // Gather all set data from inputs before saving (in case user didn't blur)
   syncInputValues();
 
@@ -1634,9 +2015,10 @@ function finishWorkout() {
         exerciseId: resolvedExercise.exerciseId,
         exerciseName: resolvedExercise.name,
         selectionId: state.choices[exercise.id] || null,
-        intensityTechnique: resolvedExercise.intensityTechnique,
-        prescription: resolvedExercise.prescription,
-        sets: validSets
+      intensityTechnique: resolvedExercise.intensityTechnique,
+      prescription: resolvedExercise.prescription,
+      note: (state.exerciseNotes[exercise.id] || '').trim(),
+      sets: validSets
       });
     }
   }
@@ -1650,6 +2032,21 @@ function finishWorkout() {
       }
     );
     return;
+  }
+
+  if (!editingWorkout && !incompleteConfirmed) {
+    const progress = getWorkoutCompletionProgress(session, state.exerciseSets, state.choices);
+    if (progress.completed < progress.total) {
+      const completed = t(progress.completed === 1 ? 'completedExerciseOne' : 'completedExerciseMany', { count: progress.completed });
+      const skipped = t(progress.skipped === 1 ? 'skippedExerciseOne' : 'skippedExerciseMany', { count: progress.skipped });
+      const incomplete = t(progress.incomplete === 1 ? 'incompleteExerciseOne' : 'incompleteExerciseMany', { count: progress.incomplete });
+      showConfirm(
+        t('finishIncompleteTitle'),
+        t('finishIncompleteSummary', { completed, skipped, incomplete }),
+        () => finishWorkout({ incompleteConfirmed: true }),
+      );
+      return;
+    }
   }
 
   // Compare against the previous occurrence before saving this workout.
@@ -1681,13 +2078,14 @@ function finishWorkout() {
     return;
   }
 
-  saveWorkout(workout);
+  const personalRecords = getNewPersonalRecords(exercises);
+  const savedWorkout = saveWorkout({ ...workout, note: state.workoutNote.trim() });
 
   // Update persistent notification after saving
   updateNotification();
 
   // Show summary
-  showSummary(session, exercises, durationMs, previousWorkout);
+  showSummary(session, exercises, durationMs, previousWorkout, personalRecords, savedWorkout);
   cleanupWorkout();
 }
 
@@ -1702,11 +2100,12 @@ function syncInputValues() {
   // The change events on inputs already update state, so this is mainly a safety check
 }
 
-function showSummary(session, exercises, durationMs, previousWorkout = null) {
+function showSummary(session, exercises, durationMs, previousWorkout = null, personalRecords = [], savedWorkout = null) {
   const overlay = document.getElementById('summary-overlay');
   const sessionInfo = document.getElementById('summary-session');
   const statsContainer = document.getElementById('summary-stats');
   const comparisonContainer = document.getElementById('summary-comparison');
+  const noteContainer = document.getElementById('summary-note');
 
   sessionInfo.textContent = `${localizeText(session.name)} — ${localizeText(session.subtitle)}`;
 
@@ -1744,6 +2143,24 @@ function showSummary(session, exercises, durationMs, previousWorkout = null) {
     `;
   } else {
     comparisonContainer.innerHTML = `<p class="summary-first-workout">${t('firstWorkoutOfSession')}</p>`;
+  }
+
+  if (personalRecords.length) {
+    comparisonContainer.insertAdjacentHTML('beforeend', `<div class="personal-records"><h3>🏆 ${t('personalRecords')}</h3>${personalRecords.slice(0, 4).map((record) => `<div class="personal-record"><strong>${escapeHtml(record.exerciseName)}</strong><span>${record.type === 'weight' ? t('recordWeight', { value: formatMetric(record.value) }) : t('recordReps', { value: formatMetric(record.value) })}</span></div>`).join('')}</div>`);
+  }
+
+  noteContainer.innerHTML = '';
+  if (savedWorkout) {
+    state.openNoteEditors.delete('summary');
+    noteContainer.appendChild(createNoteComposer({
+      id: 'summary',
+      title: t('workoutNote'),
+      placeholder: t('workoutNotePlaceholder'),
+      value: savedWorkout.note || '',
+      maxLength: 1000,
+      icon: '✦',
+      onInput: (value) => { updateWorkout(savedWorkout.id, { note: value }); },
+    }));
   }
 
   overlay.classList.add('active');
@@ -1839,6 +2256,36 @@ function initSettings() {
   themeSelect.value = getTheme();
   themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
 
+  const accessibility = getAccessibilityPreferences();
+  const textSizeSelect = document.getElementById('settings-text-size');
+  textSizeSelect.value = accessibility.textSize;
+  textSizeSelect.addEventListener('change', () => {
+    setAccessibilityPreferences({
+      ...getAccessibilityPreferences(),
+      textSize: textSizeSelect.value,
+    });
+  });
+
+  const bindAccessibilityToggle = (buttonId, preferenceName) => {
+    const button = document.getElementById(buttonId);
+    const render = () => {
+      const active = Boolean(getAccessibilityPreferences()[preferenceName]);
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    };
+    render();
+    button.addEventListener('click', () => {
+      const preferences = getAccessibilityPreferences();
+      setAccessibilityPreferences({ ...preferences, [preferenceName]: !preferences[preferenceName] });
+      render();
+    });
+  };
+
+  bindAccessibilityToggle('btn-high-contrast-toggle', 'highContrast');
+  bindAccessibilityToggle('btn-reduce-motion-toggle', 'reducedMotion');
+  bindAccessibilityToggle('btn-haptics-toggle', 'haptics');
+  bindAccessibilityToggle('btn-wake-lock-toggle', 'keepScreenAwake');
+
   // Open/close settings
   btnOpen.addEventListener('click', () => {
     overlay.classList.add('active');
@@ -1860,7 +2307,30 @@ function initSettings() {
     showToast(t(copied ? 'aiTemplateCopied' : 'aiTemplateCopyError'), copied ? 'success' : 'error');
   });
 
-  // Export data
+  async function downloadJsonFile(data, fileName) {
+    if (window.Capacitor?.isNativePlatform()) {
+      const Filesystem = window.Capacitor.Plugins.Filesystem;
+      await Filesystem.writeFile({
+        path: fileName,
+        data,
+        directory: 'DOCUMENTS',
+        encoding: 'utf8',
+      });
+      return;
+    }
+
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // Download data
   btnExport.addEventListener('click', async () => {
     const data = exportData();
     const summary = getExportSummary();
@@ -1872,47 +2342,13 @@ function initSettings() {
     const dateStr = formatLocalDate();
     const fileName = `muscu_tracker_${dateStr}.json`;
 
-    // Native Android: use Filesystem + Share
-    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-      try {
-        const Filesystem = window.Capacitor.Plugins.Filesystem;
-        const Share = window.Capacitor.Plugins.Share;
-
-        // Write to cache directory
-        const result = await Filesystem.writeFile({
-          path: fileName,
-          data: data,
-          directory: 'CACHE',
-          encoding: 'utf8'
-        });
-
-        // Share the file (user chooses: Save, Drive, Email, etc.)
-        await Share.share({
-          title: 'Muscu Tracker — Export',
-          text: t('exportedData').replace(' ✓', ''),
-          url: result.uri,
-          dialogTitle: t('exportDialog')
-        });
-
-        showToast(t('exportedData'), 'success');
-      } catch (err) {
-        console.error('Native export failed:', err);
-        showToast(t('exportError'), 'error');
-      }
-      return;
+    try {
+      await downloadJsonFile(data, fileName);
+      showToast(t('exportedData'), 'success');
+    } catch (err) {
+      console.error('Data download failed:', err);
+      showToast(t('exportError'), 'error');
     }
-
-    // Web fallback: blob download
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast(t('exportedData'), 'success');
   });
 
   // Export programs only — workout history is never included in this file.
@@ -1926,40 +2362,13 @@ function initSettings() {
     const dateStr = formatLocalDate();
     const fileName = `muscu_tracker_programmes_${dateStr}.json`;
 
-    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-      try {
-        const Filesystem = window.Capacitor.Plugins.Filesystem;
-        const Share = window.Capacitor.Plugins.Share;
-        const result = await Filesystem.writeFile({
-          path: fileName,
-          data,
-          directory: 'CACHE',
-          encoding: 'utf8'
-        });
-        await Share.share({
-          title: 'Muscu Tracker — Programmes',
-          text: t('exportedPrograms').replace(' ✓', ''),
-          url: result.uri,
-          dialogTitle: t('exportPrograms')
-        });
-        showToast(t('exportedPrograms'), 'success');
-      } catch (err) {
-        console.error('Native program export failed:', err);
-        showToast(t('exportError'), 'error');
-      }
-      return;
+    try {
+      await downloadJsonFile(data, fileName);
+      showToast(t('exportedPrograms'), 'success');
+    } catch (err) {
+      console.error('Program download failed:', err);
+      showToast(t('exportError'), 'error');
     }
-
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast(t('exportedPrograms'), 'success');
   });
 
   // Import data
@@ -2022,6 +2431,7 @@ function initSettings() {
         showToast(t('invalidJson'), 'error');
       }
     };
+    reader.onerror = () => showToast(t('fileReadError'), 'error');
     reader.readAsText(file);
     // Reset input so same file can be imported again
     fileInput.value = '';
@@ -2066,6 +2476,7 @@ function initSettings() {
         showToast(t('invalidJson'), 'error');
       }
     };
+    reader.onerror = () => showToast(t('fileReadError'), 'error');
     reader.readAsText(file);
     programsFileInput.value = '';
   });

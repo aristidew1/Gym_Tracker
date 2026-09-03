@@ -177,7 +177,7 @@ export function getResolvedExercise(item, selectionId = null) {
 
 export function getProgramExerciseIds(program = DEFAULT_PROGRAM) {
   const ids = new Set();
-  Object.values(program.sessions).forEach((session) => session.blocks.forEach((workoutBlock) => {
+  Object.values(program?.sessions || {}).forEach((session) => session.blocks.forEach((workoutBlock) => {
     workoutBlock.items.forEach((item) => {
       if (item.exerciseId) ids.add(item.exerciseId);
       getSelectionOptions(item).forEach((option) => {

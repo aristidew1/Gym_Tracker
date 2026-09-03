@@ -58,6 +58,18 @@ function installWorkoutStatusStackFix() {
     const bannerVisible = banner.classList.contains('visible');
     const stacked = timerCompact && (bannerVisible || forceStack || primedForBrowse);
 
+    // Whenever the compact timer is running, the workout view's own sticky
+    // header must clear it too (not just the "in progress" banner shown while
+    // browsing elsewhere). The hardcoded fallback in active-workout-patch.js
+    // assumes a fixed timer height, which a larger text-size preference or a
+    // long duration string can exceed, letting the header slide underneath.
+    // Measuring the real box here keeps both bars visible regardless.
+    if (timerCompact) {
+      root.style.setProperty('--workout-timer-view-offset', `${calculateOffset()}px`);
+    } else {
+      root.style.removeProperty('--workout-timer-view-offset');
+    }
+
     root.classList.toggle('workout-status-stacked', stacked);
 
     if (!stacked) {

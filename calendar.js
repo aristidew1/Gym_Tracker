@@ -6,13 +6,17 @@ import { getWorkoutSessionId } from './models/workout-schema.js';
 import { getActiveProgram, getProgramById } from './services/program-storage.js';
 import { getExerciseDisplayName } from './data.js';
 import { getLanguage, localizeText, t } from './i18n.js';
-import { getSupplementStatus } from './supplements.js';
+import { getSupplementStatus, getSupplements, getTakenSupplementIds, toggleSupplementTaken } from './supplements.js';
 import { escapeHtml } from './services/html.js';
 
 // ── Internal navigation state ───────────────────────────────────────────────
 const now = new Date();
 let currentYear  = now.getFullYear();
 let currentMonth = now.getMonth(); // 0-indexed
+let detailDate = null;
+let supplementDetailsOpen = false;
+let lastGridStartOffset = 0;
+let lastGridTotalDays = 0;
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -41,6 +45,13 @@ export function initCalendar() {
       currentYear++;
     }
     renderCalendar(currentYear, currentMonth);
+  });
+
+  // Re-align the legend hint on resize/rotation, since its position is
+  // computed in pixels from the last rendered grid layout.
+  window.addEventListener('resize', () => {
+    const container = document.getElementById('calendar-days');
+    if (container?.offsetParent) positionLegendToggle(container, lastGridStartOffset, lastGridTotalDays);
   });
 
   // Initial render for today's month
@@ -130,10 +141,11 @@ export function renderCalendar(year, month) {
     // must remain unmarked.
     const isFuture = new Date(`${dateStr}T00:00:00`).getTime() > Date.now();
     if (supplementStatus && !isFuture) {
-      cell.classList.add(supplementStatus.complete ? 'supplements-complete' : 'supplements-incomplete');
-      cell.setAttribute('aria-label', supplementStatus.complete ? t('supplementsTakenCalendar') : t('supplementsMissingCalendar'));
+      const state = supplementStatusState(supplementStatus);
+      cell.classList.add(`supplements-${state}`);
+      cell.setAttribute('aria-label', supplementStatusLabel(state));
       const marker = document.createElement('span');
-      marker.className = `calendar-supplement-marker ${supplementStatus.complete ? 'complete' : 'incomplete'}`;
+      marker.className = `calendar-supplement-marker ${state}`;
       marker.setAttribute('aria-hidden', 'true');
       cell.appendChild(marker);
     }
@@ -141,6 +153,10 @@ export function renderCalendar(year, month) {
 
     container.appendChild(cell);
   }
+
+  lastGridStartOffset = startOffset;
+  lastGridTotalDays = totalDays;
+  positionLegendToggle(container, startOffset, totalDays);
 
   // ── 5. Update streak display ────────────────────────────────────────────
   const stats = getStats(getActiveProgram());
@@ -150,6 +166,37 @@ export function renderCalendar(year, month) {
   }
   const streakLabel = document.getElementById('cal-streak-label');
   if (streakLabel) streakLabel.textContent = t(stats.streakUnit === 'week' ? 'consecutiveWeeks' : 'consecutiveWorkouts');
+}
+
+/**
+ * positionLegendToggle(container, startOffset, totalDays)
+ * Aligns the "i" legend hint with the row of the month's last day, using
+ * the empty grid space to its right. Falls back to a new row underneath
+ * when the last day already fills the rightmost column (Sunday).
+ */
+function positionLegendToggle(container, startOffset, totalDays) {
+  const legendDetails = document.getElementById('calendar-legend-details');
+  const lastDayCell = container.lastElementChild;
+  if (!legendDetails || !lastDayCell) return;
+  const lastCol = (startOffset + totalDays - 1) % 7; // 0 = Monday … 6 = Sunday
+  const rowGap = 4; // must match the .calendar-days gap in index.css
+  const toggleHeight = 26; // must match .calendar-legend-toggle in index.css
+  const top = lastCol === 6
+    ? lastDayCell.offsetTop + lastDayCell.offsetHeight + rowGap
+    : lastDayCell.offsetTop + (lastDayCell.offsetHeight - toggleHeight) / 2;
+  legendDetails.style.top = `${container.offsetTop + top}px`;
+}
+
+function supplementStatusState(status) {
+  if (status.complete) return 'complete';
+  if (status.taken > 0) return 'partial';
+  return 'incomplete';
+}
+
+function supplementStatusLabel(state) {
+  if (state === 'complete') return t('supplementsTakenCalendar');
+  if (state === 'partial') return t('supplementsPartialCalendar');
+  return t('supplementsMissingCalendar');
 }
 
 function renderCalendarLegend() {
@@ -170,14 +217,17 @@ function renderCalendarLegend() {
     item.append(dot, name);
     legend.appendChild(item);
   });
-  if (getSupplementStatus()) {
+  if (getSupplements().length > 0) {
     const complete = document.createElement('span');
     complete.className = 'calendar-legend-item supplement-legend-item';
     complete.innerHTML = `<span class="supplement-calendar-dot complete"></span><span>${t('supplementsTakenCalendar')}</span>`;
+    const partial = document.createElement('span');
+    partial.className = 'calendar-legend-item supplement-legend-item';
+    partial.innerHTML = `<span class="supplement-calendar-dot partial"></span><span>${t('supplementsPartialCalendar')}</span>`;
     const incomplete = document.createElement('span');
     incomplete.className = 'calendar-legend-item supplement-legend-item';
     incomplete.innerHTML = `<span class="supplement-calendar-dot incomplete"></span><span>${t('supplementsMissingCalendar')}</span>`;
-    legend.append(complete, incomplete);
+    legend.append(complete, partial, incomplete);
   }
 }
 
@@ -191,6 +241,9 @@ export function showDayDetail(dateStr) {
   const panel = document.getElementById('calendar-detail');
   const workouts = getWorkoutsByDate(dateStr);
   const supplementStatus = getSupplementStatus(dateStr);
+  // The current day is trackable throughout the day; only dates after today
+  // must remain uneditable/unmarked.
+  const isFuture = new Date(`${dateStr}T00:00:00`).getTime() > Date.now();
 
   // No tracked activity → hide the panel
   if ((!workouts || workouts.length === 0) && !supplementStatus) {
@@ -198,12 +251,31 @@ export function showDayDetail(dateStr) {
     return;
   }
 
+  // The supplement checklist starts collapsed each time a different day is
+  // opened, but stays open across re-renders triggered by toggling within it.
+  if (dateStr !== detailDate) supplementDetailsOpen = false;
+  detailDate = dateStr;
+
   // Format the date nicely in French (e.g. "5 Juillet 2026")
   const [yearStr, monthStr, dayStr] = dateStr.split('-');
   const formattedDate = new Intl.DateTimeFormat(getLanguage() === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr)));
 
   // Build detail HTML for every workout on that day
-  let html = supplementStatus ? `<div class="calendar-supplement-status ${supplementStatus.complete ? 'complete' : 'incomplete'}"><span aria-hidden="true">${supplementStatus.complete ? '✓' : '!'}</span><div><strong>${t('supplements')}</strong><small>${supplementStatus.complete ? t('supplementsTakenCalendar') : t('supplementsProgress', supplementStatus)}</small></div></div>` : '';
+  let html = '';
+  if (supplementStatus && !isFuture) {
+    const state = supplementStatusState(supplementStatus);
+    const icon = state === 'complete' ? '✓' : state === 'partial' ? '~' : '!';
+    const takenIds = new Set(getTakenSupplementIds(dateStr));
+    const supplements = getSupplements().filter((item) => !item.createdAt || item.createdAt <= dateStr);
+    html += `<details class="calendar-supplement-details"${supplementDetailsOpen ? ' open' : ''}>
+      <summary class="calendar-supplement-status ${state}"><span class="calendar-supplement-icon" aria-hidden="true">${icon}</span><div><strong>${t('supplements')}</strong><small>${t('supplementsProgress', supplementStatus)}</small></div><span class="calendar-supplement-chevron" aria-hidden="true">▾</span></summary>
+      <div class="supplements-checklist calendar-supplements-checklist">${supplements.map((item) => {
+        const taken = takenIds.has(item.id);
+        const dose = [item.dose, item.unit].filter(Boolean).join(' ');
+        return `<button type="button" class="supplement-check ${taken ? 'taken' : ''}" data-calendar-supplement-id="${escapeHtml(item.id)}" aria-pressed="${taken}"><span class="supplement-checkmark">✓</span><span class="supplement-name">${escapeHtml(item.name)}${dose ? `<small>${escapeHtml(dose)}</small>` : ''}</span></button>`;
+      }).join('')}</div>
+    </details>`;
+  }
 
   workouts.forEach(workout => {
     const sessionId = getWorkoutSessionId(workout);
@@ -249,6 +321,21 @@ export function showDayDetail(dateStr) {
   panel.innerHTML = html;
   panel.classList.add('active');
 
+  // ── Wire up the supplement disclosure and checklist toggles ─────────────
+  const supplementDetails = panel.querySelector('.calendar-supplement-details');
+  supplementDetails?.addEventListener('toggle', () => {
+    supplementDetailsOpen = supplementDetails.open;
+  });
+  panel.querySelectorAll('[data-calendar-supplement-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      toggleSupplementTaken(btn.dataset.calendarSupplementId, dateStr);
+      supplementDetailsOpen = true;
+      renderCalendar(currentYear, currentMonth);
+      showDayDetail(dateStr);
+      window.dispatchEvent(new CustomEvent('supplements:updated'));
+    });
+  });
+
   panel.querySelectorAll('.btn-edit-recorded-workout').forEach(btn => {
     btn.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('workout:edit-requested', { detail: { workoutId: btn.dataset.id } }));
@@ -259,13 +346,17 @@ export function showDayDetail(dateStr) {
   panel.querySelectorAll('.btn-delete-workout').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
-      if (confirm(t('deleteRecordedWorkoutConfirm'))) {
+      const workout = workouts.find((entry) => entry.id === id);
+      const sessionId = getWorkoutSessionId(workout || {});
+      const session = workout ? getProgramById(workout.programId)?.sessions[sessionId] : null;
+      const name = localizeText(session?.name || workout?.sessionName || sessionId || t('workouts'));
+      window.showConfirm?.(t('deleteRecordedWorkout'), t('deleteRecordedWorkoutConfirm', { name, date: formattedDate }), () => {
         deleteWorkout(id);
         // Re-render the calendar to reflect the deletion
         renderCalendar(currentYear, currentMonth);
         // Refresh the detail panel for the same day
         showDayDetail(dateStr);
-      }
+      });
     });
   });
 }

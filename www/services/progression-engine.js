@@ -41,3 +41,25 @@ export function getNextPrescription({ prescription, progressionRule, workoutHist
     reason: `Objectif atteint : augmenter de ${loadIncrement} kg à la prochaine séance.`,
   };
 }
+
+// How close the exercise's last logged workout is to unlocking a load
+// increase under double progression. Returns null when the rule doesn't
+// apply, when nothing was logged yet, or when more than one set is still
+// short of the top of the rep range.
+export function getProgressionProximity({ prescription, progressionRule, workoutHistory = [] }) {
+  const rule = typeof progressionRule === 'string'
+    ? getProgressionRule(progressionRule)
+    : progressionRule;
+  if (!rule || rule.type !== 'double_progression') return null;
+
+  const completedSets = getLastCompletedSets(workoutHistory);
+  if (completedSets.length === 0) return null;
+
+  const repMax = prescription.repetitionRange.max;
+  const setCount = prescription.setCount;
+  const setsAtMax = completedSets.filter((set) => Number(set.reps) >= repMax).length;
+  const missingSets = Math.max(0, setCount - setsAtMax);
+  if (missingSets > 1) return null;
+
+  return { ready: missingSets === 0, setsAtMax, setCount, repMax };
+}

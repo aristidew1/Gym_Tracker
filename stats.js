@@ -1,6 +1,6 @@
 // Statistics are driven by the exercise catalogue and recorded sessions.
 
-import { getExerciseHistory, getTrackedExercises } from './storage.js';
+import { getAllTimePersonalRecords, getExerciseHistory, getProgressionCandidates, getTrackedExercises } from './storage.js';
 import {
   MUSCLE_CATEGORIES,
   getExerciseColor,
@@ -10,8 +10,9 @@ import {
   getProgramExerciseIds,
 } from './data.js';
 import { getActiveProgram } from './services/program-storage.js';
-import { getLanguage } from './i18n.js';
+import { getLanguage, t } from './i18n.js';
 import { parseLocalDate } from './services/date-utils.js';
+import { escapeHtml } from './services/html.js';
 
 let weightChart = null;
 let repsChart = null;
@@ -123,6 +124,7 @@ export function initStats() {
 }
 
 export function updateCharts() {
+  renderStatsOverview();
   const exerciseId = document.getElementById('stats-exercise-selector')?.value;
   const period = Number(document.querySelector('#stats-period-selector .stats-period-btn.active')?.dataset.period || 0);
   const emptyElement = document.getElementById('stats-empty');
@@ -175,4 +177,46 @@ export function updateCharts() {
     data: { labels, datasets: [{ data: totalReps, backgroundColor: `rgba(${rgb},0.6)`, borderRadius: 4, borderSkipped: false }] },
     options: { responsive: true, maintainAspectRatio: false, scales: { x: sharedScale, y: { ...sharedScale, beginAtZero: true } }, plugins },
   });
+}
+
+function renderStatsOverview() {
+  renderRecordsOverview();
+  renderProgressionOverview();
+}
+
+function renderRecordsOverview() {
+  const list = document.getElementById('stats-records-list');
+  const empty = document.getElementById('stats-records-empty');
+  if (!list || !empty) return;
+  const records = getAllTimePersonalRecords();
+  empty.style.display = records.length ? 'none' : '';
+  list.innerHTML = records.map((record) => {
+    const name = getExerciseDisplayName(record.exerciseId, record.exerciseName);
+    const value = t(record.type === 'weight' ? 'recordWeight' : 'recordReps', { value: record.value });
+    return `
+      <div class="stats-overview-row">
+        <span class="stats-overview-row-name">${escapeHtml(name)}</span>
+        <span class="stats-overview-row-value">${escapeHtml(value)}</span>
+        <span class="stats-overview-row-date">${escapeHtml(formatDate(record.date))}</span>
+      </div>`;
+  }).join('');
+}
+
+function renderProgressionOverview() {
+  const list = document.getElementById('stats-progression-list');
+  const empty = document.getElementById('stats-progression-empty');
+  if (!list || !empty) return;
+  const candidates = getProgressionCandidates();
+  empty.style.display = candidates.length ? 'none' : '';
+  list.innerHTML = candidates.map((candidate) => {
+    const name = getExerciseDisplayName(candidate.exerciseId, candidate.exerciseName);
+    const detail = t('statsProgressionSetsDetail', { setsAtMax: candidate.setsAtMax, setCount: candidate.setCount, repMax: candidate.repMax });
+    const badge = t(candidate.ready ? 'statsProgressionReady' : 'statsProgressionClose');
+    return `
+      <div class="stats-overview-row">
+        <span class="stats-overview-row-name">${escapeHtml(name)}</span>
+        <span class="stats-overview-row-detail">${escapeHtml(detail)}</span>
+        <span class="stats-progression-badge ${candidate.ready ? 'ready' : 'close'}">${escapeHtml(badge)}</span>
+      </div>`;
+  }).join('');
 }

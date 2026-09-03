@@ -38,6 +38,27 @@ test('editing the base program keeps its id instead of creating a copy', () => {
   assert.equal(store.getPrograms()[0].builtIn, true);
 });
 
+test('the base program can be deleted when another program is available', () => {
+  values.clear();
+  const customProgram = structuredClone(DEFAULT_PROGRAM);
+  customProgram.id = 'replacement_program';
+  customProgram.name = 'Programme de remplacement';
+  store.saveProgram(customProgram);
+  store.setActiveProgram(DEFAULT_PROGRAM.id);
+
+  store.deleteProgram(DEFAULT_PROGRAM.id);
+
+  assert.equal(store.getProgramById(DEFAULT_PROGRAM.id), null);
+  assert.equal(store.getActiveProgram().id, customProgram.id);
+  assert.deepEqual(store.getPrograms().map((program) => program.id), [customProgram.id]);
+});
+
+test('the last available program cannot be deleted', () => {
+  values.clear();
+  assert.throws(() => store.deleteProgram(DEFAULT_PROGRAM.id));
+  assert.equal(store.getActiveProgram().id, DEFAULT_PROGRAM.id);
+});
+
 test('stored programs with the former day frequency are migrated without losing them', () => {
   values.clear();
   const legacyProgram = structuredClone(DEFAULT_PROGRAM);
