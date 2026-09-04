@@ -3990,6 +3990,13 @@ body::before {
 :root[data-style="nothing"] .exercise-library-row,
 :root[data-style="nothing"] .home-empty-state { border-color: transparent; }
 
+/* No accent strip here, so the card collapses to a single column: hiding the
+   strip on its own would drop the content into the 4px accent track. */
+:root[data-style="nothing"] .program-card {
+  grid-template-columns: minmax(0, 1fr);
+  padding-left: 16px;
+}
+
 :root[data-style="nothing"] .program-card-accent { display: none; }
 :root[data-style="nothing"] .calendar-day.today { background: var(--accent); color: #0a0a0a; box-shadow: none; }
 :root[data-style="nothing"] .calendar-day.today::after { background: #0a0a0a; }
