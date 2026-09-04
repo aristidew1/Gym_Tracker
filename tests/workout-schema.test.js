@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { DEFAULT_PROGRAM, getResolvedExercise } from '../data/default-program.js';
 import { getNextPrescription, getProgressionProximity } from '../services/progression-engine.js';
-import { migrateProgram, migrateWorkout, validateProgram, validateWorkout } from '../models/workout-schema.js';
+import { createWorkoutRecord, migrateProgram, migrateWorkout, validateProgram, validateWorkout } from '../models/workout-schema.js';
 import { createBlankProgram } from '../programs.js';
 
 test('legacy workout is migrated to the versioned schema without losing its sets', () => {
@@ -18,6 +18,18 @@ test('legacy workout is migrated to the versioned schema without losing its sets
   assert.deepEqual(migrated.exercises[0].sets[0], { setNumber: 1, type: 'working', weight: 80, reps: 5, rir: null, completed: true, segments: [] });
   assert.deepEqual(validateWorkout(migrated), []);
   assert.deepEqual(migrateWorkout(migrated), migrated);
+});
+
+test('a finished workout is dated by the local calendar day, not the UTC one', () => {
+  const originalTz = process.env.TZ;
+  // UTC+14: local day has already rolled over while UTC is still on the previous day.
+  process.env.TZ = 'Pacific/Kiritimati';
+  try {
+    const record = createWorkoutRecord({ exercises: [] }, 'seed', '2026-09-04T23:30:00.000Z');
+    assert.equal(record.date, '2026-09-05');
+  } finally {
+    process.env.TZ = originalTz;
+  }
 });
 
 test('method choices retain the pull-up exercise during migration', () => {

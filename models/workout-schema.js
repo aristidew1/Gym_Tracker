@@ -141,7 +141,7 @@ export function createWorkoutRecord(workout, id, savedAt = new Date().toISOStrin
     id,
     schemaVersion: CURRENT_WORKOUT_SCHEMA_VERSION,
     savedAt,
-    date: workout.date || savedAt.slice(0, 10),
+    date: workout.date || formatLocalDate(new Date(savedAt)),
   });
 }
 
