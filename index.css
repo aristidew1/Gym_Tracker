@@ -3951,7 +3951,7 @@ body::before {
 
 /* ---- Layer 3 — Nothing: monochrome ground, single red accent ---- */
 :root[data-style="nothing"] {
-  --bg-primary: #030303;
+  --bg-primary: #020202;
   --bg-secondary: #0e0e0e;
   --bg-surface: #111111;
   --border-glass: #242422;
