@@ -4,6 +4,8 @@
    ======================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Doto:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* --- CSS Variables --- */
 :root {
@@ -3353,4 +3355,262 @@ body::before {
   .advanced-block-head > input[data-block-field="name"],
   .advanced-block-head > select[data-block-field="executionMode"] { grid-column: 1 / -1; }
   .advanced-block-head > label { grid-column: auto; }
+}
+
+/* ========================================
+   VISUAL STYLES — alternate skins
+   Selected in Réglages → Apparence → Style visuel
+   ======================================== */
+
+/* --- Shared: flatten the glassmorphism (blur, translucent gradients, glow) --- */
+:root[data-style="piste"],
+:root[data-style="nothing"] {
+  --bg-card: var(--bg-surface);
+  --bg-card-hover: var(--bg-surface);
+  --bg-glass: var(--bg-surface);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+}
+
+:root[data-style="piste"] body::before,
+:root[data-style="nothing"] body::before {
+  display: none;
+}
+
+:root[data-style="piste"] .stat-card,
+:root[data-style="piste"] .session-card,
+:root[data-style="piste"] .supplements-home-card,
+:root[data-style="piste"] .exercise-card,
+:root[data-style="piste"] .workout-actions-menu,
+:root[data-style="piste"] .program-action-menu,
+:root[data-style="piste"] .rest-timer-overlay,
+:root[data-style="piste"] .summary-overlay,
+:root[data-style="piste"] .summary-card,
+:root[data-style="piste"] .calendar-detail,
+:root[data-style="piste"] .calendar-streak,
+:root[data-style="piste"] .stats-overview-card,
+:root[data-style="piste"] .program-card,
+:root[data-style="piste"] .settings-panel,
+:root[data-style="piste"] .confirm-card,
+:root[data-style="piste"] .onboarding-card,
+:root[data-style="piste"] .feature-tour-card,
+:root[data-style="piste"] .select-picker-sheet,
+:root[data-style="piste"] .workout-header,
+:root[data-style="piste"] #bottom-nav,
+:root[data-style="nothing"] .stat-card,
+:root[data-style="nothing"] .session-card,
+:root[data-style="nothing"] .supplements-home-card,
+:root[data-style="nothing"] .exercise-card,
+:root[data-style="nothing"] .workout-actions-menu,
+:root[data-style="nothing"] .program-action-menu,
+:root[data-style="nothing"] .rest-timer-overlay,
+:root[data-style="nothing"] .summary-overlay,
+:root[data-style="nothing"] .summary-card,
+:root[data-style="nothing"] .calendar-detail,
+:root[data-style="nothing"] .calendar-streak,
+:root[data-style="nothing"] .stats-overview-card,
+:root[data-style="nothing"] .program-card,
+:root[data-style="nothing"] .settings-panel,
+:root[data-style="nothing"] .confirm-card,
+:root[data-style="nothing"] .onboarding-card,
+:root[data-style="nothing"] .feature-tour-card,
+:root[data-style="nothing"] .select-picker-sheet,
+:root[data-style="nothing"] .workout-header,
+:root[data-style="nothing"] #bottom-nav {
+  background: var(--bg-surface);
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+:root[data-style="piste"] .stat-card .stat-value,
+:root[data-style="nothing"] .stat-card .stat-value {
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: initial;
+  background: none;
+}
+
+/* --- PISTE: graphite, one amber accent, condensed display numerals --- */
+:root[data-style="piste"] {
+  --bg-primary: #14171b;
+  --bg-secondary: #1b1f25;
+  --bg-surface: #1b1f25;
+  --border-glass: #2a2f37;
+  --border-subtle: #262b32;
+
+  --text-primary: #f2efe9;
+  --text-secondary: #8b93a1;
+  --text-muted: #666e7a;
+
+  --session-a: #ffb020;
+  --session-a-rgb: 255, 176, 32;
+  --session-b: #8b93a1;
+  --session-b-rgb: 139, 147, 161;
+  --session-c: #7cc49b;
+  --session-c-rgb: 124, 196, 155;
+  --session-d: #5c9be0;
+  --session-d-rgb: 92, 155, 224;
+
+  --accent: #ffb020;
+  --accent-rgb: 255, 176, 32;
+  --success: #7cc49b;
+  --warning: #ffb020;
+  --danger: #ff6b5e;
+
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+
+  font-family: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif;
+}
+
+:root[data-style="piste"] body { font-family: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif; }
+
+:root[data-style="piste"] h1,
+:root[data-style="piste"] h2,
+:root[data-style="piste"] .program-card h2,
+:root[data-style="piste"] .session-card .card-title,
+:root[data-style="piste"] .onboarding-card h1,
+:root[data-style="piste"] .feature-tour-card h1,
+:root[data-style="piste"] .summary-card h2 {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+:root[data-style="piste"] .stat-card .stat-value,
+:root[data-style="piste"] .streak-value,
+:root[data-style="piste"] .timer-time,
+:root[data-style="piste"] .summary-stat-value {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+:root[data-style="piste"] .set-input,
+:root[data-style="piste"] .stat-label,
+:root[data-style="piste"] .summary-stat-label,
+:root[data-style="piste"] .card-subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+:root[data-style="piste"] .stat-card,
+:root[data-style="piste"] .exercise-card,
+:root[data-style="piste"] .program-card,
+:root[data-style="piste"] .session-card {
+  border: 1px solid var(--border-glass);
+}
+
+:root[data-style="piste"] .nav-btn.active {
+  background: none;
+  color: var(--accent);
+}
+
+:root[data-style="piste"] .btn-finish,
+:root[data-style="piste"] .feature-tour-actions .btn-finish {
+  background: var(--accent);
+  box-shadow: none;
+  color: #14171b;
+}
+
+/* --- NOTHING: monochrome, one red accent, rounded surfaces, dot-matrix numerals --- */
+:root[data-style="nothing"] {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-surface: #121212;
+  --border-glass: #242422;
+  --border-subtle: #1c1c1a;
+
+  --text-primary: #f5f5f0;
+  --text-secondary: #a8a89f;
+  --text-muted: #87877f;
+
+  --session-a: #e4b7a0;
+  --session-a-rgb: 228, 183, 160;
+  --session-b: #9fb8c9;
+  --session-b-rgb: 159, 184, 201;
+  --session-c: #b7c79f;
+  --session-c-rgb: 183, 199, 159;
+  --session-d: #c9a0be;
+  --session-d-rgb: 201, 160, 190;
+
+  --accent: #ff1e1e;
+  --accent-rgb: 255, 30, 30;
+  --success: #f5f5f0;
+  --warning: #ff1e1e;
+  --danger: #ff1e1e;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  font-family: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
+}
+
+:root[data-style="nothing"] body { font-family: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif; }
+
+:root[data-style="nothing"] h1,
+:root[data-style="nothing"] h2,
+:root[data-style="nothing"] .program-card h2,
+:root[data-style="nothing"] .session-card .card-title,
+:root[data-style="nothing"] .onboarding-card h1,
+:root[data-style="nothing"] .feature-tour-card h1,
+:root[data-style="nothing"] .summary-card h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+:root[data-style="nothing"] .stat-card .stat-value,
+:root[data-style="nothing"] .streak-value,
+:root[data-style="nothing"] .timer-time,
+:root[data-style="nothing"] .summary-stat-value {
+  font-family: 'Doto', sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Doto needs real size to read as digits rather than a blob of dots */
+:root[data-style="nothing"] .stat-card .stat-value {
+  font-size: 2rem;
+}
+
+:root[data-style="nothing"] .summary-stat-value {
+  font-size: 1.7rem;
+}
+
+:root[data-style="nothing"] .streak-value {
+  color: var(--accent);
+}
+
+:root[data-style="nothing"] .set-input,
+:root[data-style="nothing"] .stat-label,
+:root[data-style="nothing"] .summary-stat-label,
+:root[data-style="nothing"] .card-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+:root[data-style="nothing"] .nav-btn.active {
+  background: none;
+  color: var(--text-primary);
+}
+
+:root[data-style="nothing"] .program-create-button,
+:root[data-style="nothing"] .btn-finish {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  box-shadow: none;
+}
+
+:root[data-style="nothing"] .feature-tour-actions .btn-finish {
+  background: var(--accent);
+  color: #fff;
+}
+
+:root[data-style="nothing"] .timer-circle .timer-progress {
+  stroke: var(--accent);
 }

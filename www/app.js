@@ -78,6 +78,8 @@ const state = {
 
 const ONBOARDING_KEY = 'muscu_onboarding_completed';
 const THEME_KEY = 'muscu_theme';
+const STYLE_KEY = 'muscu_visual_style';
+const VISUAL_STYLES = ['default', 'piste', 'nothing'];
 const ACCESSIBILITY_KEY = 'muscu_accessibility';
 const SEEN_PROGRAM_NOTES_KEY = 'muscu_seen_program_notes';
 
@@ -159,7 +161,23 @@ function setTheme(theme) {
   window.dispatchEvent(new Event('themechange'));
 }
 
+function getVisualStyle() {
+  const stored = localStorage.getItem(STYLE_KEY);
+  return VISUAL_STYLES.includes(stored) ? stored : 'default';
+}
+
+function setVisualStyle(style) {
+  const selectedStyle = VISUAL_STYLES.includes(style) ? style : 'default';
+  if (selectedStyle === 'default') {
+    delete document.documentElement.dataset.style;
+  } else {
+    document.documentElement.dataset.style = selectedStyle;
+  }
+  localStorage.setItem(STYLE_KEY, selectedStyle);
+}
+
 setTheme(getTheme());
+setVisualStyle(getVisualStyle());
 applyAccessibilityPreferences();
 
 function getWorkoutProgram() {
@@ -2252,6 +2270,10 @@ function initSettings() {
   const themeSelect = document.getElementById('settings-theme');
   themeSelect.value = getTheme();
   themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
+
+  const styleSelect = document.getElementById('settings-style');
+  styleSelect.value = getVisualStyle();
+  styleSelect.addEventListener('change', () => setVisualStyle(styleSelect.value));
 
   const accessibility = getAccessibilityPreferences();
   const textSizeSelect = document.getElementById('settings-text-size');
