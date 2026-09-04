@@ -3359,12 +3359,14 @@ body::before {
 
 /* ========================================
    VISUAL STYLES — alternate skins
-   Selected in Réglages → Apparence → Style visuel
+   Réglages → Apparence → Style visuel.
+   `:root[data-style]` matches Piste and Nothing but never the classic skin,
+   which drops the attribute entirely. Layer 1 holds the composition both
+   styles share; layers 2 and 3 only carry palette, type and radius.
    ======================================== */
 
-/* --- Shared: flatten the glassmorphism (blur, translucent gradients, glow) --- */
-:root[data-style="piste"],
-:root[data-style="nothing"] {
+/* ---- Layer 1 — shared composition ---- */
+:root[data-style] {
   --bg-card: var(--bg-surface);
   --bg-card-hover: var(--bg-surface);
   --bg-glass: var(--bg-surface);
@@ -3373,51 +3375,35 @@ body::before {
   --shadow-lg: none;
 }
 
-:root[data-style="piste"] body::before,
-:root[data-style="nothing"] body::before {
-  display: none;
-}
+:root[data-style] body::before { display: none; }
 
-:root[data-style="piste"] .stat-card,
-:root[data-style="piste"] .session-card,
-:root[data-style="piste"] .supplements-home-card,
-:root[data-style="piste"] .exercise-card,
-:root[data-style="piste"] .workout-actions-menu,
-:root[data-style="piste"] .program-action-menu,
-:root[data-style="piste"] .rest-timer-overlay,
-:root[data-style="piste"] .summary-overlay,
-:root[data-style="piste"] .summary-card,
-:root[data-style="piste"] .calendar-detail,
-:root[data-style="piste"] .calendar-streak,
-:root[data-style="piste"] .stats-overview-card,
-:root[data-style="piste"] .program-card,
-:root[data-style="piste"] .settings-panel,
-:root[data-style="piste"] .confirm-card,
-:root[data-style="piste"] .onboarding-card,
-:root[data-style="piste"] .feature-tour-card,
-:root[data-style="piste"] .select-picker-sheet,
-:root[data-style="piste"] .workout-header,
-:root[data-style="piste"] #bottom-nav,
-:root[data-style="nothing"] .stat-card,
-:root[data-style="nothing"] .session-card,
-:root[data-style="nothing"] .supplements-home-card,
-:root[data-style="nothing"] .exercise-card,
-:root[data-style="nothing"] .workout-actions-menu,
-:root[data-style="nothing"] .program-action-menu,
-:root[data-style="nothing"] .rest-timer-overlay,
-:root[data-style="nothing"] .summary-overlay,
-:root[data-style="nothing"] .summary-card,
-:root[data-style="nothing"] .calendar-detail,
-:root[data-style="nothing"] .calendar-streak,
-:root[data-style="nothing"] .stats-overview-card,
-:root[data-style="nothing"] .program-card,
-:root[data-style="nothing"] .settings-panel,
-:root[data-style="nothing"] .confirm-card,
-:root[data-style="nothing"] .onboarding-card,
-:root[data-style="nothing"] .feature-tour-card,
-:root[data-style="nothing"] .select-picker-sheet,
-:root[data-style="nothing"] .workout-header,
-:root[data-style="nothing"] #bottom-nav {
+/* Flat surfaces instead of blurred glass */
+:root[data-style] .stat-card,
+:root[data-style] .session-card,
+:root[data-style] .supplements-home-card,
+:root[data-style] .supplement-check,
+:root[data-style] .supplement-form,
+:root[data-style] .exercise-card,
+:root[data-style] .stats-overview-card,
+:root[data-style] .program-card,
+:root[data-style] .ai-program-card,
+:root[data-style] .exercise-library-row,
+:root[data-style] .calendar-detail,
+:root[data-style] .calendar-streak,
+:root[data-style] .summary-stat,
+:root[data-style] .summary-comparison-stat,
+:root[data-style] .home-empty-state,
+:root[data-style] .btn-home-empty,
+:root[data-style] .programs-tab,
+:root[data-style] .program-import-button,
+:root[data-style] .workout-actions-menu,
+:root[data-style] .program-action-menu,
+:root[data-style] .select-picker-sheet,
+:root[data-style] .settings-panel,
+:root[data-style] .confirm-card,
+:root[data-style] .summary-card,
+:root[data-style] .onboarding-card,
+:root[data-style] .feature-tour-card {
   background: var(--bg-surface);
   background-image: none;
   backdrop-filter: none;
@@ -3425,15 +3411,456 @@ body::before {
   box-shadow: none;
 }
 
-:root[data-style="piste"] .stat-card .stat-value,
-:root[data-style="nothing"] .stat-card .stat-value {
+:root[data-style] .workout-header,
+:root[data-style] #bottom-nav {
+  background: var(--bg-primary);
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+:root[data-style] .rest-timer-overlay,
+:root[data-style] .summary-overlay,
+:root[data-style] .confirm-overlay,
+:root[data-style] .onboarding-overlay,
+:root[data-style] .feature-tour-overlay,
+:root[data-style] .settings-overlay,
+:root[data-style] .select-picker-overlay {
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-style] .rest-timer-overlay.timer-fullscreen { background: var(--bg-primary); }
+
+/* Typography */
+:root[data-style] body,
+:root[data-style] input,
+:root[data-style] select,
+:root[data-style] textarea,
+:root[data-style] button { font-family: var(--style-body); }
+
+:root[data-style] h1,
+:root[data-style] .view-header h1,
+:root[data-style] .programs-heading h1,
+:root[data-style] .session-card .card-title,
+:root[data-style] .program-card h2,
+:root[data-style] .summary-card h2,
+:root[data-style] .settings-header h2,
+:root[data-style] .onboarding-card h1,
+:root[data-style] .feature-tour-card h1,
+:root[data-style] .stats-section-title,
+:root[data-style] .home-empty-state h2 {
+  font-family: var(--style-display);
+  font-weight: var(--style-display-weight);
+  letter-spacing: var(--style-display-tracking);
+}
+
+/* Hero numerals */
+:root[data-style] .stat-card .stat-value,
+:root[data-style] .calendar-streak .streak-value,
+:root[data-style] .timer-display .timer-time,
+:root[data-style] .summary-stat .summary-stat-value {
+  font-family: var(--style-numeral);
+  font-weight: var(--style-numeral-weight);
+  background: none;
   -webkit-background-clip: initial;
   background-clip: initial;
   -webkit-text-fill-color: initial;
+  color: var(--text-primary);
+}
+
+/* Data and micro-labels ride the mono face */
+:root[data-style] .stat-card .stat-label,
+:root[data-style] .summary-stat .summary-stat-label,
+:root[data-style] .session-card .card-badge,
+:root[data-style] .nav-btn .nav-label,
+:root[data-style] .settings-section-title,
+:root[data-style] .settings-group-title,
+:root[data-style] .stats-period-btn,
+:root[data-style] .programs-tab,
+:root[data-style] .block-type-badge,
+:root[data-style] .workout-progress,
+:root[data-style] .workout-timer-display,
+:root[data-style] .set-input,
+:root[data-style] .calendar-weekdays,
+:root[data-style] .program-meta,
+:root[data-style] .summary-comparison-stat {
+  font-family: var(--style-mono);
+}
+
+/* Section labels (markup only surfaces here) */
+.section-eyebrow,
+.home-date { display: none; }
+
+:root[data-style] .section-eyebrow,
+:root[data-style] .home-date {
+  display: block;
+  margin: 0 0 10px;
+  font-family: var(--style-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+:root[data-style] .home-date { margin: 0 0 5px; }
+:root[data-style] .section-eyebrow[hidden] { display: none; }
+
+/* ---- Home ---- */
+:root[data-style] .view-header { align-items: flex-start; }
+
+:root[data-style] .home-stats {
+  gap: 0;
+  margin-bottom: 22px;
+}
+
+:root[data-style] .stat-card {
+  background: none;
+  border: 0;
+  border-right: 1px solid var(--border-glass);
+  border-radius: 0;
+  padding: 14px 6px;
+}
+
+:root[data-style] .stat-card:last-child { border-right: 0; }
+
+:root[data-style] .stat-card .stat-value { font-size: 1.85rem; line-height: 1; }
+
+:root[data-style] .stat-card .stat-label {
+  margin-top: 7px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+:root[data-style] .next-session-hint {
+  text-align: left;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.86rem;
+}
+
+/* The eyebrow already names the block */
+:root[data-style] .next-session-hint > span[data-i18n="nextSuggested"] { display: none; }
+
+:root[data-style] .supplements-home-card {
+  border: 1px solid var(--border-glass);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+:root[data-style] .supplements-icon { color: var(--text-muted); }
+:root[data-style] .supplements-manage-btn { color: var(--accent); font-size: 0.66rem; font-family: var(--style-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Supplements read as chips, like the mockup */
+:root[data-style] .supplements-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+:root[data-style] .supplement-check {
+  width: auto;
+  min-height: 0;
+  padding: 7px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-glass);
   background: none;
 }
 
-/* --- PISTE: graphite, one amber accent, condensed display numerals --- */
+:root[data-style] .supplement-check.taken { border-color: var(--success); color: var(--text-primary); background: none; }
+:root[data-style] .supplement-checkmark { width: 14px; height: 14px; border: 0; background: var(--border-glass); color: transparent; font-size: 0.5rem; }
+:root[data-style] .supplement-check.taken .supplement-checkmark { background: var(--success); color: var(--bg-primary); }
+:root[data-style] .supplement-name { display: flex; align-items: baseline; gap: 5px; font-size: 0.76rem; }
+:root[data-style] .supplement-name small { font-size: 0.68rem; }
+
+:root[data-style] .session-grid { gap: 10px; }
+
+:root[data-style] .session-card {
+  min-height: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border-glass);
+  border-left: 3px solid var(--card-color);
+  box-shadow: none;
+}
+
+:root[data-style] .session-card::before { display: none; }
+:root[data-style] .session-card:hover,
+:root[data-style] .session-card:active { transform: none; box-shadow: none; background: var(--bg-surface); }
+:root[data-style] .session-card.suggested { box-shadow: none; }
+:root[data-style] .session-card .card-icon { font-size: 1.35rem; margin-bottom: 8px; filter: none; }
+:root[data-style] .session-card .card-title { font-size: 0.98rem; margin-bottom: 3px; }
+:root[data-style] .session-card .card-subtitle { font-size: 0.7rem; }
+:root[data-style] .session-card-footer { padding-top: 11px; }
+
+:root[data-style] .session-card .card-badge {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
+}
+
+:root[data-style] .session-card .card-next { color: var(--accent); }
+
+:root[data-style] .home-empty-state { border: 1px solid var(--border-glass); }
+:root[data-style] .btn-home-empty { border: 1px solid var(--border-glass); }
+:root[data-style] .btn-home-empty.primary { border-color: var(--accent); }
+
+/* ---- Bottom navigation ---- */
+:root[data-style] #bottom-nav { border-top: 1px solid var(--border-glass); }
+:root[data-style] .nav-btn { border-radius: 0; }
+:root[data-style] .nav-btn.active { background: none; color: var(--accent); }
+:root[data-style] .nav-btn .nav-label { font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ---- Calendar ---- */
+:root[data-style] .calendar-nav h2 { font-family: var(--style-display); font-weight: var(--style-display-weight); }
+:root[data-style] .calendar-weekdays { font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; }
+
+:root[data-style] .calendar-day.has-workout::before {
+  background: var(--bg-surface);
+  border: 0;
+}
+
+:root[data-style] .calendar-day.today {
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+:root[data-style] .calendar-day.today::after { background: var(--accent); }
+
+:root[data-style] .calendar-day.has-workout::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgb(var(--day-color-rgb, 255, 255, 255));
+}
+
+:root[data-style] .calendar-detail,
+:root[data-style] .calendar-streak {
+  border: 1px solid var(--border-glass);
+}
+
+:root[data-style] .btn-edit-recorded-workout,
+:root[data-style] .btn-delete-workout {
+  background: none;
+  border: 1px solid var(--border-glass);
+  font-family: var(--style-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+:root[data-style] .btn-edit-recorded-workout { color: var(--text-primary); }
+:root[data-style] .btn-delete-workout { color: var(--danger); }
+
+:root[data-style] .calendar-streak .streak-value { font-size: 2.1rem; color: var(--accent); }
+:root[data-style] .calendar-streak .streak-label { font-family: var(--style-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* ---- Stats ---- */
+:root[data-style] .stats-group-selector,
+:root[data-style] .stats-period-selector { gap: 6px; }
+
+:root[data-style] .stats-period-btn {
+  border: 1px solid var(--border-glass);
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:root[data-style] .stats-period-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-primary);
+}
+
+/* Muscle group is a filter, not a mode: outline it instead of filling it */
+:root[data-style] #stats-group-selector .stats-period-btn.active {
+  background: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+:root[data-style] .stats-overview-card { border: 1px solid var(--border-glass); }
+:root[data-style] .stats-overview-card h2 { font-size: 0.76rem; font-family: var(--style-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+:root[data-style] .stats-overview-row { border-bottom: 1px solid var(--border-glass); }
+:root[data-style] .stats-overview-row-value { font-family: var(--style-mono); color: var(--success); }
+:root[data-style] .stats-overview-row-detail { font-family: var(--style-mono); font-size: 0.64rem; }
+:root[data-style] .stats-progression-badge { border: 0; background: none; padding: 0; color: var(--accent); font-family: var(--style-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+:root[data-style] .stats-filter select { border-radius: var(--radius-sm); background: var(--bg-surface); border: 1px solid var(--border-glass); }
+:root[data-style] .stats-filter > span { font-family: var(--style-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* ---- Programs ---- */
+:root[data-style] .programs-tab {
+  border: 1px solid var(--border-glass);
+  background: none;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:root[data-style] .programs-tab.active {
+  background: var(--bg-surface);
+  border-color: var(--border-glass);
+  color: var(--accent);
+}
+
+:root[data-style] .program-card { border: 1px solid var(--border-glass); }
+:root[data-style] .program-card.active-program { border-color: var(--accent); background: var(--bg-surface); }
+/* The accent strip carries an inline colour from the program itself */
+:root[data-style] .program-card-accent { background: var(--border-glass) !important; }
+:root[data-style] .program-card.active-program .program-card-accent { background: var(--accent) !important; }
+:root[data-style] .program-active-check { color: var(--accent); }
+
+:root[data-style] .active-pill {
+  border: 1px solid var(--accent);
+  background: none;
+  color: var(--accent);
+  font-family: var(--style-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+:root[data-style] .program-meta { font-size: 0.64rem; letter-spacing: 0.03em; }
+:root[data-style] .ai-program-card { border: 1px solid var(--border-glass); }
+:root[data-style] .ai-program-card-icon { background: var(--bg-primary); color: var(--accent); }
+:root[data-style] .program-create-button { background: var(--accent); color: var(--bg-primary); }
+:root[data-style] .program-import-button { border: 1px solid var(--border-glass); }
+:root[data-style] .exercise-library-row { border: 1px solid var(--border-glass); }
+
+/* ---- Active workout ---- */
+:root[data-style] .workout-header { border-bottom: 1px solid var(--border-glass); }
+:root[data-style] .workout-timer-display { color: var(--accent); font-weight: 600; }
+:root[data-style] .workout-progress { background: none; padding: 0; font-size: 0.62rem; letter-spacing: 0.04em; }
+
+.workout-ring { display: none; }
+
+:root[data-style] .workout-ring {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) 0turn calc(var(--ring-progress, 0) * 1turn), var(--border-glass) 0turn);
+}
+
+:root[data-style] .workout-ring::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+}
+
+:root[data-style] .workout-bottom-bar { background: var(--bg-primary); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; border-top: 1px solid var(--border-glass); }
+:root[data-style] .note-composer { border-color: var(--border-glass); background: var(--bg-surface); }
+:root[data-style] .note-composer[open] { border-color: var(--border-glass); background: var(--bg-surface); box-shadow: none; }
+:root[data-style] .note-composer-icon { background: var(--bg-primary); color: var(--accent); }
+:root[data-style] .note-composer-state { background: none; color: var(--text-muted); font-family: var(--style-mono); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; }
+:root[data-style] .note-composer.has-content .note-composer-state { background: none; color: var(--success); }
+:root[data-style] .note-composer-prompts button { background: none; border: 1px solid var(--border-glass); font-family: var(--style-mono); font-size: 0.6rem; }
+:root[data-style] .exercise-note-icon { color: var(--accent); }
+:root[data-style] .choice-btn { background: var(--bg-surface); border: 1px solid var(--border-glass); }
+:root[data-style] .choice-btn.selected { border-color: var(--accent); background: var(--bg-surface); color: var(--accent); }
+
+:root[data-style] .block-type-badge {
+  border-radius: var(--radius-sm);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:root[data-style] .exercise-card { border: 1px solid var(--border-glass); }
+:root[data-style] .set-input { border-radius: var(--radius-sm); background: var(--bg-primary); border: 1px solid var(--border-glass); }
+:root[data-style] .set-number { background: none; color: var(--text-muted); font-family: var(--style-mono); }
+:root[data-style] .set-check { background: none; border: 1px solid var(--border-glass); }
+:root[data-style] .set-check.checked { background: var(--success); border-color: var(--success); color: var(--bg-primary); }
+:root[data-style] .btn-set-action,
+:root[data-style] .btn-skip-exercise {
+  background: none;
+  border: 1px solid var(--border-glass);
+  font-family: var(--style-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+:root[data-style] .btn-rest-timer { border: 1px dashed var(--border-glass); background: none; color: var(--accent); font-family: var(--style-mono); font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; }
+:root[data-style] .timer-circle .timer-progress { stroke: var(--accent); }
+:root[data-style] .timer-display .timer-time { color: var(--text-primary); }
+
+/* ---- Workout summary ---- */
+:root[data-style] .summary-stats { grid-template-columns: repeat(4, 1fr); gap: 0; }
+
+:root[data-style] .summary-stat {
+  background: none;
+  border: 0;
+  border-right: 1px solid var(--border-glass);
+  border-radius: 0;
+  padding: 14px 4px;
+  text-align: center;
+}
+
+:root[data-style] .summary-stat:last-child { border-right: 0; }
+:root[data-style] .summary-stat .summary-stat-value { font-size: 1.3rem; }
+:root[data-style] .summary-stat .summary-stat-label { font-size: 0.53rem; letter-spacing: 0.07em; }
+:root[data-style] .summary-comparison h3 { font-family: var(--style-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+:root[data-style] .summary-comparison-grid { grid-template-columns: 1fr; gap: 0; }
+:root[data-style] .summary-comparison-stat { border-radius: 0; background: none; border-bottom: 1px solid var(--border-glass); padding: 9px 2px; font-size: 0.68rem; }
+:root[data-style] .personal-record {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--border-glass);
+  font-size: 0.78rem;
+}
+
+:root[data-style] .personal-record span { font-family: var(--style-mono); color: var(--accent); }
+
+:root[data-style] .btn-summary-close {
+  background: var(--accent);
+  color: var(--bg-primary);
+  font-family: var(--style-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+:root[data-style] .personal-records h3 { font-family: var(--style-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ---- Settings ---- */
+:root[data-style] .settings-section-title {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  color: var(--text-muted);
+}
+
+:root[data-style] .settings-group-title { color: var(--text-muted); font-size: 0.58rem; letter-spacing: 0.12em; }
+:root[data-style] .settings-row { border-bottom: 1px solid var(--border-glass); }
+:root[data-style] .settings-select { border-radius: var(--radius-sm); background: var(--bg-surface); border: 1px solid var(--border-glass); }
+:root[data-style] .toggle-track { background: var(--border-glass); }
+:root[data-style] .settings-toggle.active .toggle-track { background: var(--accent); }
+:root[data-style] .settings-toggle.active .toggle-thumb { background: var(--bg-primary); box-shadow: none; }
+
+/* ---- Layer 2 — Piste: graphite ground, single amber accent ---- */
 :root[data-style="piste"] {
   --bg-primary: #14171b;
   --bg-secondary: #1b1f25;
@@ -3443,7 +3870,7 @@ body::before {
 
   --text-primary: #f2efe9;
   --text-secondary: #8b93a1;
-  --text-muted: #666e7a;
+  --text-muted: #7d8593;
 
   --session-a: #ffb020;
   --session-a-rgb: 255, 176, 32;
@@ -3465,69 +3892,38 @@ body::before {
   --radius-lg: 6px;
   --radius-xl: 8px;
 
-  font-family: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif;
+  --style-body: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif;
+  --style-display: 'Big Shoulders Display', sans-serif;
+  --style-display-weight: 800;
+  --style-display-tracking: 0;
+  --style-mono: 'IBM Plex Mono', monospace;
+  --style-numeral: 'Big Shoulders Display', sans-serif;
+  --style-numeral-weight: 800;
 }
 
-:root[data-style="piste"] body { font-family: 'IBM Plex Sans', 'Inter', -apple-system, sans-serif; }
-
-:root[data-style="piste"] h1,
-:root[data-style="piste"] h2,
-:root[data-style="piste"] .program-card h2,
-:root[data-style="piste"] .session-card .card-title,
-:root[data-style="piste"] .onboarding-card h1,
-:root[data-style="piste"] .feature-tour-card h1,
-:root[data-style="piste"] .summary-card h2 {
-  font-family: 'Big Shoulders Display', sans-serif;
-  font-weight: 800;
-  letter-spacing: 0;
+/* The stat strip is ruled top and bottom rather than boxed */
+:root[data-style="piste"] .home-stats {
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
 }
 
-:root[data-style="piste"] .stat-card .stat-value,
-:root[data-style="piste"] .streak-value,
-:root[data-style="piste"] .timer-time,
-:root[data-style="piste"] .summary-stat-value {
-  font-family: 'Big Shoulders Display', sans-serif;
-  font-weight: 800;
-  color: var(--accent);
-}
+:root[data-style="piste"] .stat-card .stat-value { color: var(--accent); }
+:root[data-style="piste"] .next-session-hint { border-left: 3px solid var(--accent); }
+:root[data-style="piste"] .btn-finish { background: var(--accent); color: #14171b; box-shadow: none; }
+:root[data-style="piste"] .feature-tour-actions .btn-finish { background: var(--accent); color: #14171b; box-shadow: none; }
+:root[data-style="piste"] .view-header h1 { font-size: 1.6rem; }
 
-:root[data-style="piste"] .set-input,
-:root[data-style="piste"] .stat-label,
-:root[data-style="piste"] .summary-stat-label,
-:root[data-style="piste"] .card-subtitle {
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-:root[data-style="piste"] .stat-card,
-:root[data-style="piste"] .exercise-card,
-:root[data-style="piste"] .program-card,
-:root[data-style="piste"] .session-card {
-  border: 1px solid var(--border-glass);
-}
-
-:root[data-style="piste"] .nav-btn.active {
-  background: none;
-  color: var(--accent);
-}
-
-:root[data-style="piste"] .btn-finish,
-:root[data-style="piste"] .feature-tour-actions .btn-finish {
-  background: var(--accent);
-  box-shadow: none;
-  color: #14171b;
-}
-
-/* --- NOTHING: monochrome, one red accent, rounded surfaces, dot-matrix numerals --- */
+/* ---- Layer 3 — Nothing: monochrome ground, single red accent ---- */
 :root[data-style="nothing"] {
   --bg-primary: #0a0a0a;
   --bg-secondary: #111111;
-  --bg-surface: #121212;
-  --border-glass: #242422;
+  --bg-surface: #141414;
+  --border-glass: #262624;
   --border-subtle: #1c1c1a;
 
   --text-primary: #f5f5f0;
   --text-secondary: #a8a89f;
-  --text-muted: #87877f;
+  --text-muted: #8d8d84;
 
   --session-a: #e4b7a0;
   --session-a-rgb: 228, 183, 160;
@@ -3546,71 +3942,73 @@ body::before {
 
   --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
 
-  font-family: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
-}
-
-:root[data-style="nothing"] body { font-family: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif; }
-
-:root[data-style="nothing"] h1,
-:root[data-style="nothing"] h2,
-:root[data-style="nothing"] .program-card h2,
-:root[data-style="nothing"] .session-card .card-title,
-:root[data-style="nothing"] .onboarding-card h1,
-:root[data-style="nothing"] .feature-tour-card h1,
-:root[data-style="nothing"] .summary-card h2 {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-:root[data-style="nothing"] .stat-card .stat-value,
-:root[data-style="nothing"] .streak-value,
-:root[data-style="nothing"] .timer-time,
-:root[data-style="nothing"] .summary-stat-value {
-  font-family: 'Doto', sans-serif;
-  font-weight: 600;
-  color: var(--text-primary);
+  --style-body: 'Hanken Grotesk', 'Inter', -apple-system, sans-serif;
+  --style-display: 'Hanken Grotesk', sans-serif;
+  --style-display-weight: 700;
+  --style-display-tracking: -0.01em;
+  --style-mono: 'JetBrains Mono', monospace;
+  --style-numeral: 'Doto', sans-serif;
+  --style-numeral-weight: 600;
 }
 
 /* Doto needs real size to read as digits rather than a blob of dots */
-:root[data-style="nothing"] .stat-card .stat-value {
-  font-size: 2rem;
+:root[data-style="nothing"] .stat-card .stat-value { font-size: 2rem; }
+:root[data-style="nothing"] .summary-stat .summary-stat-value { font-size: 1.55rem; }
+:root[data-style="nothing"] .calendar-streak .streak-value { font-size: 2.3rem; }
+
+/* The stat strip sits on its own rounded surface */
+:root[data-style="nothing"] .home-stats {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: 4px 0;
 }
 
-:root[data-style="nothing"] .summary-stat-value {
-  font-size: 1.7rem;
+:root[data-style="nothing"] .stat-card { border-right-color: var(--bg-primary); }
+
+:root[data-style="nothing"] .next-session-hint::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
 }
 
-:root[data-style="nothing"] .streak-value {
-  color: var(--accent);
-}
+:root[data-style="nothing"] .supplements-home-card,
+:root[data-style="nothing"] .session-card,
+:root[data-style="nothing"] .exercise-card,
+:root[data-style="nothing"] .stats-overview-card,
+:root[data-style="nothing"] .program-card,
+:root[data-style="nothing"] .ai-program-card,
+:root[data-style="nothing"] .calendar-detail,
+:root[data-style="nothing"] .calendar-streak,
+:root[data-style="nothing"] .exercise-library-row,
+:root[data-style="nothing"] .home-empty-state { border-color: transparent; }
 
-:root[data-style="nothing"] .set-input,
-:root[data-style="nothing"] .stat-label,
-:root[data-style="nothing"] .summary-stat-label,
-:root[data-style="nothing"] .card-subtitle {
-  font-family: 'JetBrains Mono', monospace;
-}
+:root[data-style="nothing"] .program-card-accent { display: none; }
+:root[data-style="nothing"] .calendar-day.today { background: var(--accent); color: #0a0a0a; box-shadow: none; }
+:root[data-style="nothing"] .calendar-day.today::after { background: #0a0a0a; }
 
-:root[data-style="nothing"] .nav-btn.active {
-  background: none;
-  color: var(--text-primary);
+:root[data-style="nothing"] .programs-tab.active,
+:root[data-style="nothing"] .stats-period-btn.active {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-primary);
 }
 
 :root[data-style="nothing"] .program-create-button,
-:root[data-style="nothing"] .btn-finish {
+:root[data-style="nothing"] .btn-finish,
+:root[data-style="nothing"] .btn-summary-close {
   background: var(--text-primary);
   color: var(--bg-primary);
   box-shadow: none;
 }
 
-:root[data-style="nothing"] .feature-tour-actions .btn-finish {
-  background: var(--accent);
-  color: #fff;
-}
+:root[data-style="nothing"] .feature-tour-actions .btn-finish { background: var(--accent); color: #fff; }
+:root[data-style="nothing"] .stats-overview-row-value { color: var(--text-primary); }
 
-:root[data-style="nothing"] .timer-circle .timer-progress {
-  stroke: var(--accent);
-}

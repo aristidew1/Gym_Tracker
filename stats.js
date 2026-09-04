@@ -40,11 +40,19 @@ function updateMoreButton(button, total, expanded) {
   button.setAttribute('aria-expanded', String(expanded));
 }
 
+const STYLE_CHART_FONTS = { piste: 'IBM Plex Mono', nothing: 'JetBrains Mono' };
+
 function getChartTheme() {
-  const light = document.documentElement.classList.contains('light-theme');
-  return light
+  const root = document.documentElement;
+  const light = root.classList.contains('light-theme');
+  const style = root.dataset.style;
+  const base = light
     ? { grid: 'rgba(37, 51, 82, 0.12)', ticks: 'rgba(37, 51, 82, 0.7)' }
     : { grid: 'rgba(255,255,255,0.05)', ticks: 'rgba(255,255,255,0.4)' };
+  // The alternate styles are built around a single accent, so charts drop the
+  // per-exercise colour and follow the theme instead.
+  const accent = style ? getComputedStyle(root).getPropertyValue('--accent').trim() : '';
+  return { ...base, accent: accent || null, font: STYLE_CHART_FONTS[style] || 'Inter' };
 }
 
 function hexToRgb(hex) {
@@ -198,17 +206,17 @@ export function updateCharts() {
 
   emptyElement.style.display = 'none';
   chartsElement.style.display = '';
-  const color = getExerciseColor(exerciseId);
+  const chartTheme = getChartTheme();
+  const color = chartTheme.accent || getExerciseColor(exerciseId);
   const rgb = hexToRgb(color);
   const labels = history.map((entry) => formatDate(entry.date));
   const maxWeights = history.map((entry) => Math.max(0, ...(entry.sets || []).map((set) => Number(set.weight) || 0)));
   const totalReps = history.map((entry) => (entry.sets || []).reduce((sum, set) => sum + (Number(set.reps) || 0), 0));
-  const chartTheme = getChartTheme();
   const sharedScale = {
     grid: { color: chartTheme.grid },
-    ticks: { color: chartTheme.ticks, font: { family: 'Inter', size: 10 } },
+    ticks: { color: chartTheme.ticks, font: { family: chartTheme.font, size: 10 } },
   };
-  const plugins = { legend: { display: false }, tooltip: { titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } } };
+  const plugins = { legend: { display: false }, tooltip: { titleFont: { family: chartTheme.font }, bodyFont: { family: chartTheme.font } } };
 
   if (weightChart) weightChart.destroy();
   if (repsChart) repsChart.destroy();

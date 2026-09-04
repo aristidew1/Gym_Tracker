@@ -174,6 +174,7 @@ function setVisualStyle(style) {
     document.documentElement.dataset.style = selectedStyle;
   }
   localStorage.setItem(STYLE_KEY, selectedStyle);
+  window.dispatchEvent(new Event('themechange'));
 }
 
 setTheme(getTheme());
@@ -678,12 +679,31 @@ function initSelectPicker() {
 // ============================================
 // HOME VIEW
 // ============================================
+// Section labels only exist for the alternate visual styles: keep each one in
+// sync with the block it introduces so none of them dangles over an empty area.
+function syncSectionEyebrows() {
+  document.querySelectorAll('[data-eyebrow-for]').forEach((eyebrow) => {
+    const target = document.getElementById(eyebrow.dataset.eyebrowFor);
+    const visible = Boolean(target) && target.style.display !== 'none' && target.childElementCount > 0;
+    eyebrow.hidden = !visible;
+  });
+}
+
+function renderHomeDate() {
+  const dateElement = document.getElementById('home-date');
+  if (!dateElement) return;
+  const locale = getLanguage() === 'en' ? 'en-GB' : 'fr-FR';
+  dateElement.textContent = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
 function renderHome() {
   const program = getActiveProgram();
   const emptyState = document.getElementById('home-empty-state');
   const homeStats = document.getElementById('home-stats');
   const nextSessionHint = document.getElementById('next-session-hint');
   const grid = document.getElementById('session-grid');
+
+  renderHomeDate();
 
   if (!program) {
     emptyState.setAttribute('aria-hidden', 'false');
@@ -692,6 +712,7 @@ function renderHome() {
     grid.style.display = 'none';
     grid.innerHTML = '';
     renderHomeSupplements();
+    syncSectionEyebrows();
     return;
   }
 
@@ -749,6 +770,8 @@ function renderHome() {
     card.addEventListener('click', () => startSession(sessionId));
     grid.appendChild(card);
   }
+
+  syncSectionEyebrows();
 }
 
 // ============================================
@@ -1498,6 +1521,8 @@ function updateWorkoutProgress() {
   if (!progressElement || !session) return;
   const progress = getWorkoutCompletionProgress(session, state.exerciseSets, state.choices);
   progressElement.textContent = t('workoutProgress', progress);
+  const ring = document.getElementById('workout-ring');
+  if (ring) ring.style.setProperty('--ring-progress', progress.total ? progress.completed / progress.total : 0);
   document.querySelectorAll('.exercise-card[data-exercise-id]').forEach((card) => {
     updateExerciseCardStatus(card, state.exerciseSets[card.dataset.exerciseId]);
   });
