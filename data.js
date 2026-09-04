@@ -11,7 +11,7 @@ if (
 // focused data modules directly when it only needs one responsibility.
 
 export { DEFAULT_PROGRAM as PROGRAM, getProgramExerciseIds, getResolvedExercise, getSelectionOptions } from './data/default-program.js';
-export { EXERCISES, MUSCLE_CATEGORIES, getExerciseById, getExercises, getExerciseDisplayName, getLocalizedExerciseName, getMuscleCategoryDisplayName, getExerciseColor, getExerciseMuscleCategory, getExercisesByMuscleCategory } from './data/exercises.js';
+export { EXERCISES, MUSCLE_CATEGORIES, STATS_MUSCLE_GROUPS, getExerciseById, getExercises, getExerciseDisplayName, getLocalizedExerciseName, getMuscleCategoryDisplayName, getExerciseColor, getExerciseMuscleCategory, getExercisesByMuscleCategory, getStatsMuscleGroup, getExerciseStatsGroups } from './data/exercises.js';
 export { INTENSITY_TECHNIQUES, getIntensityTechnique, createIntensityTechnique } from './data/intensity-techniques.js';
 
 import { DEFAULT_PROGRAM, getProgramExerciseIds, getResolvedExercise } from './data/default-program.js';

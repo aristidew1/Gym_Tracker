@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { EXERCISES, MUSCLE_CATEGORIES, getExerciseMuscleCategory, getExercisesByMuscleCategory } from '../data/exercises.js';
+import { EXERCISES, MUSCLE_CATEGORIES, STATS_MUSCLE_GROUPS, getExerciseMuscleCategory, getExerciseStatsGroups, getExercisesByMuscleCategory, getStatsMuscleGroup } from '../data/exercises.js';
 
 test('expanded exercise catalogue has unique IDs and every exercise has a muscle category', () => {
   assert.ok(EXERCISES.length >= 100);
@@ -18,6 +18,22 @@ test('pull-ups are available after selecting the back category', () => {
 
 test('every muscle category contains exercises', () => {
   MUSCLE_CATEGORIES.forEach((category) => assert.ok(getExercisesByMuscleCategory(category.id).length > 0, category.id));
+});
+
+test('every muscle category maps to exactly one push/pull/legs stats group', () => {
+  MUSCLE_CATEGORIES.forEach((category) => assert.ok(getStatsMuscleGroup(category.id), category.id));
+  const seen = new Set();
+  STATS_MUSCLE_GROUPS.forEach((group) => group.categories.forEach((categoryId) => {
+    assert.ok(!seen.has(categoryId), `${categoryId} listed in more than one stats group`);
+    seen.add(categoryId);
+  }));
+});
+
+test('the conventional deadlift counts as both a legs and a pull stats exercise', () => {
+  assert.deepEqual(getExerciseStatsGroups('barbell_deadlift'), ['legs', 'pull']);
+  assert.deepEqual(getExerciseStatsGroups('dumbbell_deadlift'), ['legs', 'pull']);
+  // Hinge variants that don't load the back the same way stay legs-only.
+  assert.deepEqual(getExerciseStatsGroups('romanian_deadlift'), ['legs']);
 });
 
 test('common barbell movements also expose their dumbbell variants', () => {

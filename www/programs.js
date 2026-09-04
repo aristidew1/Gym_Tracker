@@ -1,5 +1,5 @@
 import { EXERCISES, INTENSITY_TECHNIQUES, MUSCLE_CATEGORIES, createIntensityTechnique, getExerciseMuscleCategory, getExercisesByMuscleCategory, getIntensityTechnique, getLocalizedExerciseName, getMuscleCategoryDisplayName } from './data.js';
-import { localizeText, t } from './i18n.js';
+import { getLanguage, localizeText, t } from './i18n.js';
 import {
   deleteProgram,
   duplicateProgram,
@@ -8,6 +8,12 @@ import {
   saveProgram,
   setActiveProgram,
 } from './services/program-storage.js';
+import {
+  createCustomExercise,
+  deleteCustomExercise,
+  getCustomExercises,
+  updateCustomExercise,
+} from './services/custom-exercises.js';
 import {
   createBuilderDisclosureState,
   formatBlockSummary,
@@ -25,7 +31,7 @@ const PARAMETER_LABELS = {
 };
 const ui = {
   screen: 'list', editing: null, editorSessionId: null, editorQuery: '', editorCategory: 'back',
-  history: [], future: [], disclosure: null,
+  history: [], future: [], disclosure: null, exerciseDraft: null, libraryEditingId: null,
 };
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -172,15 +178,55 @@ export function initPrograms() {
   renderPrograms();
 }
 
+function renderProgramsTabs(active) {
+  return `<div class="programs-tabs" role="tablist">
+    <button type="button" class="programs-tab ${active === 'list' ? 'active' : ''}" data-action="programs-tab-list" role="tab" aria-selected="${active === 'list'}">${t('programsTabPrograms')}</button>
+    <button type="button" class="programs-tab ${active === 'exercises' ? 'active' : ''}" data-action="programs-tab-exercises" role="tab" aria-selected="${active === 'exercises'}">${t('programsTabExercises')}</button>
+  </div>`;
+}
+
 export function renderPrograms() {
   if (ui.screen === 'editor') return renderEditor();
+  if (ui.screen === 'exercises') return renderExerciseLibrary();
   document.body.classList.remove('program-editor-active');
   const activeId = getActiveProgramId();
   const programs = getPrograms();
   getContainer().innerHTML = `
-    <div class="programs-heading"><div><h1>${t('programsHeading')}</h1><p>${t('programsSubtitle')}</p></div><button class="icon-button primary-icon" data-action="new-program" title="${t('create')}" aria-label="${t('create')}">＋</button></div>
+    ${renderProgramsTabs('list')}
+    <div class="programs-heading"><div><h1>${t('programsHeading')}</h1><p>${t('programsSubtitle')}</p></div><div class="programs-heading-actions"><button class="icon-button primary-icon" data-action="new-program" title="${t('create')}" aria-label="${t('create')}">＋</button></div></div>
     <div class="program-list">${programs.map((program) => renderProgramCard(program, activeId)).join('')}</div>
     <button class="program-create-button" data-action="new-program">${t('customProgram')}</button>`;
+}
+
+function renderExerciseLibrary() {
+  document.body.classList.remove('program-editor-active');
+  const exercises = getCustomExercises().sort((a, b) => a.name.localeCompare(b.name, getLanguage()));
+  const editingId = ui.libraryEditingId;
+  getContainer().innerHTML = `<div class="program-workspace">
+    ${renderProgramsTabs('exercises')}
+    <div class="programs-heading"><div><h1>${t('exerciseLibrary')}</h1><p>${t('exerciseLibrarySubtitle')}</p></div></div>
+    ${editingId === 'new' ? renderLibraryForm(null) : ''}
+    <div class="exercise-library-list">${exercises.length ? exercises.map((exercise) => (editingId === exercise.id ? renderLibraryForm(exercise) : renderLibraryRow(exercise))).join('') : (editingId === 'new' ? '' : `<div class="editor-empty compact-empty"><strong>${t('noCustomExercise')}</strong><p>${t('noCustomExerciseHelp')}</p></div>`)}</div>
+    ${editingId ? '' : `<button class="add-row-button" data-action="library-new-exercise">＋ ${t('createExercise')}</button>`}
+  </div>`;
+}
+
+function renderLibraryRow(exercise) {
+  return `<div class="exercise-library-row">
+    <div class="exercise-library-row-copy"><strong>${escapeHtml(exercise.name)}</strong><span>${escapeHtml(getMuscleCategoryDisplayName(exercise.muscleCategory))}</span></div>
+    <div class="mini-actions"><button class="icon-button" data-action="library-edit-exercise" data-exercise-id="${escapeHtml(exercise.id)}" title="${t('edit')}" aria-label="${t('edit')}">✎</button><button class="icon-button danger-icon" data-action="library-delete-exercise" data-exercise-id="${escapeHtml(exercise.id)}" title="${t('delete')}" aria-label="${t('delete')}">⌫</button></div>
+  </div>`;
+}
+
+function renderLibraryForm(exercise) {
+  return `<div class="exercise-draft-form">
+    <label>${t('exerciseName')}<input data-new-exercise-name value="${escapeHtml(exercise?.name || '')}" placeholder="${escapeHtml(t('exerciseName'))}" /></label>
+    <label>${t('muscleCategory')}<select data-new-exercise-category>${renderCategoryOptions(exercise?.muscleCategory || 'back')}</select></label>
+    <div class="mini-actions">
+      <button type="button" class="secondary-command compact" data-action="library-cancel">${t('cancel')}</button>
+      <button type="button" class="primary-command compact" data-action="library-save">${exercise ? t('save') : t('createExercise')}</button>
+    </div>
+  </div>`;
 }
 
 function renderProgramCard(program, activeId) {
@@ -202,6 +248,7 @@ function openEditor(program, { isNew = false } = {}) {
   ui.editorSessionId = draft.sessionOrder[0];
   ui.editorQuery = '';
   ui.editorCategory = 'back';
+  ui.exerciseDraft = null;
   ui.history = [];
   ui.future = [];
   ui.disclosure = createBuilderDisclosureState(draft, { isNew });
@@ -278,9 +325,10 @@ function renderEditorBlock(block) {
       <div class="editor-add-exercise">
         <label><span>${t('muscleCategory')}</span><select data-editor-category>${renderCategoryOptions(ui.editorCategory)}</select></label>
         <label><span>${t('filterIn', { category: categoryName(ui.editorCategory) })}</span><input data-editor-query value="${escapeHtml(ui.editorQuery)}" placeholder="${escapeHtml(t('filterIn', { category: categoryName(ui.editorCategory) }))}" /></label>
-        <label class="editor-add-exercise-choice"><span>${t('exercise')}</span><select data-editor-add-exercise>${filteredExercises().map((exercise) => `<option value="${exercise.id}">${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}</select></label>
+        <label class="editor-add-exercise-choice"><span>${t('exercise')}</span><select data-editor-add-exercise>${filteredExercises().map((exercise) => `<option value="${exercise.id}">${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}${createExerciseOption()}</select></label>
         <button class="secondary-command" data-action="editor-add-item">＋ ${t('add')}</button>
       </div>
+      ${ui.exerciseDraft?.scope === 'add' && ui.exerciseDraft.blockId === block.id ? renderExerciseDraftForm() : ''}
     </div>` : ''}
   </section>`;
 }
@@ -297,7 +345,8 @@ function renderEditorItem(item) {
   return `<div class="editor-item advanced-editor-item ${open ? 'expanded' : ''}" data-item-id="${escapeHtml(item.id)}" data-item-expanded="${open}">
     ${disclosureHeader('editor-toggle-item', exerciseName, formatPrescriptionSummary(item), open, `data-item-id="${escapeHtml(item.id)}"`)}
     ${open ? `<div class="editor-item-body">
-      <div class="exercise-selector-pair"><label>${t('muscleCategory')}<select data-item-field="muscleCategory">${renderCategoryOptions(muscleCategory)}</select></label><label>${t('exercise')}<select data-item-field="exerciseId">${categoryExercises.map((exercise) => `<option value="${exercise.id}" ${exercise.id === selectedExerciseId ? 'selected' : ''}>${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}</select></label></div>
+      <div class="exercise-selector-pair"><label>${t('muscleCategory')}<select data-item-field="muscleCategory">${renderCategoryOptions(muscleCategory)}</select></label><label>${t('exercise')}<select data-item-field="exerciseId">${categoryExercises.map((exercise) => `<option value="${exercise.id}" ${exercise.id === selectedExerciseId ? 'selected' : ''}>${escapeHtml(getLocalizedExerciseName(exercise))}</option>`).join('')}${createExerciseOption()}</select></label></div>
+      ${ui.exerciseDraft?.scope === 'item' && ui.exerciseDraft.itemId === item.id ? renderExerciseDraftForm() : ''}
       <div class="editor-item-settings prescription-grid basic-prescription-grid"><label>${t('sets')}<input type="number" min="1" max="30" data-item-field="sets" value="${p.setCount}" /></label><label>${t('minReps')}<input type="number" min="0" data-item-field="min" value="${p.repetitionRange.min}" /></label><label>${t('maxReps')}<input type="number" min="0" data-item-field="max" value="${p.repetitionRange.max}" /></label><label>${t('rest')} (s)<input type="number" min="0" step="5" data-item-field="rest" value="${p.restSeconds || 0}" /></label></div>
       <div class="advanced-options-section">
         ${disclosureHeader('editor-toggle-item-advanced', t('advancedOptions'), '', advancedOpen, `data-item-id="${escapeHtml(item.id)}"`)}
@@ -316,6 +365,21 @@ function renderTechniqueParameters(technique) {
 
 function renderCategoryOptions(selectedId) {
   return MUSCLE_CATEGORIES.map((category) => `<option value="${category.id}" ${category.id === selectedId ? 'selected' : ''}>${escapeHtml(getMuscleCategoryDisplayName(category))}</option>`).join('');
+}
+
+function createExerciseOption() {
+  return `<option value="__create__">${escapeHtml(t('createNewExerciseOption'))}</option>`;
+}
+
+function renderExerciseDraftForm() {
+  return `<div class="exercise-draft-form">
+    <label>${t('exerciseName')}<input data-new-exercise-name value="" placeholder="${escapeHtml(t('exerciseName'))}" /></label>
+    <label>${t('muscleCategory')}<select data-new-exercise-category>${renderCategoryOptions(ui.exerciseDraft.muscleCategory)}</select></label>
+    <div class="mini-actions">
+      <button type="button" class="secondary-command compact" data-action="cancel-create-exercise">${t('cancel')}</button>
+      <button type="button" class="primary-command compact" data-action="confirm-create-exercise">${t('createExercise')}</button>
+    </div>
+  </div>`;
 }
 
 function categoryName(categoryId) {
@@ -468,6 +532,26 @@ async function handleClick(event) {
   const action = button.dataset.action;
   try {
     if (action === 'new-program') openEditor(createBlankProgram(), { isNew: true });
+    if (action === 'programs-tab-list') { ui.screen = 'list'; ui.libraryEditingId = null; renderPrograms(); resetDocumentScroll(); }
+    if (action === 'programs-tab-exercises') { ui.screen = 'exercises'; ui.libraryEditingId = null; renderPrograms(); resetDocumentScroll(); }
+    if (action === 'library-new-exercise') { ui.libraryEditingId = 'new'; renderPrograms(); }
+    if (action === 'library-edit-exercise') { ui.libraryEditingId = button.dataset.exerciseId; renderPrograms(); }
+    if (action === 'library-cancel') { ui.libraryEditingId = null; renderPrograms(); }
+    if (action === 'library-save') {
+      const nameInput = document.querySelector('[data-new-exercise-name]');
+      const categorySelect = document.querySelector('[data-new-exercise-category]');
+      const payload = { name: nameInput?.value, muscleCategory: categorySelect?.value };
+      const ok = ui.libraryEditingId === 'new' ? !!createCustomExercise(payload) : updateCustomExercise(ui.libraryEditingId, payload);
+      if (!ok) { window.showToast?.(t('exerciseNameRequired'), 'error'); return; }
+      ui.libraryEditingId = null;
+      renderPrograms();
+    }
+    if (action === 'library-delete-exercise') {
+      const exercise = getCustomExercises().find((entry) => entry.id === button.dataset.exerciseId);
+      if (exercise && window.confirm(t('deleteExerciseConfirm', { name: exercise.name }))) { deleteCustomExercise(exercise.id); renderPrograms(); }
+    }
+    if (action === 'confirm-create-exercise') confirmCreateExercise();
+    if (action === 'cancel-create-exercise') { ui.exerciseDraft = null; renderEditor(); }
     if (action === 'program-actions') {
       const card = button.closest('.program-card');
       const willOpen = !card?.classList.contains('actions-open');
@@ -573,10 +657,58 @@ function handleStructureAction(action, button) {
 
 function handleChange(event) {
   if (event.target.id === 'editor-program-frequency-mode') { syncEditor(); renderEditor(); return; }
+  if (event.target.dataset.editorAddExercise !== undefined && event.target.value === '__create__') {
+    const blockElement = event.target.closest('.editor-block');
+    openExerciseDraft({ scope: 'add', blockId: blockElement?.dataset.blockId, category: blockElement?.querySelector('[data-editor-category]')?.value || ui.editorCategory });
+    return;
+  }
+  if (event.target.dataset.itemField === 'exerciseId' && event.target.value === '__create__') {
+    const itemElement = event.target.closest('.editor-item');
+    const blockElement = event.target.closest('.editor-block');
+    openExerciseDraft({
+      scope: 'item',
+      blockId: blockElement?.dataset.blockId,
+      itemId: itemElement?.dataset.itemId,
+      category: itemElement?.querySelector('[data-item-field="muscleCategory"]')?.value || 'back',
+    });
+    return;
+  }
   if (event.target.dataset.editorCategory !== undefined) updateAddExerciseOptions(event.target, '');
   if (event.target.dataset.itemField === 'muscleCategory') { changeItemMuscleCategory(event.target); }
   if (event.target.dataset.editorQuery !== undefined) updateAddExerciseOptions(event.target.closest('.editor-block')?.querySelector('[data-editor-category]'), event.target.value);
   if (event.target.dataset.itemField === 'technique') { pushHistory(); syncEditor(); renderEditor(); }
+}
+
+function openExerciseDraft({ scope, blockId, itemId, category }) {
+  syncEditor();
+  ui.exerciseDraft = { scope, blockId, itemId, muscleCategory: category };
+  renderEditor();
+}
+
+function confirmCreateExercise() {
+  const nameInput = document.querySelector('[data-new-exercise-name]');
+  const categorySelect = document.querySelector('[data-new-exercise-category]');
+  const created = createCustomExercise({ name: nameInput?.value, muscleCategory: categorySelect?.value });
+  if (!created) { window.showToast?.(t('exerciseNameRequired'), 'error'); return; }
+  const draft = ui.exerciseDraft;
+  const session = ui.editing.sessions[ui.editorSessionId];
+  const block = byId(session?.blocks || [], draft.blockId);
+  if (draft.scope === 'add' && block) {
+    pushHistory();
+    const createdItem = createItem(created.id);
+    block.items.push(createdItem);
+    ui.disclosure.openItems.add(createdItem.id);
+    ui.editorCategory = created.muscleCategory;
+  } else if (draft.scope === 'item' && block) {
+    const item = byId(block.items, draft.itemId);
+    if (item) {
+      pushHistory();
+      item.exerciseId = created.id;
+      delete item.selection;
+    }
+  }
+  ui.exerciseDraft = null;
+  renderEditor();
 }
 
 function updateAddExerciseOptions(categorySelect, query) {
@@ -598,6 +730,10 @@ function updateAddExerciseOptions(categorySelect, query) {
     option.textContent = getLocalizedExerciseName(exercise);
     exerciseSelect.appendChild(option);
   });
+  const createOption = document.createElement('option');
+  createOption.value = '__create__';
+  createOption.textContent = t('createNewExerciseOption');
+  exerciseSelect.appendChild(createOption);
 }
 
 function changeItemMuscleCategory(select) {

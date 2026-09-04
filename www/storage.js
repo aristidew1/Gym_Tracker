@@ -290,6 +290,7 @@ export function getProgressionCandidates() {
         latestByExercise.set(exercise.exerciseId, {
           exerciseId: exercise.exerciseId,
           exerciseName: exercise.exerciseName || getExerciseDisplayName(exercise.exerciseId),
+          date: workout.date,
           prescription: exercise.prescription,
           sets: exercise.sets,
         });
@@ -303,9 +304,9 @@ export function getProgressionCandidates() {
         progressionRule: entry.prescription.progressionRuleId,
         workoutHistory: [{ sets: entry.sets }],
       });
-      return proximity ? [{ exerciseId: entry.exerciseId, exerciseName: entry.exerciseName, ...proximity }] : [];
+      return proximity ? [{ exerciseId: entry.exerciseId, exerciseName: entry.exerciseName, date: entry.date, ...proximity }] : [];
     })
-    .sort((a, b) => Number(b.ready) - Number(a.ready) || b.setsAtMax - a.setsAtMax);
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 function dateToDayNumber(dateValue) {

@@ -1,6 +1,7 @@
 // Canonical exercise catalogue. Programs only reference these stable IDs.
 
 import { getLanguage, t } from '../i18n.js';
+import { getCustomExerciseById, getCustomExercises } from '../services/custom-exercises.js';
 
 export const EXERCISES = [
   { id: 'weighted_pull_up', name: 'Tractions lestées', category: 'strength', movementPattern: 'vertical_pull', primaryMuscles: ['lats', 'biceps'], secondaryMuscles: ['upper_back', 'forearms'], equipment: ['pullup_bar', 'weight_belt'], level: 'intermediate', unilateral: false, tags: ['compound', 'bodyweight'], color: '#4d7cff' },
@@ -147,21 +148,57 @@ export const MUSCLE_CATEGORIES = [
   { id: 'forearms', name: 'Avant-bras', muscles: ['forearms'] },
 ];
 
+// Stats-only grouping: folds the fine-grained muscle categories into the
+// push/pull/legs split most lifters already think in, so the Stats view
+// doesn't require picking through all ten categories at once.
+export const STATS_MUSCLE_GROUPS = [
+  { id: 'push', categories: ['chest', 'shoulders', 'triceps'] },
+  { id: 'pull', categories: ['back', 'biceps', 'forearms'] },
+  { id: 'legs', categories: ['quadriceps', 'posterior_chain', 'calves', 'core'] },
+];
+
+const STATS_GROUP_BY_CATEGORY = new Map(STATS_MUSCLE_GROUPS.flatMap((group) => group.categories.map((categoryId) => [categoryId, group.id])));
+
+export function getStatsMuscleGroup(categoryId) {
+  return STATS_GROUP_BY_CATEGORY.get(categoryId) || null;
+}
+
+const CATEGORY_IDS = new Set(MUSCLE_CATEGORIES.map((category) => category.id));
+
 const CATEGORY_BY_MUSCLE = new Map(MUSCLE_CATEGORIES.flatMap((category) => category.muscles.map((muscle) => [muscle, category.id])));
 
 const EXERCISE_BY_ID = new Map(EXERCISES.map((exercise) => [exercise.id, exercise]));
 
 export function getExerciseById(id) {
-  return EXERCISE_BY_ID.get(id) || null;
+  return EXERCISE_BY_ID.get(id) || getCustomExerciseById(id);
 }
 
 export function getExerciseMuscleCategory(exerciseOrId) {
   const exercise = typeof exerciseOrId === 'string' ? getExerciseById(exerciseOrId) : exerciseOrId;
+  if (exercise?.custom) return CATEGORY_IDS.has(exercise.muscleCategory) ? exercise.muscleCategory : 'other';
   return CATEGORY_BY_MUSCLE.get(exercise?.primaryMuscles?.[0]) || 'other';
 }
 
 export function getExercisesByMuscleCategory(categoryId) {
-  return EXERCISES.filter((exercise) => getExerciseMuscleCategory(exercise) === categoryId);
+  const builtIn = EXERCISES.filter((exercise) => getExerciseMuscleCategory(exercise) === categoryId);
+  const custom = getCustomExercises().filter((exercise) => exercise.muscleCategory === categoryId);
+  return [...builtIn, ...custom];
+}
+
+// A handful of exercises pull real weight in a second push/pull/legs group
+// beyond the one their primary muscle implies — the conventional deadlift is
+// a legs/posterior-chain lift but also loads the back and grip like a pull.
+const STATS_GROUP_EXTRAS = {
+  barbell_deadlift: ['pull'],
+  dumbbell_deadlift: ['pull'],
+};
+
+export function getExerciseStatsGroups(exerciseOrId) {
+  const exercise = typeof exerciseOrId === 'string' ? getExerciseById(exerciseOrId) : exerciseOrId;
+  if (!exercise) return [];
+  const primaryGroup = getStatsMuscleGroup(getExerciseMuscleCategory(exercise));
+  const extraGroups = STATS_GROUP_EXTRAS[exercise.id] || [];
+  return [...new Set([primaryGroup, ...extraGroups].filter(Boolean))];
 }
 
 function englishExerciseName(id) {
@@ -173,6 +210,7 @@ function englishExerciseName(id) {
 export function getLocalizedExerciseName(exerciseOrId, fallback = t('unknownExercise')) {
   const exercise = typeof exerciseOrId === 'string' ? getExerciseById(exerciseOrId) : exerciseOrId;
   if (!exercise) return fallback;
+  if (exercise.custom) return exercise.name;
   return getLanguage() === 'en' ? englishExerciseName(exercise.id) : exercise.name;
 }
 

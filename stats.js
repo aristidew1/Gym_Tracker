@@ -3,9 +3,11 @@
 import { getAllTimePersonalRecords, getExerciseHistory, getProgressionCandidates, getTrackedExercises } from './storage.js';
 import {
   MUSCLE_CATEGORIES,
+  STATS_MUSCLE_GROUPS,
   getExerciseColor,
   getExerciseDisplayName,
   getExerciseMuscleCategory,
+  getExerciseStatsGroups,
   getMuscleCategoryDisplayName,
   getProgramExerciseIds,
 } from './data.js';
@@ -17,6 +19,26 @@ import { escapeHtml } from './services/html.js';
 let weightChart = null;
 let repsChart = null;
 let initialized = false;
+
+const OVERVIEW_PREVIEW_COUNT = 3;
+let recordsExpanded = false;
+let progressionExpanded = false;
+let activeStatsGroup = STATS_MUSCLE_GROUPS[0].id;
+
+function matchesActiveGroup(exerciseId) {
+  return getExerciseStatsGroups(exerciseId).includes(activeStatsGroup);
+}
+
+function updateMoreButton(button, total, expanded) {
+  if (!button) return;
+  if (total <= OVERVIEW_PREVIEW_COUNT) {
+    button.hidden = true;
+    return;
+  }
+  button.hidden = false;
+  button.textContent = expanded ? t('statsShowLess') : t('statsShowMore', { count: total - OVERVIEW_PREVIEW_COUNT });
+  button.setAttribute('aria-expanded', String(expanded));
+}
 
 function getChartTheme() {
   const light = document.documentElement.classList.contains('light-theme');
@@ -46,6 +68,7 @@ function getSelectorExercises() {
   });
   return [...exercises.values()]
     .map((exercise) => ({ ...exercise, muscleCategory: getExerciseMuscleCategory(exercise.id) }))
+    .filter((exercise) => matchesActiveGroup(exercise.id))
     .sort((first, second) => first.name.localeCompare(second.name, getLanguage()));
 }
 
@@ -110,6 +133,18 @@ export function initStats() {
     updateCharts();
   });
 
+  document.getElementById('stats-group-selector').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-group]');
+    if (!button || button.dataset.group === activeStatsGroup) return;
+    document.querySelectorAll('#stats-group-selector [data-group]').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    activeStatsGroup = button.dataset.group;
+    recordsExpanded = false;
+    progressionExpanded = false;
+    refreshStatsSelector();
+    updateCharts();
+  });
+
   document.getElementById('stats-period-selector').addEventListener('click', (event) => {
     const button = event.target.closest('.stats-period-btn');
     if (!button) return;
@@ -119,6 +154,16 @@ export function initStats() {
   });
 
   window.addEventListener('themechange', updateCharts);
+
+  document.getElementById('stats-records-more').addEventListener('click', () => {
+    recordsExpanded = !recordsExpanded;
+    renderRecordsOverview();
+  });
+
+  document.getElementById('stats-progression-more').addEventListener('click', () => {
+    progressionExpanded = !progressionExpanded;
+    renderProgressionOverview();
+  });
 
   updateCharts();
 }
@@ -187,10 +232,12 @@ function renderStatsOverview() {
 function renderRecordsOverview() {
   const list = document.getElementById('stats-records-list');
   const empty = document.getElementById('stats-records-empty');
+  const moreBtn = document.getElementById('stats-records-more');
   if (!list || !empty) return;
-  const records = getAllTimePersonalRecords();
+  const records = getAllTimePersonalRecords().filter((record) => matchesActiveGroup(record.exerciseId));
   empty.style.display = records.length ? 'none' : '';
-  list.innerHTML = records.map((record) => {
+  const visible = recordsExpanded ? records : records.slice(0, OVERVIEW_PREVIEW_COUNT);
+  list.innerHTML = visible.map((record) => {
     const name = getExerciseDisplayName(record.exerciseId, record.exerciseName);
     const value = t(record.type === 'weight' ? 'recordWeight' : 'recordReps', { value: record.value });
     return `
@@ -200,15 +247,18 @@ function renderRecordsOverview() {
         <span class="stats-overview-row-date">${escapeHtml(formatDate(record.date))}</span>
       </div>`;
   }).join('');
+  updateMoreButton(moreBtn, records.length, recordsExpanded);
 }
 
 function renderProgressionOverview() {
   const list = document.getElementById('stats-progression-list');
   const empty = document.getElementById('stats-progression-empty');
+  const moreBtn = document.getElementById('stats-progression-more');
   if (!list || !empty) return;
-  const candidates = getProgressionCandidates();
+  const candidates = getProgressionCandidates().filter((candidate) => matchesActiveGroup(candidate.exerciseId));
   empty.style.display = candidates.length ? 'none' : '';
-  list.innerHTML = candidates.map((candidate) => {
+  const visible = progressionExpanded ? candidates : candidates.slice(0, OVERVIEW_PREVIEW_COUNT);
+  list.innerHTML = visible.map((candidate) => {
     const name = getExerciseDisplayName(candidate.exerciseId, candidate.exerciseName);
     const detail = t('statsProgressionSetsDetail', { setsAtMax: candidate.setsAtMax, setCount: candidate.setCount, repMax: candidate.repMax });
     const badge = t(candidate.ready ? 'statsProgressionReady' : 'statsProgressionClose');
@@ -219,4 +269,5 @@ function renderProgressionOverview() {
         <span class="stats-progression-badge ${candidate.ready ? 'ready' : 'close'}">${escapeHtml(badge)}</span>
       </div>`;
   }).join('');
+  updateMoreButton(moreBtn, candidates.length, progressionExpanded);
 }

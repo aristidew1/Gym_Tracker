@@ -288,8 +288,31 @@ test('progression candidates surface exercises within one set of the top of thei
 
   const candidates = storage.getProgressionCandidates();
   assert.deepEqual(candidates, [
-    { exerciseId: 'barbell_back_squat', exerciseName: 'Squat', ready: false, setsAtMax: 3, setCount: 4, repMax: 5 },
+    { exerciseId: 'barbell_back_squat', exerciseName: 'Squat', date: '2026-01-01', ready: false, setsAtMax: 3, setCount: 4, repMax: 5 },
   ]);
+});
+
+test('progression candidates are ordered by the most recently logged exercise first', () => {
+  values.clear();
+  storage.saveWorkout({
+    programId: 'custom', sessionId: 'one', date: '2026-01-01',
+    exercises: [{
+      programExerciseId: 'squat', exerciseId: 'barbell_back_squat', exerciseName: 'Squat',
+      prescription: { setCount: 4, repetitionRange: { min: 3, max: 5 }, progressionRuleId: 'double_progression' },
+      sets: [{ reps: 5, completed: true }, { reps: 5, completed: true }, { reps: 5, completed: true }, { reps: 4, completed: true }],
+    }],
+  });
+  storage.saveWorkout({
+    programId: 'custom', sessionId: 'two', date: '2026-01-10',
+    exercises: [{
+      programExerciseId: 'curl', exerciseId: 'dumbbell_curl', exerciseName: 'Curl haltères',
+      prescription: { setCount: 3, repetitionRange: { min: 8, max: 12 }, progressionRuleId: 'double_progression' },
+      sets: [{ reps: 12, completed: true }, { reps: 12, completed: true }, { reps: 11, completed: true }],
+    }],
+  });
+
+  const candidates = storage.getProgressionCandidates();
+  assert.deepEqual(candidates.map((candidate) => candidate.exerciseId), ['dumbbell_curl', 'barbell_back_squat']);
 });
 
 test('versioned imports reject unsupported future backup versions', () => {

@@ -129,16 +129,24 @@
         </div>
       </div>
 
+      <div class="stats-group-selector" id="stats-group-selector">
+        <button type="button" class="stats-period-btn active" data-group="push" data-i18n="statsGroupPush">Push</button>
+        <button type="button" class="stats-period-btn" data-group="pull" data-i18n="statsGroupPull">Pull</button>
+        <button type="button" class="stats-period-btn" data-group="legs" data-i18n="statsGroupLegs">Jambes</button>
+      </div>
+
       <div class="stats-overview">
         <section class="stats-overview-card">
           <h2><span aria-hidden="true">🏆</span> <span data-i18n="statsRecordsTitle">Records personnels</span></h2>
           <div class="stats-overview-list" id="stats-records-list"></div>
           <p class="stats-overview-empty" id="stats-records-empty" data-i18n="statsRecordsEmpty">Termine une séance pour voir apparaître tes records ici.</p>
+          <button type="button" class="stats-overview-more-btn" id="stats-records-more" aria-expanded="false" hidden></button>
         </section>
         <section class="stats-overview-card">
           <h2><span aria-hidden="true">⚡</span> <span data-i18n="statsProgressionTitle">Proche du palier supérieur</span></h2>
           <div class="stats-overview-list" id="stats-progression-list"></div>
           <p class="stats-overview-empty" id="stats-progression-empty" data-i18n="statsProgressionEmpty">Aucun exercice proche d’un palier pour l’instant.</p>
+          <button type="button" class="stats-overview-more-btn" id="stats-progression-more" aria-expanded="false" hidden></button>
         </section>
       </div>
 
