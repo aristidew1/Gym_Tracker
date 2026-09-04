@@ -382,7 +382,7 @@ function getDailyStatus() {
         : t('nextWorkoutInDays', { count: daysUntilNext, name: localizeText(nextSession.name) });
       workoutStatus = {
         title: (weeklyRecommendation?.completedToday ?? daysDiff === 0) ? t('workoutCompletedToday') : t('restToday'),
-        body: `${nextLabel} — ${localizeText(nextSession.subtitle)}`,
+        body: `${nextLabel} · ${localizeText(nextSession.subtitle)}`,
       };
     }
   }

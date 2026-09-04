@@ -731,7 +731,7 @@ function renderHome() {
   const nextSession = getNextSession(program);
   const sessionData = program.sessions[nextSession];
   document.getElementById('next-session-name').textContent =
-    `${localizeText(sessionData.name)} — ${localizeText(sessionData.subtitle)}`;
+    `${localizeText(sessionData.name)} · ${localizeText(sessionData.subtitle)}`;
 
   renderHomeSupplements();
 
@@ -1935,6 +1935,15 @@ function initTimerControls() {
     if (!state.timerEndsAt) return;
     startRestTimerNotification(state.timerRemaining);
   });
+
+  document.getElementById('btn-timer-minus30').addEventListener('click', () => {
+    if (!state.timerEndsAt) return;
+    state.timerEndsAt -= 30 * 1000;
+    state.timerTotal = Math.max(1, state.timerTotal - 30);
+    refreshRestTimer();
+    if (!state.timerEndsAt) return;
+    startRestTimerNotification(state.timerRemaining);
+  });
 }
 
 function initTimerLifecycle() {
@@ -2148,7 +2157,7 @@ function showSummary(session, exercises, durationMs, previousWorkout = null, per
   const comparisonContainer = document.getElementById('summary-comparison');
   const noteContainer = document.getElementById('summary-note');
 
-  sessionInfo.textContent = `${localizeText(session.name)} — ${localizeText(session.subtitle)}`;
+  sessionInfo.textContent = `${localizeText(session.name)} · ${localizeText(session.subtitle)}`;
 
   const current = getWorkoutMetrics(exercises, durationMs);
 

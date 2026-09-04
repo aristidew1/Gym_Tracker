@@ -1,6 +1,6 @@
 // Non-destructive live workout UX layer.
 // Keeps a live workout in memory while the user browses the app. Each rest
-// countdown stays compact while the user trains and can be expanded on demand.
+// countdown opens fullscreen and can be reduced to a compact bar on demand.
 
 const patchState = {
   liveWorkout: false,
@@ -79,8 +79,21 @@ function injectActiveWorkoutStyles() {
     }
 
     .rest-timer-overlay .timer-controls {
+      display: flex !important;
+      flex-direction: row !important;
       margin-left: auto !important;
       gap: 6px !important;
+    }
+
+    /* Compact mode flattens both rows into the single control bar and drops
+       the -30s button so the bar stays narrow enough to sit beside the ring. */
+    .rest-timer-overlay:not(.timer-fullscreen) .timer-adjust-row,
+    .rest-timer-overlay:not(.timer-fullscreen) .timer-actions-row {
+      display: contents !important;
+    }
+
+    .rest-timer-overlay:not(.timer-fullscreen) #btn-timer-minus30 {
+      display: none !important;
     }
 
     .rest-timer-overlay .btn-timer {
@@ -89,13 +102,6 @@ function injectActiveWorkoutStyles() {
       border-radius: 10px !important;
       font-size: .76rem !important;
       white-space: nowrap !important;
-    }
-
-    .rest-timer-overlay .btn-timer-expand {
-      width: 40px !important;
-      min-width: 40px !important;
-      padding-inline: 0 !important;
-      font-size: 1.08rem !important;
     }
 
     /* Explicit fullscreen mode, enabled only by the user. */
@@ -140,22 +146,23 @@ function injectActiveWorkoutStyles() {
     }
 
     .rest-timer-overlay.timer-fullscreen .timer-controls {
+      flex-direction: column !important;
       margin-left: 0 !important;
+      align-items: center !important;
+      gap: 14px !important;
+    }
+
+    .rest-timer-overlay.timer-fullscreen .timer-adjust-row,
+    .rest-timer-overlay.timer-fullscreen .timer-actions-row {
+      display: flex !important;
       justify-content: center !important;
       gap: 10px !important;
     }
 
     .rest-timer-overlay.timer-fullscreen .btn-timer {
       min-height: 48px !important;
-      padding: 10px 16px !important;
+      padding: 10px 18px !important;
       font-size: .88rem !important;
-    }
-
-    .rest-timer-overlay.timer-fullscreen .btn-timer-expand {
-      width: 48px !important;
-      min-width: 48px !important;
-      padding-inline: 0 !important;
-      font-size: 1.08rem !important;
     }
 
     html.light-theme .rest-timer-overlay:not(.timer-fullscreen) {
@@ -230,11 +237,6 @@ function injectActiveWorkoutStyles() {
       .rest-timer-overlay:not(.timer-fullscreen) .btn-timer {
         padding-inline: 8px !important;
         font-size: .7rem !important;
-      }
-      .rest-timer-overlay:not(.timer-fullscreen) .btn-timer-expand {
-        width: 36px !important;
-        min-width: 36px !important;
-        padding-inline: 0 !important;
       }
       .active-workout-banner-duration { display: none; }
     }
@@ -378,17 +380,20 @@ function clearLiveWorkout() {
 }
 
 function ensureTimerExpandButton() {
-  const controls = document.querySelector('#rest-timer-overlay .timer-controls');
-  if (!controls) return null;
+  // Lives beside "Passer" in the actions row so it reads as a same-weight
+  // action instead of a small corner icon.
+  const actionsRow = document.getElementById('timer-actions-row')
+    || document.querySelector('#rest-timer-overlay .timer-controls');
+  if (!actionsRow) return null;
   let button = document.getElementById('btn-timer-expand');
   if (button) return button;
 
   button = document.createElement('button');
   button.type = 'button';
   button.id = 'btn-timer-expand';
-  button.className = 'btn-timer secondary btn-timer-expand';
+  button.className = 'btn-timer secondary';
   button.addEventListener('click', () => setTimerFullscreen(!patchState.timerFullscreen));
-  controls.appendChild(button);
+  actionsRow.appendChild(button);
   syncTimerExpandButton();
   return button;
 }
@@ -398,11 +403,11 @@ function syncTimerExpandButton() {
   if (!button) return;
   const french = isFrench();
   if (patchState.timerFullscreen) {
-    button.textContent = '↙';
+    button.textContent = french ? 'Réduire' : 'Minimize';
     button.setAttribute('aria-label', french ? 'Revenir au minuteur compact' : 'Return to compact timer');
     button.title = french ? 'Minuteur compact' : 'Compact timer';
   } else {
-    button.textContent = '⛶';
+    button.textContent = french ? 'Plein écran' : 'Fullscreen';
     button.setAttribute('aria-label', french ? 'Compte à rebours en plein écran' : 'Fullscreen countdown');
     button.title = french ? 'Plein écran' : 'Fullscreen';
   }
@@ -425,9 +430,9 @@ function observeTimer() {
   const sync = () => {
     const running = overlay.classList.contains('active');
 
-    // A new rest period must not interrupt the workout. Fullscreen remains an
-    // explicit choice through the expand button.
-    if (running && !wasRunning) setTimerFullscreen(false);
+    // A new rest period opens fullscreen by default; the user can reduce it
+    // to the compact bar on demand via the "Réduire" button.
+    if (running && !wasRunning) setTimerFullscreen(true);
 
     document.documentElement.classList.toggle('rest-timer-running', running);
     if (!running && patchState.timerFullscreen) setTimerFullscreen(false);

@@ -7,11 +7,17 @@ const patchSource = await readFile(new URL('../active-workout-patch.js', import.
 const htmlSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const i18nSource = await readFile(new URL('../i18n.js', import.meta.url), 'utf8');
 
-test('rest starts compact and fullscreen remains optional', () => {
-  assert.match(patchSource, /if \(running && !wasRunning\) setTimerFullscreen\(false\)/);
-  assert.doesNotMatch(patchSource, /if \(running && !wasRunning\) setTimerFullscreen\(true\)/);
+test('rest starts fullscreen and can be reduced to a compact bar', () => {
+  assert.match(patchSource, /if \(running && !wasRunning\) setTimerFullscreen\(true\)/);
+  assert.doesNotMatch(patchSource, /if \(running && !wasRunning\) setTimerFullscreen\(false\)/);
   assert.match(patchSource, /html\.rest-timer-running \.btn-rest-timer[\s\S]*display: none/);
-  assert.match(patchSource, /button\.textContent = '⛶'/);
+  assert.match(patchSource, /button\.textContent = french \? 'Réduire' : 'Minimize'/);
+  assert.match(patchSource, /button\.textContent = french \? 'Plein écran' : 'Fullscreen'/);
+});
+
+test('the fullscreen rest timer offers +30s/-30s adjustments above skip and reduce', () => {
+  assert.match(htmlSource, /id="timer-adjust-row"[\s\S]*id="btn-timer-add30"[\s\S]*id="btn-timer-minus30"[\s\S]*<\/div>\s*<div class="timer-actions-row" id="timer-actions-row">\s*<button[^>]*id="btn-timer-skip"/);
+  assert.match(appSource, /document\.getElementById\('btn-timer-minus30'\)\.addEventListener\('click'/);
 });
 
 test('workout edit and discard actions live in a labelled secondary menu', () => {
