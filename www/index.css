@@ -3951,11 +3951,11 @@ body::before {
 
 /* ---- Layer 3 — Nothing: monochrome ground, single red accent ---- */
 :root[data-style="nothing"] {
-  --bg-primary: #060606;
-  --bg-secondary: #101010;
-  --bg-surface: #131313;
-  --border-glass: #262624;
-  --border-subtle: #1c1c1a;
+  --bg-primary: #030303;
+  --bg-secondary: #0e0e0e;
+  --bg-surface: #111111;
+  --border-glass: #242422;
+  --border-subtle: #1a1a18;
 
   --text-primary: #f5f5f0;
   --text-secondary: #a8a89f;
