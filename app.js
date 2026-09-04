@@ -46,8 +46,6 @@ import {
 import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
 import { getActiveProgram, getProgramById, restorePrograms, saveProgram, setActiveProgram } from './services/program-storage.js';
 import { getOnboardingProgramTemplate } from './data/onboarding-programs.js';
-import { buildAiProgramPrompt } from './services/ai-program-template.js';
-import { copyText } from './services/clipboard.js';
 import { formatLocalDate, localDateToDayNumber } from './services/date-utils.js';
 import { escapeHtml } from './services/html.js';
 import { insertNotePrompt } from './services/note-editor.js';
@@ -751,7 +749,7 @@ function renderHomeSupplements() {
   const header = document.createElement('div');
   header.className = 'supplements-card-header';
   const title = document.createElement('div');
-  title.innerHTML = `<span class="supplements-icon" aria-hidden="true">💊</span><div><h2 id="supplements-home-title">${t('supplements')}</h2><p>${supplements.length ? t('supplementsProgress', { taken: status.taken, total: status.total }) : t('supplementsEmptyHome')}</p></div>`;
+  title.innerHTML = `<span class="supplements-icon" aria-hidden="true"><svg class="icon-glyph icon-glyph--md" viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><div><h2 id="supplements-home-title">${t('supplements')}</h2><p>${supplements.length ? t('supplementsProgress', { taken: status.taken, total: status.total }) : t('supplementsEmptyHome')}</p></div>`;
   const manage = document.createElement('button');
   manage.className = 'supplements-manage-btn';
   manage.type = 'button';
@@ -2146,7 +2144,7 @@ function showSummary(session, exercises, durationMs, previousWorkout = null, per
   }
 
   if (personalRecords.length) {
-    comparisonContainer.insertAdjacentHTML('beforeend', `<div class="personal-records"><h3>🏆 ${t('personalRecords')}</h3>${personalRecords.slice(0, 4).map((record) => `<div class="personal-record"><strong>${escapeHtml(record.exerciseName)}</strong><span>${record.type === 'weight' ? t('recordWeight', { value: formatMetric(record.value) }) : t('recordReps', { value: formatMetric(record.value) })}</span></div>`).join('')}</div>`);
+    comparisonContainer.insertAdjacentHTML('beforeend', `<div class="personal-records"><h3><span class="icon-tint-warning" aria-hidden="true"><svg class="icon-glyph icon-glyph--sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span> ${t('personalRecords')}</h3>${personalRecords.slice(0, 4).map((record) => `<div class="personal-record"><strong>${escapeHtml(record.exerciseName)}</strong><span>${record.type === 'weight' ? t('recordWeight', { value: formatMetric(record.value) }) : t('recordReps', { value: formatMetric(record.value) })}</span></div>`).join('')}</div>`);
   }
 
   noteContainer.innerHTML = '';
@@ -2247,7 +2245,6 @@ function initSettings() {
   const btnExportPrograms = document.getElementById('btn-export-programs');
   const btnImportPrograms = document.getElementById('btn-import-programs');
   const programsFileInput = document.getElementById('import-programs-file-input');
-  const btnCopyAiTemplate = document.getElementById('btn-copy-ai-template');
   const languageSelect = document.getElementById('settings-language');
   languageSelect.value = getLanguage();
   languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
@@ -2300,11 +2297,6 @@ function initSettings() {
     if (e.target === overlay) {
       overlay.classList.remove('active');
     }
-  });
-
-  btnCopyAiTemplate.addEventListener('click', async () => {
-    const copied = await copyText(buildAiProgramPrompt());
-    showToast(t(copied ? 'aiTemplateCopied' : 'aiTemplateCopyError'), copied ? 'success' : 'error');
   });
 
   async function downloadJsonFile(data, fileName) {

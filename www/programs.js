@@ -23,6 +23,8 @@ import {
 import { escapeHtml } from './services/html.js';
 import { exportProgramData } from './storage.js';
 import { formatLocalDate } from './services/date-utils.js';
+import { buildAiProgramPrompt } from './services/ai-program-template.js';
+import { copyText } from './services/clipboard.js';
 
 const SESSION_COLORS = ['#4d7cff', '#ff8a3d', '#ff4d6a', '#3ddc84', '#e7c65c', '#45c4d9'];
 const PARAMETER_LABELS = {
@@ -32,6 +34,7 @@ const PARAMETER_LABELS = {
 const ui = {
   screen: 'list', editing: null, editorSessionId: null, editorQuery: '', editorCategory: 'back',
   history: [], future: [], disclosure: null, exerciseDraft: null, libraryEditingId: null,
+  aiCardOpen: false,
 };
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -185,6 +188,27 @@ function renderProgramsTabs(active) {
   </div>`;
 }
 
+function renderAiProgramCard() {
+  const open = ui.aiCardOpen;
+  return `<div class="ai-program-card ${open ? 'open' : ''}">
+    <button type="button" class="ai-program-card-head" data-action="toggle-ai-card" aria-expanded="${open}">
+      <span class="ai-program-card-icon" aria-hidden="true"><svg class="icon-glyph icon-glyph--sm" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/><path d="M19 3v4"/><path d="M17 5h4"/></svg></span>
+      <div class="ai-program-card-head-copy">
+        <h2>${t('programsAiCardTitle')}</h2>
+        ${open ? `<p>${t('programsAiCardDesc')}</p>` : ''}
+      </div>
+      <span class="ai-program-card-chevron" aria-hidden="true">⌄</span>
+    </button>
+    ${open ? `
+    <ol class="ai-program-card-steps">
+      <li>${t('programsAiCardStep1')}</li>
+      <li>${t('programsAiCardStep2')}</li>
+      <li>${t('programsAiCardStep3')}</li>
+    </ol>
+    <button class="ai-program-card-button" data-action="copy-ai-template"><span aria-hidden="true">⧉</span>${t('copyTemplate')}</button>` : ''}
+  </div>`;
+}
+
 export function renderPrograms() {
   if (ui.screen === 'editor') return renderEditor();
   if (ui.screen === 'exercises') return renderExerciseLibrary();
@@ -194,8 +218,12 @@ export function renderPrograms() {
   getContainer().innerHTML = `
     ${renderProgramsTabs('list')}
     <div class="programs-heading"><div><h1>${t('programsHeading')}</h1><p>${t('programsSubtitle')}</p></div><div class="programs-heading-actions"><button class="icon-button primary-icon" data-action="new-program" title="${t('create')}" aria-label="${t('create')}">＋</button></div></div>
+    ${renderAiProgramCard()}
     <div class="program-list">${programs.map((program) => renderProgramCard(program, activeId)).join('')}</div>
-    <button class="program-create-button" data-action="new-program">${t('customProgram')}</button>`;
+    <div class="program-actions-row">
+      <button class="program-create-button" data-action="new-program">${t('customProgram')}</button>
+      <button class="program-import-button" data-action="import-programs-from-list">${t('importPrograms')}</button>
+    </div>`;
 }
 
 function renderExerciseLibrary() {
@@ -532,6 +560,12 @@ async function handleClick(event) {
   const action = button.dataset.action;
   try {
     if (action === 'new-program') openEditor(createBlankProgram(), { isNew: true });
+    if (action === 'import-programs-from-list') document.getElementById('import-programs-file-input')?.click();
+    if (action === 'toggle-ai-card') { ui.aiCardOpen = !ui.aiCardOpen; renderPrograms(); }
+    if (action === 'copy-ai-template') {
+      const copied = await copyText(buildAiProgramPrompt());
+      window.showToast?.(t(copied ? 'aiTemplateCopied' : 'aiTemplateCopyError'), copied ? 'success' : 'error');
+    }
     if (action === 'programs-tab-list') { ui.screen = 'list'; ui.libraryEditingId = null; renderPrograms(); resetDocumentScroll(); }
     if (action === 'programs-tab-exercises') { ui.screen = 'exercises'; ui.libraryEditingId = null; renderPrograms(); resetDocumentScroll(); }
     if (action === 'library-new-exercise') { ui.libraryEditingId = 'new'; renderPrograms(); }

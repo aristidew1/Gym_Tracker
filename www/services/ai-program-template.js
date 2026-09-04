@@ -1,5 +1,6 @@
 import { EXERCISES, getLocalizedExerciseName } from '../data/exercises.js';
 import { INTENSITY_TECHNIQUES, getIntensityTechnique } from '../data/intensity-techniques.js';
+import { getCustomExercises } from './custom-exercises.js';
 import { getLanguage } from '../i18n.js';
 
 const COPY = {
@@ -9,12 +10,16 @@ const COPY = {
     blockName: 'Bloc principal',
     presentationLabel: 'Principal',
     intro: 'Tu crées un programme de musculation pour Muscu Tracker.',
-    output: 'Réponds uniquement avec le JSON final valide, sans Markdown ni commentaire.',
+    output: 'Si ton environnement le permet, fournis un lien de téléchargement vers le fichier JSON final plutôt que de le coller dans ta réponse. Sinon, réponds uniquement avec le JSON final valide, sans Markdown ni commentaire.',
     contract: 'CONTRAT DE SORTIE',
     rules: 'RÈGLES DU SCHÉMA',
     techniques: "TECHNIQUES D’INTENSIFICATION AUTORISÉES",
     exercises: 'EXERCICES AUTORISÉS',
+    customExercises: "EXERCICES PERSONNALISÉS DE L’UTILISATEUR (à préférer si pertinents)",
+    noCustomExercises: 'aucun — cet utilisateur n’a créé aucun exercice personnalisé',
     example: 'EXEMPLE MINIMAL VALIDE',
+    verify: 'VÉRIFICATION AVANT RÉPONSE',
+    verifyLine: 'Relis chaque règle ci-dessus et corrige silencieusement ton JSON si besoin avant de répondre. Ne réponds qu’une fois certain qu’il est valide et conforme.',
     need: "BESOIN UTILISATEUR À REMPLACER : décris ici l’objectif, le niveau, le matériel disponible, la fréquence et les contraintes.",
     techniqueNone: 'aucun paramètre supplémentaire',
     lines: [
@@ -30,6 +35,7 @@ const COPY = {
       '- intensityTechnique contient toujours un type autorisé. Ajoute uniquement les paramètres listés pour ce type, avec des valeurs du bon type.',
       '- N’invente aucun identifiant d’exercice ou de technique. N’ajoute aucune clé JavaScript, aucun commentaire et aucune virgule finale.',
       '- Donne des prescriptions réalistes et cohérentes avec l’objectif, le niveau, le matériel et la récupération de l’utilisateur.',
+      '- Rédige tous les textes visibles (name, subtitle, note...) en français.',
     ],
   },
   en: {
@@ -38,12 +44,16 @@ const COPY = {
     blockName: 'Main block',
     presentationLabel: 'Main',
     intro: 'You create a strength-training program for Muscu Tracker.',
-    output: 'Reply only with valid final JSON, without Markdown or commentary.',
+    output: 'If your environment supports it, provide a downloadable link to the final JSON file instead of pasting it in your reply. Otherwise, reply only with valid final JSON, without Markdown or commentary.',
     contract: 'OUTPUT CONTRACT',
     rules: 'SCHEMA RULES',
     techniques: 'ALLOWED INTENSITY TECHNIQUES',
     exercises: 'ALLOWED EXERCISES',
+    customExercises: 'USER’S CUSTOM EXERCISES (prefer these when relevant)',
+    noCustomExercises: 'none — this user has not created any custom exercise',
     example: 'MINIMAL VALID EXAMPLE',
+    verify: 'VERIFY BEFORE ANSWERING',
+    verifyLine: 'Re-read every rule above and silently fix your JSON if needed before answering. Only answer once you are certain it is valid and compliant.',
     need: 'USER REQUIREMENT TO REPLACE: describe the goal, level, available equipment, frequency, and constraints here.',
     techniqueNone: 'no additional parameters',
     lines: [
@@ -59,6 +69,7 @@ const COPY = {
       '- intensityTechnique always contains an allowed type. Add only the parameters listed for that type, using the required value types.',
       '- Never invent exercise or technique IDs. Do not add JavaScript keys, comments, or trailing commas.',
       '- Use realistic prescriptions consistent with the user’s goal, level, equipment, and recovery.',
+      '- Write every visible text (name, subtitle, note...) in English.',
     ],
   },
 };
@@ -134,6 +145,9 @@ export function buildAiProgramPrompt() {
   const exerciseCatalog = EXERCISES
     .map((exercise) => `${exercise.id} — ${getLocalizedExerciseName(exercise)}`)
     .join('\n');
+  const customExerciseCatalog = getCustomExercises()
+    .map((exercise) => `${exercise.id} — ${getLocalizedExerciseName(exercise)}`)
+    .join('\n') || text.noCustomExercises;
   const techniqueCatalog = INTENSITY_TECHNIQUES
     .map((technique) => techniqueLine(technique, text))
     .join('\n');
@@ -154,8 +168,14 @@ export function buildAiProgramPrompt() {
     text.exercises,
     exerciseCatalog,
     '',
+    text.customExercises,
+    customExerciseCatalog,
+    '',
     text.example,
     JSON.stringify(createAiProgramImportExample(language), null, 2),
+    '',
+    text.verify,
+    text.verifyLine,
     '',
     text.need,
   ].join('\n');

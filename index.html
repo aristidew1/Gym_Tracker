@@ -20,7 +20,9 @@
         <div>
           <h1>Muscu Tracker</h1>
         </div>
-        <button class="btn-settings" id="btn-settings" title="Paramètres" data-i18n-title="settings">⚙️</button>
+        <button class="btn-settings" id="btn-settings" title="Paramètres" data-i18n-title="settings">
+          <svg class="icon-glyph icon-glyph--md" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
       </div>
 
       <div class="home-stats" id="home-stats">
@@ -51,7 +53,7 @@
       </div>
 
       <section class="home-empty-state" id="home-empty-state" aria-hidden="true">
-        <div class="home-empty-mark" aria-hidden="true">🗂️</div>
+        <div class="home-empty-mark" aria-hidden="true"><svg class="icon-glyph icon-glyph--xl" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M8 14h8M8 17h5"/></svg></div>
         <h2 data-i18n="homeEmptyTitle">Pas encore de programme</h2>
         <p data-i18n="homeEmptyDescription">Crée un programme sur mesure ou pars d’un modèle prêt à l’emploi pour commencer à t’entraîner.</p>
         <div class="home-empty-actions">
@@ -137,13 +139,13 @@
 
       <div class="stats-overview">
         <section class="stats-overview-card">
-          <h2><span aria-hidden="true">🏆</span> <span data-i18n="statsRecordsTitle">Records personnels</span></h2>
+          <h2><span class="stats-overview-icon icon-tint-warning" aria-hidden="true"><svg class="icon-glyph icon-glyph--sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span> <span data-i18n="statsRecordsTitle">Records personnels</span></h2>
           <div class="stats-overview-list" id="stats-records-list"></div>
           <p class="stats-overview-empty" id="stats-records-empty" data-i18n="statsRecordsEmpty">Termine une séance pour voir apparaître tes records ici.</p>
           <button type="button" class="stats-overview-more-btn" id="stats-records-more" aria-expanded="false" hidden></button>
         </section>
         <section class="stats-overview-card">
-          <h2><span aria-hidden="true">⚡</span> <span data-i18n="statsProgressionTitle">Proche du palier supérieur</span></h2>
+          <h2><span class="stats-overview-icon icon-tint-accent" aria-hidden="true"><svg class="icon-glyph icon-glyph--sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> <span data-i18n="statsProgressionTitle">Proche du palier supérieur</span></h2>
           <div class="stats-overview-list" id="stats-progression-list"></div>
           <p class="stats-overview-empty" id="stats-progression-empty" data-i18n="statsProgressionEmpty">Aucun exercice proche d’un palier pour l’instant.</p>
           <button type="button" class="stats-overview-more-btn" id="stats-progression-more" aria-expanded="false" hidden></button>
@@ -182,7 +184,7 @@
       </div>
 
       <div class="stats-empty" id="stats-empty" style="display:none">
-        <div class="empty-icon">📊</div>
+        <div class="empty-icon"><svg class="icon-glyph icon-glyph--xl" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="M2 7h4M8 4h4M14 9h4"/></svg></div>
         <p data-i18n="noStats">Commence à t'entraîner pour voir tes stats !</p>
       </div>
     </div>
@@ -306,17 +308,6 @@
             <button class="settings-toggle" id="btn-rest-timer-notif-toggle" aria-pressed="true">
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
             </button>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3 class="settings-section-title" data-i18n="createWithAi">Création avec une IA</h3>
-          <div class="settings-row settings-action-row">
-            <div class="settings-row-info">
-              <div class="settings-row-label" data-i18n="aiProgramTemplate">Template de programme pour IA</div>
-              <div class="settings-row-desc" data-i18n="aiProgramTemplateDesc">Copie un prompt complet qui explique le format Muscu Tracker et demande un JSON directement importable.</div>
-            </div>
-            <button class="settings-action-btn" id="btn-copy-ai-template"><span aria-hidden="true">⧉</span><span data-i18n="copyTemplate">Copier le template</span></button>
           </div>
         </div>
 
