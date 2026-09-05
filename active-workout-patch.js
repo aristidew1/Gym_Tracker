@@ -2,6 +2,9 @@
 // Keeps a live workout in memory while the user browses the app. Each rest
 // countdown opens fullscreen and can be reduced to a compact bar on demand.
 
+import { showTip } from './coachmark.js';
+import { t } from './i18n.js';
+
 const patchState = {
   liveWorkout: false,
   browsing: false,
@@ -429,6 +432,15 @@ function observeTimer() {
     // A new rest period opens fullscreen by default; the user can reduce it
     // to the compact bar on demand via the "Réduire" button.
     if (running && !wasRunning) setTimerFullscreen(true);
+    if (running && !wasRunning) {
+      requestAnimationFrame(() => {
+        showTip('rest-timer-fullscreen', {
+          target: '#btn-timer-expand',
+          title: t('tipRestFullscreenTitle'),
+          body: t('tipRestFullscreenDesc'),
+        });
+      });
+    }
 
     document.documentElement.classList.toggle('rest-timer-running', running);
     if (!running && patchState.timerFullscreen) setTimerFullscreen(false);

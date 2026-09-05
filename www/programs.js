@@ -1,5 +1,6 @@
 import { EXERCISES, INTENSITY_TECHNIQUES, MUSCLE_CATEGORIES, createIntensityTechnique, getExerciseMuscleCategory, getExercisesByMuscleCategory, getIntensityTechnique, getLocalizedExerciseName, getMuscleCategoryDisplayName } from './data.js';
 import { getLanguage, localizeText, t } from './i18n.js';
+import { showTip } from './coachmark.js';
 import {
   deleteProgram,
   duplicateProgram,
@@ -549,7 +550,18 @@ function toggleEditorDisclosure(action, button) {
     ui.disclosure.openItems = toggleDisclosure(ui.disclosure.openItems, button.dataset.itemId);
   }
   if (action === 'editor-toggle-item-advanced') {
-    ui.disclosure.openAdvancedItems = toggleDisclosure(ui.disclosure.openAdvancedItems, button.dataset.itemId);
+    const itemId = button.dataset.itemId;
+    const justOpened = !ui.disclosure.openAdvancedItems.has(itemId);
+    ui.disclosure.openAdvancedItems = toggleDisclosure(ui.disclosure.openAdvancedItems, itemId);
+    if (justOpened) {
+      requestAnimationFrame(() => {
+        showTip('intensity-technique', {
+          target: `.editor-item[data-item-id="${itemId}"] .technique-editor`,
+          title: t('tipTechniqueTitle'),
+          body: t('tipTechniqueDesc'),
+        });
+      });
+    }
   }
   renderEditor();
 }

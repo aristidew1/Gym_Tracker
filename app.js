@@ -51,6 +51,7 @@ import { escapeHtml } from './services/html.js';
 import { insertNotePrompt } from './services/note-editor.js';
 import { getExerciseCompletionState, getWorkoutCompletionProgress } from './services/workout-progress.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
+import { runTour, showTip } from './coachmark.js';
 
 // ============================================
 // STATE
@@ -360,43 +361,27 @@ function completeOnboarding() {
   overlay?.setAttribute('aria-hidden', 'true');
 }
 
-const FEATURE_TOUR_STEPS = [
-  { mark: '🗂️', title: 'tourProgramTitle', description: 'tourProgramDescription' },
-  { mark: '✅', title: 'tourWorkoutTitle', description: 'tourWorkoutDescription' },
-  { mark: '⏱️', title: 'tourRestTitle', description: 'tourRestDescription' },
-  { mark: '📈', title: 'tourProgressTitle', description: 'tourProgressDescription' },
+// Each step spotlights a real element of the actual UI (navigating between
+// views as needed) instead of showing a generic card, so users see exactly
+// where each feature lives.
+const MAIN_TOUR_STEPS = [
+  { view: 'home', target: '#home-stats', title: 'tourHomeTitle', body: 'tourHomeDesc' },
+  { target: '#supplements-home-card', title: 'tourSupplementsTitle', body: 'tourSupplementsDesc' },
+  { target: '#session-grid', title: 'tourSessionsTitle', body: 'tourSessionsDesc' },
+  { view: 'calendar', target: '#calendar-legend-details', title: 'tourCalendarTitle', body: 'tourCalendarDesc' },
+  { view: 'stats', target: '#stats-group-selector', title: 'tourStatsTitle', body: 'tourStatsDesc' },
+  { view: 'programs', target: ['.program-card', '#programs-content'], title: 'tourProgramsTitle', body: 'tourProgramsDesc' },
+  { view: 'home', target: '#btn-settings', title: 'tourSettingsTitle', body: 'tourSettingsDesc' },
 ];
 
-function startFeatureTour(onComplete = () => {}) {
-  const overlay = document.getElementById('feature-tour-overlay');
-  if (!overlay) return onComplete();
-  let step = 0;
-
-  const renderStep = () => {
-    const current = FEATURE_TOUR_STEPS[step];
-    overlay.querySelector('#feature-tour-mark').textContent = current.mark;
-    overlay.querySelector('#feature-tour-step').textContent = t('tourStep', { current: step + 1, total: FEATURE_TOUR_STEPS.length });
-    overlay.querySelector('#feature-tour-title').textContent = t(current.title);
-    overlay.querySelector('#feature-tour-description').textContent = t(current.description);
-    overlay.querySelector('#feature-tour-progress').style.setProperty('--tour-progress', `${((step + 1) / FEATURE_TOUR_STEPS.length) * 100}%`);
-    overlay.querySelector('#btn-feature-tour-next').textContent = t(step === FEATURE_TOUR_STEPS.length - 1 ? 'tourDone' : 'tourNext');
-  };
-  const finishTour = () => {
-    overlay.classList.remove('active');
-    overlay.setAttribute('aria-hidden', 'true');
-    onComplete();
-  };
-
-  overlay.querySelector('#btn-feature-tour-skip').onclick = finishTour;
-  overlay.querySelector('#btn-feature-tour-next').onclick = () => {
-    if (step === FEATURE_TOUR_STEPS.length - 1) return finishTour();
-    step += 1;
-    renderStep();
-  };
-  renderStep();
-  overlay.classList.add('active');
-  overlay.setAttribute('aria-hidden', 'false');
+function localizedTourSteps() {
+  return MAIN_TOUR_STEPS.map((step) => ({ ...step, title: t(step.title), body: t(step.body) }));
 }
+
+function startMainTour(onFinish = () => doNavigate('home')) {
+  runTour(localizedTourSteps(), { navigate: doNavigate, onFinish });
+}
+
 
 function openOnboardingOverlay() {
   const overlay = document.getElementById('onboarding-overlay');
@@ -431,12 +416,12 @@ function initOnboarding() {
       setActiveProgram(saved.id);
       completeOnboarding();
       doNavigate('home');
-      startFeatureTour();
+      startMainTour();
     });
   });
   overlay.querySelector('[data-onboarding-action="create"]')?.addEventListener('click', () => {
     completeOnboarding();
-    startFeatureTour(() => {
+    startMainTour(() => {
       doNavigate('programs');
       openNewProgramEditor();
     });
@@ -448,7 +433,7 @@ function initOnboarding() {
   document.getElementById('btn-onboarding-skip')?.addEventListener('click', skipOnboarding);
   window.addEventListener('programs:imported', () => {
     completeOnboarding();
-    startFeatureTour(() => doNavigate('programs'));
+    startMainTour(() => doNavigate('programs'));
   }, { once: true });
 
   document.getElementById('btn-home-empty-create')?.addEventListener('click', () => {
@@ -820,6 +805,14 @@ function renderHomeSupplements() {
     list.appendChild(button);
   });
   container.appendChild(list);
+
+  if (document.getElementById('view-home')?.classList.contains('active')) {
+    showTip('supplements-check-tap', {
+      target: '.supplements-checklist',
+      title: t('tipSupplementsCheckTitle'),
+      body: t('tipSupplementsCheckDesc'),
+    });
+  }
 }
 
 function renderSupplements() {
@@ -2342,6 +2335,15 @@ function initSettings() {
   // Open/close settings
   btnOpen.addEventListener('click', () => {
     overlay.classList.add('active');
+    // The settings panel slides up over 0.35s (see .settings-panel's
+    // transform transition) — wait it out so the target's rect is settled.
+    setTimeout(() => {
+      showTip('settings-advanced', {
+        target: document.getElementById('settings-style')?.closest('.settings-row'),
+        title: t('tipSettingsTitle'),
+        body: t('tipSettingsDesc'),
+      });
+    }, 400);
   });
 
   btnClose.addEventListener('click', () => {

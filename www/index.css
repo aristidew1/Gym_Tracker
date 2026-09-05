@@ -101,8 +101,9 @@
 :root.light-theme .confirm-card { background: #fff; }
 :root.light-theme .settings-overlay,
 :root.light-theme .confirm-overlay,
-:root.light-theme .onboarding-overlay,
-:root.light-theme .feature-tour-overlay { background: rgba(236, 240, 248, .78); }
+:root.light-theme .onboarding-overlay { background: rgba(236, 240, 248, .78); }
+:root.light-theme .coachmark-hole { box-shadow: 0 0 0 9999px rgba(210, 218, 232, 0.74); }
+:root.light-theme .coachmark-hole.tip { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.9), 0 0 0 9999px rgba(210, 218, 232, 0.02); }
 :root.light-theme #bottom-nav { background: rgba(255, 255, 255, .94); border-color: rgba(37, 51, 82, .1); }
 :root.light-theme .settings-select,
 :root.light-theme .stats-filter select,
@@ -126,7 +127,6 @@
 :root.light-theme .summary-overlay,
 :root.light-theme .confirm-overlay,
 :root.light-theme .onboarding-overlay,
-:root.light-theme .feature-tour-overlay,
 :root.light-theme .settings-overlay,
 :root.light-theme .select-picker-overlay { background: rgba(229, 234, 244, .78); }
 :root.light-theme .summary-card,
@@ -2449,35 +2449,6 @@ body::before {
 .onboarding-option:hover { background: rgba(255, 255, 255, 0.09); }
 .onboarding-skip { display: block; width: 100%; margin-top: 14px; padding: 8px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: .78rem; cursor: pointer; }
 
-.feature-tour-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 230;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  background: rgba(4, 5, 11, 0.82);
-  backdrop-filter: blur(12px);
-}
-.feature-tour-overlay.active { display: flex; }
-.feature-tour-card {
-  width: min(100%, 390px);
-  padding: 24px;
-  border: 1px solid rgba(var(--accent-rgb), 0.4);
-  border-radius: 22px;
-  background: linear-gradient(145deg, var(--bg-elevated), var(--bg-elevated-2));
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-}
-.feature-tour-progress { height: 4px; margin: -4px 0 20px; border-radius: 999px; background: linear-gradient(90deg, var(--accent) var(--tour-progress, 25%), rgba(255,255,255,.1) var(--tour-progress, 25%)); }
-.feature-tour-mark { font-size: 2.3rem; }
-.feature-tour-step { margin: 12px 0 4px; color: #c49cfc; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.feature-tour-card h1 { margin: 0 0 9px; font-size: 1.35rem; }
-.feature-tour-card > p:not(.feature-tour-step) { margin: 0; color: var(--text-secondary); font-size: .9rem; line-height: 1.5; }
-.feature-tour-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
-.feature-tour-skip { padding: 8px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: .78rem; cursor: pointer; }
-.feature-tour-actions .btn-finish { background: linear-gradient(135deg, #ae7bff, var(--accent)); box-shadow: 0 5px 16px rgba(var(--accent-rgb), 0.35); color: #fff; }
-
 .confirm-actions {
   display: flex;
   gap: 10px;
@@ -3433,7 +3404,7 @@ body::before {
 :root[data-style] .confirm-card,
 :root[data-style] .summary-card,
 :root[data-style] .onboarding-card,
-:root[data-style] .feature-tour-card {
+:root[data-style] .coachmark-bubble {
   background: var(--bg-surface);
   background-image: none;
   backdrop-filter: none;
@@ -3454,13 +3425,14 @@ body::before {
 :root[data-style] .summary-overlay,
 :root[data-style] .confirm-overlay,
 :root[data-style] .onboarding-overlay,
-:root[data-style] .feature-tour-overlay,
 :root[data-style] .settings-overlay,
 :root[data-style] .select-picker-overlay {
   background: rgba(0, 0, 0, 0.82);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+:root[data-style] .coachmark-hole { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.82); }
 
 :root[data-style] .rest-timer-overlay.timer-fullscreen { background: var(--bg-primary); }
 
@@ -3479,7 +3451,7 @@ body::before {
 :root[data-style] .summary-card h2,
 :root[data-style] .settings-header h2,
 :root[data-style] .onboarding-card h1,
-:root[data-style] .feature-tour-card h1,
+:root[data-style] .coachmark-bubble h3,
 :root[data-style] .stats-section-title,
 :root[data-style] .home-empty-state h2 {
   font-family: var(--style-display);
@@ -3981,7 +3953,8 @@ body::before {
 :root[data-style="piste"] .stat-card .stat-value { color: var(--accent); }
 :root[data-style="piste"] .next-session-hint { border-left: 3px solid var(--accent); }
 :root[data-style="piste"] .btn-finish { background: var(--accent); color: #14171b; box-shadow: none; }
-:root[data-style="piste"] .feature-tour-actions .btn-finish { background: var(--accent); color: #14171b; box-shadow: none; }
+:root[data-style="piste"] .coachmark-next,
+:root[data-style="piste"] .coachmark-gotit { background: var(--accent); color: #14171b; box-shadow: none; }
 :root[data-style="piste"] .view-header h1 { font-size: 1.6rem; }
 
 /* ---- Layer 3 — Nothing: monochrome ground, single red accent ---- */
@@ -4093,6 +4066,7 @@ body::before {
   box-shadow: none;
 }
 
-:root[data-style="nothing"] .feature-tour-actions .btn-finish { background: var(--accent); color: #fff; }
+:root[data-style="nothing"] .coachmark-next,
+:root[data-style="nothing"] .coachmark-gotit { background: var(--accent); color: #fff; }
 :root[data-style="nothing"] .stats-overview-row-value { color: var(--text-primary); }
 
