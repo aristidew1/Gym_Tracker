@@ -4,9 +4,7 @@
 
 import { t } from '../i18n.js';
 
-// TODO: point this at the real deployed domain before shipping (see
-// server/deploy/Caddyfile, which has the same placeholder today).
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://sync.aristidew.com';
 const TOKEN_KEY = 'muscu_auth_token';
 
 // The Web OAuth client ID — not a secret (it ships in every Google Sign-In
