@@ -33,7 +33,7 @@ function injectActiveWorkoutStyles() {
       padding: 8px 10px !important;
       border: 1px solid rgba(var(--session-color-rgb, 77, 124, 255), .32) !important;
       border-radius: 16px !important;
-      background: rgba(18, 18, 31, .97) !important;
+      background: rgba(var(--bg-surface-rgb), .97) !important;
       backdrop-filter: blur(18px) !important;
       -webkit-backdrop-filter: blur(18px) !important;
       box-shadow: 0 10px 28px rgba(0, 0, 0, .38) !important;
@@ -116,7 +116,7 @@ function injectActiveWorkoutStyles() {
       padding: max(24px, calc(var(--safe-area-top) + 16px)) 20px max(24px, calc(var(--safe-area-bottom) + 16px)) !important;
       border: 0 !important;
       border-radius: 0 !important;
-      background: rgba(7, 7, 13, .97) !important;
+      background: rgba(var(--bg-primary-rgb), .97) !important;
       box-shadow: none !important;
       flex-direction: column !important;
       justify-content: center !important;
@@ -166,11 +166,7 @@ function injectActiveWorkoutStyles() {
     }
 
     html.light-theme .rest-timer-overlay:not(.timer-fullscreen) {
-      background: rgba(255, 255, 255, .97) !important;
       box-shadow: 0 10px 28px rgba(38, 52, 82, .16) !important;
-    }
-    html.light-theme .rest-timer-overlay.timer-fullscreen {
-      background: rgba(244, 246, 251, .98) !important;
     }
 
     .active-workout-banner {
