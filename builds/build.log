@@ -1,15 +1,15 @@
 Gym Tracker Android STABLE TEST build
 Package: fr.aris.gymtrack.test
 Signing: dedicated stable test key
-Commit: 3fb440f99fd1b1f2f57184a9383a7c53e89ffdb9
-Started: 2026-09-05T21:14:02Z
+Commit: b705d51547af8260a682ae4ced5e9ad26f9bf570
+Started: 2026-09-05T23:32:10Z
 
 ===== npm ci =====
 npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
 
-added 102 packages, and audited 103 packages in 1s
+added 105 packages, and audited 106 packages in 2s
 
-11 packages are looking for funding
+12 packages are looking for funding
   run `npm fund` for details
 
 4 moderate severity vulnerabilities
@@ -35,475 +35,475 @@ TAP version 13
 # Subtest: accessibility controls persist their changes
 ok 1 - accessibility controls persist their changes
   ---
-  duration_ms: 1.034884
+  duration_ms: 1.942445
   type: 'test'
   ...
 # Subtest: accessibility preferences have visible effects
 ok 2 - accessibility preferences have visible effects
   ---
-  duration_ms: 0.235209
+  duration_ms: 0.314596
   type: 'test'
   ...
 # Subtest: AI example follows the program-only import contract
 ok 3 - AI example follows the program-only import contract
   ---
-  duration_ms: 2.758721
+  duration_ms: 3.413002
   type: 'test'
   ...
 # Subtest: AI prompt follows the active application language and complete catalog
 ok 4 - AI prompt follows the active application language and complete catalog
   ---
-  duration_ms: 2.928903
+  duration_ms: 4.183652
   type: 'test'
   ...
 # Subtest: copyText uses the asynchronous Clipboard API
 ok 5 - copyText uses the asynchronous Clipboard API
   ---
-  duration_ms: 1.37529
+  duration_ms: 1.283991
   type: 'test'
   ...
 # Subtest: copyText falls back to a temporary textarea
 ok 6 - copyText falls back to a temporary textarea
   ---
-  duration_ms: 0.461765
+  duration_ms: 0.484086
   type: 'test'
   ...
 # Subtest: copyText reports failure when neither copy mechanism is available
 ok 7 - copyText reports failure when neither copy mechanism is available
   ---
-  duration_ms: 0.226115
+  duration_ms: 0.220697
   type: 'test'
   ...
 # Subtest: a custom exercise can be created, listed, updated and deleted
 ok 8 - a custom exercise can be created, listed, updated and deleted
   ---
-  duration_ms: 2.444525
+  duration_ms: 1.658936
   type: 'test'
   ...
 # Subtest: creating a custom exercise without a name or category is rejected
 ok 9 - creating a custom exercise without a name or category is rejected
   ---
-  duration_ms: 0.238804
+  duration_ms: 0.160648
   type: 'test'
   ...
 # Subtest: custom exercises behave like built-in ones in the exercise catalogue
 ok 10 - custom exercises behave like built-in ones in the exercise catalogue
   ---
-  duration_ms: 0.783081
+  duration_ms: 0.546069
   type: 'test'
   ...
 # Subtest: an unknown custom exercise id resolves to null instead of throwing
 ok 11 - an unknown custom exercise id resolves to null instead of throwing
   ---
-  duration_ms: 1.784156
+  duration_ms: 0.926201
   type: 'test'
   ...
 # Subtest: calendar dates preserve their local calendar day
 ok 12 - calendar dates preserve their local calendar day
   ---
-  duration_ms: 1.292597
+  duration_ms: 1.336388
   type: 'test'
   ...
 # Subtest: expanded exercise catalogue has unique IDs and every exercise has a muscle category
 ok 13 - expanded exercise catalogue has unique IDs and every exercise has a muscle category
   ---
-  duration_ms: 1.330413
+  duration_ms: 1.07486
   type: 'test'
   ...
 # Subtest: pull-ups are available after selecting the back category
 ok 14 - pull-ups are available after selecting the back category
   ---
-  duration_ms: 0.344742
+  duration_ms: 0.288768
   type: 'test'
   ...
 # Subtest: every muscle category contains exercises
 ok 15 - every muscle category contains exercises
   ---
-  duration_ms: 2.19201
+  duration_ms: 0.441574
   type: 'test'
   ...
 # Subtest: every muscle category maps to exactly one push/pull/legs stats group
 ok 16 - every muscle category maps to exactly one push/pull/legs stats group
   ---
-  duration_ms: 0.3101
+  duration_ms: 1.170563
   type: 'test'
   ...
 # Subtest: the conventional deadlift counts as both a legs and a pull stats exercise
 ok 17 - the conventional deadlift counts as both a legs and a pull stats exercise
   ---
-  duration_ms: 1.353207
+  duration_ms: 0.88545
   type: 'test'
   ...
 # Subtest: common barbell movements also expose their dumbbell variants
 ok 18 - common barbell movements also expose their dumbbell variants
   ---
-  duration_ms: 0.27637
+  duration_ms: 0.169982
   type: 'test'
   ...
 # Subtest: user-provided HTML is escaped before template rendering
 ok 19 - user-provided HTML is escaped before template rendering
   ---
-  duration_ms: 0.997489
+  duration_ms: 1.066969
   type: 'test'
   ...
 # Subtest: language preference is persistent and translates interface strings
 ok 20 - language preference is persistent and translates interface strings
   ---
-  duration_ms: 1.050708
+  duration_ms: 1.066989
   type: 'test'
   ...
 # Subtest: every exercise and muscle category has an English display name
 ok 21 - every exercise and muscle category has an English display name
   ---
-  duration_ms: 1.917343
+  duration_ms: 1.863899
   type: 'test'
   ...
 # Subtest: a note prompt starts on a new line and places the cursor after its label
 ok 22 - a note prompt starts on a new line and places the cursor after its label
   ---
-  duration_ms: 1.052931
+  duration_ms: 1.201588
   type: 'test'
   ...
 # Subtest: a note prompt replaces the current selection without exceeding the limit
 ok 23 - a note prompt replaces the current selection without exceeding the limit
   ---
-  duration_ms: 0.258783
+  duration_ms: 0.24305
   type: 'test'
   ...
 # Subtest: weekly notification recommendations follow the calendar-week target
 ok 24 - weekly notification recommendations follow the calendar-week target
   ---
-  duration_ms: 2.474749
+  duration_ms: 2.525208
   type: 'test'
   ...
 # Subtest: a completed weekly target waits until the next Monday
 ok 25 - a completed weekly target waits until the next Monday
   ---
-  duration_ms: 0.354997
+  duration_ms: 0.342377
   type: 'test'
   ...
 # Subtest: first-run templates are distinct valid programs
 ok 26 - first-run templates are distinct valid programs
   ---
-  duration_ms: 2.747775
+  duration_ms: 2.762388
   type: 'test'
   ...
 # Subtest: every first-run template references known exercises and unique item ids
 ok 27 - every first-run template references known exercises and unique item ids
   ---
-  duration_ms: 0.880575
+  duration_ms: 0.823779
   type: 'test'
   ...
 # Subtest: templates are cloned before they are edited
 ok 28 - templates are cloned before they are edited
   ---
-  duration_ms: 0.476978
+  duration_ms: 0.492519
   type: 'test'
   ...
 # Subtest: existing programs start compact while new programs guide the first edit
 ok 29 - existing programs start compact while new programs guide the first edit
   ---
-  duration_ms: 0.877661
+  duration_ms: 0.856298
   type: 'test'
   ...
 # Subtest: summaries expose useful information without advanced fields
 ok 30 - summaries expose useful information without advanced fields
   ---
-  duration_ms: 0.939764
+  duration_ms: 0.882306
   type: 'test'
   ...
 # Subtest: summaries omit optional targets that are not configured
 ok 31 - summaries omit optional targets that are not configured
   ---
-  duration_ms: 0.230261
+  duration_ms: 0.208469
   type: 'test'
   ...
 # Subtest: the program menu opens upward near the bottom of the viewport
 ok 32 - the program menu opens upward near the bottom of the viewport
   ---
-  duration_ms: 1.095614
+  duration_ms: 0.787896
   type: 'test'
   ...
 # Subtest: the program menu keeps opening downward when it fits
 ok 33 - the program menu keeps opening downward when it fits
   ---
-  duration_ms: 0.195369
+  duration_ms: 0.138204
   type: 'test'
   ...
 # Subtest: program library saves, activates and deletes custom programs without touching the preset
 ok 34 - program library saves, activates and deletes custom programs without touching the preset
   ---
-  duration_ms: 10.506559
+  duration_ms: 6.811763
   type: 'test'
   ...
 # Subtest: editing the base program keeps its id instead of creating a copy
 ok 35 - editing the base program keeps its id instead of creating a copy
   ---
-  duration_ms: 3.950958
+  duration_ms: 2.343379
   type: 'test'
   ...
 # Subtest: the base program can be deleted when another program is available
 ok 36 - the base program can be deleted when another program is available
   ---
-  duration_ms: 8.486804
+  duration_ms: 5.219616
   type: 'test'
   ...
 # Subtest: the last available program cannot be deleted
 ok 37 - the last available program cannot be deleted
   ---
-  duration_ms: 1.767812
+  duration_ms: 1.213516
   type: 'test'
   ...
 # Subtest: stored programs with the former day frequency are migrated without losing them
 ok 38 - stored programs with the former day frequency are migrated without losing them
   ---
-  duration_ms: 1.360938
+  duration_ms: 1.350048
   type: 'test'
   ...
 # Subtest: editing an existing program starts with compact disclosure controls
 ok 39 - editing an existing program starts with compact disclosure controls
   ---
-  duration_ms: 3.999611
+  duration_ms: 5.375967
   type: 'test'
   ...
 # Subtest: storage migrates old local data in place and keeps the next session generic
 ok 40 - storage migrates old local data in place and keeps the next session generic
   ---
-  duration_ms: 1.545362
+  duration_ms: 1.505599
   type: 'test'
   ...
 # Subtest: storage saves versioned records and looks them up by program exercise id
 ok 41 - storage saves versioned records and looks them up by program exercise id
   ---
-  duration_ms: 0.80904
+  duration_ms: 0.760146
   type: 'test'
   ...
 # Subtest: an interrupted workout draft is separate from completed workout history
 ok 42 - an interrupted workout draft is separate from completed workout history
   ---
-  duration_ms: 0.244663
+  duration_ms: 0.239555
   type: 'test'
   ...
 # Subtest: storage updates a recorded workout in place without changing its date or id
 ok 43 - storage updates a recorded workout in place without changing its date or id
   ---
-  duration_ms: 0.387355
+  duration_ms: 0.41917
   type: 'test'
   ...
 # Subtest: last exercise data follows the exercise across programs and sessions
 ok 44 - last exercise data follows the exercise across programs and sessions
   ---
-  duration_ms: 0.45154
+  duration_ms: 0.47918
   type: 'test'
   ...
 # Subtest: the previous workout lookup stays within the same program and session
 ok 45 - the previous workout lookup stays within the same program and session
   ---
-  duration_ms: 0.343579
+  duration_ms: 0.389557
   type: 'test'
   ...
 # Subtest: interval streak follows the active program frequency
 ok 46 - interval streak follows the active program frequency
   ---
-  duration_ms: 2.064001
+  duration_ms: 1.959481
   type: 'test'
   ...
 # Subtest: weekly streak counts consecutive weeks that reach their workout target
 ok 47 - weekly streak counts consecutive weeks that reach their workout target
   ---
-  duration_ms: 1.065089
+  duration_ms: 1.068141
   type: 'test'
   ...
 # Subtest: backup exports and restores workouts, custom programs, and the active program
 ok 48 - backup exports and restores workouts, custom programs, and the active program
   ---
-  duration_ms: 11.492321
+  duration_ms: 10.331142
   type: 'test'
   ...
 # Subtest: program-only backup adds programs without changing workout history or the active program
 ok 49 - program-only backup adds programs without changing workout history or the active program
   ---
-  duration_ms: 30.527516
+  duration_ms: 24.998628
   type: 'test'
   ...
 # Subtest: a single program can be exported for sharing
 ok 50 - a single program can be exported for sharing
   ---
-  duration_ms: 1.863393
+  duration_ms: 1.55364
   type: 'test'
   ...
 # Subtest: storage still imports the legacy workout-array export format
 ok 51 - storage still imports the legacy workout-array export format
   ---
-  duration_ms: 0.547742
+  duration_ms: 0.363968
   type: 'test'
   ...
 # Subtest: supplements persist daily intake and are included in full backups
 ok 52 - supplements persist daily intake and are included in full backups
   ---
-  duration_ms: 3.861095
+  duration_ms: 2.759574
   type: 'test'
   ...
 # Subtest: backup summary includes supplements and edits to the built-in program
 ok 53 - backup summary includes supplements and edits to the built-in program
   ---
-  duration_ms: 2.040826
+  duration_ms: 2.883277
   type: 'test'
   ...
 # Subtest: all-time personal records track the best set ever logged per exercise, dated when it was first reached
 ok 54 - all-time personal records track the best set ever logged per exercise, dated when it was first reached
   ---
-  duration_ms: 0.739237
+  duration_ms: 0.870098
   type: 'test'
   ...
 # Subtest: progression candidates surface exercises within one set of the top of their rep range
 ok 55 - progression candidates surface exercises within one set of the top of their rep range
   ---
-  duration_ms: 0.773617
+  duration_ms: 0.774747
   type: 'test'
   ...
 # Subtest: progression candidates are ordered by the most recently logged exercise first
 ok 56 - progression candidates are ordered by the most recently logged exercise first
   ---
-  duration_ms: 0.439512
+  duration_ms: 0.524787
   type: 'test'
   ...
 # Subtest: versioned imports reject unsupported future backup versions
 ok 57 - versioned imports reject unsupported future backup versions
   ---
-  duration_ms: 2.273911
+  duration_ms: 3.349538
   type: 'test'
   ...
 # Subtest: workout progress counts only fully completed visible exercises
 ok 58 - workout progress counts only fully completed visible exercises
   ---
-  duration_ms: 2.078843
+  duration_ms: 2.0609
   type: 'test'
   ...
 # Subtest: a resolved exercise choice joins workout progress
 ok 59 - a resolved exercise choice joins workout progress
   ---
-  duration_ms: 0.269369
+  duration_ms: 0.259905
   type: 'test'
   ...
 # Subtest: exercise progress counts a drop set only after every segment is complete
 ok 60 - exercise progress counts a drop set only after every segment is complete
   ---
-  duration_ms: 0.248158
+  duration_ms: 0.240766
   type: 'test'
   ...
 # Subtest: an explicitly emptied exercise is counted as skipped
 ok 61 - an explicitly emptied exercise is counted as skipped
   ---
-  duration_ms: 0.234297
+  duration_ms: 0.262528
   type: 'test'
   ...
 # Subtest: legacy workout is migrated to the versioned schema without losing its sets
 ok 62 - legacy workout is migrated to the versioned schema without losing its sets
   ---
-  duration_ms: 3.673367
+  duration_ms: 2.157624
   type: 'test'
   ...
 # Subtest: a finished workout is dated by the local calendar day, not the UTC one
 ok 63 - a finished workout is dated by the local calendar day, not the UTC one
   ---
-  duration_ms: 0.909363
+  duration_ms: 4.564326
   type: 'test'
   ...
 # Subtest: method choices retain the pull-up exercise during migration
 ok 64 - method choices retain the pull-up exercise during migration
   ---
-  duration_ms: 0.639999
+  duration_ms: 0.574911
   type: 'test'
   ...
 # Subtest: drop-set segments survive normalization
 ok 65 - drop-set segments survive normalization
   ---
-  duration_ms: 0.353003
+  duration_ms: 0.27037
   type: 'test'
   ...
 # Subtest: the default preset resolves an exercise choice and an intensity method
 ok 66 - the default preset resolves an exercise choice and an intensity method
   ---
-  duration_ms: 0.520211
+  duration_ms: 0.449245
   type: 'test'
   ...
 # Subtest: manually composed program satisfies the generic schema
 ok 67 - manually composed program satisfies the generic schema
   ---
-  duration_ms: 1.343923
+  duration_ms: 1.00671
   type: 'test'
   ...
 # Subtest: legacy program frequencies migrate to the polyvalent schema
 ok 68 - legacy program frequencies migrate to the polyvalent schema
   ---
-  duration_ms: 0.93037
+  duration_ms: 0.63537
   type: 'test'
   ...
 # Subtest: program schema accepts interval and weekly frequencies
 ok 69 - program schema accepts interval and weekly frequencies
   ---
-  duration_ms: 0.823972
+  duration_ms: 0.728549
   type: 'test'
   ...
 # Subtest: double progression only proposes a load increase when all sets reach the top range
 ok 70 - double progression only proposes a load increase when all sets reach the top range
   ---
-  duration_ms: 0.690194
+  duration_ms: 0.963967
   type: 'test'
   ...
 # Subtest: progression proximity flags an exercise one set away from the top of its rep range
 ok 71 - progression proximity flags an exercise one set away from the top of its rep range
   ---
-  duration_ms: 0.782631
+  duration_ms: 0.716691
   type: 'test'
   ...
 # Subtest: progression proximity marks an exercise ready once every set reaches the top of its rep range
 ok 72 - progression proximity marks an exercise ready once every set reaches the top of its rep range
   ---
-  duration_ms: 0.310451
+  duration_ms: 0.303359
   type: 'test'
   ...
 # Subtest: progression proximity ignores exercises still more than one set away or without double progression
 ok 73 - progression proximity ignores exercises still more than one set away or without double progression
   ---
-  duration_ms: 0.270832
+  duration_ms: 0.204162
   type: 'test'
   ...
 # Subtest: rest starts fullscreen and can be reduced to a compact bar
 ok 74 - rest starts fullscreen and can be reduced to a compact bar
   ---
-  duration_ms: 0.9981
+  duration_ms: 0.966301
   type: 'test'
   ...
 # Subtest: the fullscreen rest timer offers +30s/-30s adjustments above skip and reduce
 ok 75 - the fullscreen rest timer offers +30s/-30s adjustments above skip and reduce
   ---
-  duration_ms: 0.432221
+  duration_ms: 0.415745
   type: 'test'
   ...
 # Subtest: workout edit and discard actions live in a labelled secondary menu
 ok 76 - workout edit and discard actions live in a labelled secondary menu
   ---
-  duration_ms: 0.378762
+  duration_ms: 0.384248
   type: 'test'
   ...
 # Subtest: workout labels describe the action and completion scope
 ok 77 - workout labels describe the action and completion scope
   ---
-  duration_ms: 0.252104
+  duration_ms: 0.211984
   type: 'test'
   ...
 # Subtest: incomplete workouts explain their state before saving
 ok 78 - incomplete workouts explain their state before saving
   ---
-  duration_ms: 0.269579
+  duration_ms: 0.27025
   type: 'test'
   ...
 # Subtest: irreversible supplement deletion requires a named confirmation
 ok 79 - irreversible supplement deletion requires a named confirmation
   ---
-  duration_ms: 0.454905
+  duration_ms: 0.320905
   type: 'test'
   ...
 1..79
@@ -514,7 +514,7 @@ ok 79 - irreversible supplement deletion requires a named confirmation
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 546.703868
+# duration_ms 542.144519
 Exit code: 0
 
 ===== sync android =====
@@ -527,15 +527,18 @@ Exit code: 0
 > node scripts/sync-web.js
 
 www synchronisé depuis les sources racines.
-✔ Copying web assets from www to android/app/src/main/assets/public in 7.92ms
-✔ Creating capacitor.config.json in android/app/src/main/assets in 534.15μs
-✔ copy android in 14.32ms
-✔ Updating Android plugins in 740.86μs
-[info] Found 2 Capacitor plugins for android:
+✔ Copying web assets from www to android/app/src/main/assets/public in 7.65ms
+✔ Creating capacitor.config.json in android/app/src/main/assets in 501.20μs
+✔ copy android in 15.14ms
+✔ Updating Android plugins in 942.19μs
+[info] Found 5 Capacitor plugins for android:
+       @capacitor/app@8.1.1
        @capacitor/filesystem@8.1.2
+       @capacitor/preferences@8.0.1
        @capacitor/share@8.0.1
-✔ update android in 21.13ms
-[info] Sync finished in 0.05s
+       @capawesome/capacitor-google-sign-in@0.1.4
+✔ update android in 27.11ms
+[info] Sync finished in 0.06s
 Exit code: 0
 
 ===== gradle assembleDebug =====
@@ -565,90 +568,139 @@ WARNING: Using flatDir should be avoided because it doesn't support any meta-dat
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :capacitor-android:preBuild UP-TO-DATE
 > Task :capacitor-android:preDebugBuild UP-TO-DATE
+> Task :capacitor-app:preBuild UP-TO-DATE
+> Task :capacitor-app:preDebugBuild UP-TO-DATE
 > Task :capacitor-cordova-android-plugins:preBuild UP-TO-DATE
 > Task :capacitor-cordova-android-plugins:preDebugBuild UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
+> Task :capacitor-app:writeDebugAarMetadata
+> Task :capacitor-android:writeDebugAarMetadata
 > Task :capacitor-filesystem:preBuild UP-TO-DATE
 > Task :capacitor-filesystem:preDebugBuild UP-TO-DATE
-> Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
 > Task :app:javaPreCompileDebug
-> Task :capacitor-android:writeDebugAarMetadata
+> Task :capacitor-preferences:preBuild UP-TO-DATE
+> Task :capacitor-preferences:preDebugBuild UP-TO-DATE
 > Task :capacitor-filesystem:writeDebugAarMetadata
 > Task :capacitor-share:preBuild UP-TO-DATE
 > Task :capacitor-share:preDebugBuild UP-TO-DATE
+> Task :capacitor-preferences:writeDebugAarMetadata
+> Task :capawesome-capacitor-google-sign-in:preBuild UP-TO-DATE
+> Task :capawesome-capacitor-google-sign-in:preDebugBuild UP-TO-DATE
 > Task :capacitor-share:writeDebugAarMetadata
+> Task :capawesome-capacitor-google-sign-in:writeDebugAarMetadata
 > Task :capacitor-android:processDebugNavigationResources
+> Task :capacitor-app:processDebugNavigationResources
 > Task :capacitor-cordova-android-plugins:processDebugNavigationResources
-> Task :app:checkDebugAarMetadata
 > Task :capacitor-filesystem:processDebugNavigationResources
+> Task :capacitor-preferences:processDebugNavigationResources
 > Task :capacitor-share:processDebugNavigationResources
+> Task :app:checkDebugAarMetadata
+> Task :capawesome-capacitor-google-sign-in:processDebugNavigationResources
 > Task :app:processDebugNavigationResources
 > Task :app:compileDebugNavigationResources
 > Task :app:generateDebugResValues
 > Task :capacitor-android:generateDebugResValues
 > Task :capacitor-android:generateDebugResources
 > Task :capacitor-android:packageDebugResources
+> Task :capacitor-app:generateDebugResValues
+> Task :capacitor-app:generateDebugResources
+> Task :capacitor-app:packageDebugResources
 > Task :capacitor-cordova-android-plugins:generateDebugResValues
 > Task :capacitor-cordova-android-plugins:generateDebugResources
 > Task :capacitor-cordova-android-plugins:packageDebugResources
 > Task :capacitor-filesystem:generateDebugResValues
 > Task :capacitor-filesystem:generateDebugResources
 > Task :capacitor-filesystem:packageDebugResources
+> Task :capacitor-preferences:generateDebugResValues
+> Task :capacitor-preferences:generateDebugResources
+> Task :capacitor-preferences:packageDebugResources
 > Task :capacitor-share:generateDebugResValues
 > Task :capacitor-share:generateDebugResources
 > Task :capacitor-share:packageDebugResources
+> Task :capawesome-capacitor-google-sign-in:generateDebugResValues
+> Task :capawesome-capacitor-google-sign-in:generateDebugResources
+> Task :capawesome-capacitor-google-sign-in:packageDebugResources
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :capacitor-android:extractDeepLinksDebug
+> Task :capacitor-app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
 > Task :capacitor-cordova-android-plugins:extractDeepLinksDebug
-> Task :capacitor-filesystem:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
+> Task :capacitor-filesystem:extractDeepLinksDebug
+> Task :capacitor-cordova-android-plugins:processDebugManifest
+> Task :capacitor-android:processDebugManifest
+> Task :capacitor-app:processDebugManifest
+> Task :capacitor-filesystem:processDebugManifest
+> Task :capacitor-preferences:extractDeepLinksDebug
+> Task :capacitor-preferences:processDebugManifest
 > Task :capacitor-share:extractDeepLinksDebug
 > Task :capacitor-share:processDebugManifest
-> Task :capacitor-filesystem:processDebugManifest
-> Task :capacitor-android:processDebugManifest
-> Task :capacitor-cordova-android-plugins:processDebugManifest
+> Task :capawesome-capacitor-google-sign-in:extractDeepLinksDebug
+> Task :capawesome-capacitor-google-sign-in:processDebugManifest
 > Task :capacitor-android:compileDebugLibraryResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :capacitor-app:compileDebugLibraryResources
 > Task :app:processDebugManifestForPackage
 > Task :capacitor-cordova-android-plugins:compileDebugLibraryResources
 > Task :capacitor-android:parseDebugLocalResources
-> Task :capacitor-cordova-android-plugins:parseDebugLocalResources
+> Task :capacitor-app:parseDebugLocalResources
 > Task :capacitor-filesystem:compileDebugLibraryResources
+> Task :capacitor-cordova-android-plugins:parseDebugLocalResources
 > Task :capacitor-filesystem:parseDebugLocalResources
-> Task :capacitor-share:compileDebugLibraryResources
-> Task :capacitor-cordova-android-plugins:generateDebugRFile
 > Task :capacitor-android:generateDebugRFile
+> Task :capacitor-app:generateDebugRFile
+> Task :capacitor-cordova-android-plugins:generateDebugRFile
 > Task :capacitor-filesystem:generateDebugRFile
-> Task :capacitor-android:javaPreCompileDebug
-> Task :capacitor-cordova-android-plugins:javaPreCompileDebug
+> Task :capacitor-preferences:compileDebugLibraryResources
+> Task :capacitor-share:compileDebugLibraryResources
+> Task :capacitor-preferences:parseDebugLocalResources
+> Task :capawesome-capacitor-google-sign-in:compileDebugLibraryResources
 > Task :capacitor-share:parseDebugLocalResources
+> Task :capacitor-preferences:generateDebugRFile
+> Task :capawesome-capacitor-google-sign-in:parseDebugLocalResources
+> Task :capacitor-android:javaPreCompileDebug
+> Task :capacitor-share:generateDebugRFile
+> Task :capawesome-capacitor-google-sign-in:generateDebugRFile
 
 > Task :capacitor-android:compileDebugJavaWithJavac
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 
-> Task :capacitor-share:generateDebugRFile
-> Task :capacitor-android:bundleLibCompileToJarDebug
-> Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
+> Task :capacitor-app:javaPreCompileDebug
 > Task :capacitor-filesystem:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :capacitor-cordova-android-plugins:bundleLibCompileToJarDebug
-> Task :app:processDebugResources
+> Task :capacitor-cordova-android-plugins:javaPreCompileDebug
 > Task :capacitor-filesystem:javaPreCompileDebug
+> Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
+> Task :capacitor-cordova-android-plugins:bundleLibCompileToJarDebug
+> Task :capacitor-preferences:javaPreCompileDebug
 > Task :capacitor-share:javaPreCompileDebug
+> Task :capawesome-capacitor-google-sign-in:javaPreCompileDebug
+> Task :capacitor-android:bundleLibCompileToJarDebug
+> Task :app:mergeDebugShaders
+> Task :capacitor-app:compileDebugJavaWithJavac
+> Task :capacitor-app:bundleLibCompileToJarDebug
+> Task :app:processDebugResources
+> Task :capacitor-preferences:compileDebugJavaWithJavac
+> Task :capacitor-preferences:bundleLibCompileToJarDebug
 > Task :capacitor-share:compileDebugJavaWithJavac
 > Task :capacitor-share:bundleLibCompileToJarDebug
-> Task :app:mergeDebugShaders
+> Task :capawesome-capacitor-google-sign-in:compileDebugJavaWithJavac
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
+> Task :capawesome-capacitor-google-sign-in:bundleLibCompileToJarDebug
 > Task :capacitor-android:mergeDebugShaders
 > Task :capacitor-android:compileDebugShaders NO-SOURCE
 > Task :capacitor-android:generateDebugAssets UP-TO-DATE
 > Task :capacitor-android:mergeDebugAssets
+> Task :capacitor-app:mergeDebugShaders
+> Task :capacitor-app:compileDebugShaders NO-SOURCE
+> Task :capacitor-app:generateDebugAssets UP-TO-DATE
+> Task :capacitor-app:mergeDebugAssets
 > Task :capacitor-cordova-android-plugins:mergeDebugShaders
 > Task :capacitor-cordova-android-plugins:compileDebugShaders NO-SOURCE
 > Task :capacitor-cordova-android-plugins:generateDebugAssets UP-TO-DATE
@@ -657,21 +709,70 @@ Note: Recompile with -Xlint:unchecked for details.
 > Task :capacitor-filesystem:compileDebugShaders NO-SOURCE
 > Task :capacitor-filesystem:generateDebugAssets UP-TO-DATE
 > Task :capacitor-filesystem:mergeDebugAssets
+> Task :capacitor-preferences:mergeDebugShaders
+> Task :capacitor-preferences:compileDebugShaders NO-SOURCE
+> Task :capacitor-preferences:generateDebugAssets UP-TO-DATE
+> Task :capacitor-preferences:mergeDebugAssets
 > Task :capacitor-share:mergeDebugShaders
 > Task :capacitor-share:compileDebugShaders NO-SOURCE
 > Task :capacitor-share:generateDebugAssets UP-TO-DATE
 > Task :capacitor-share:mergeDebugAssets
+> Task :capawesome-capacitor-google-sign-in:mergeDebugShaders
+> Task :capawesome-capacitor-google-sign-in:compileDebugShaders NO-SOURCE
+> Task :capawesome-capacitor-google-sign-in:generateDebugAssets UP-TO-DATE
+> Task :capawesome-capacitor-google-sign-in:mergeDebugAssets
 > Task :app:mergeDebugAssets
-> Task :capacitor-share:bundleLibRuntimeToJarDebug
-> Task :capacitor-android:bundleLibRuntimeToJarDebug
+> Task :capacitor-preferences:bundleLibRuntimeToJarDebug
 > Task :app:compressDebugAssets
+> Task :capacitor-app:bundleLibRuntimeToJarDebug
+> Task :capacitor-share:bundleLibRuntimeToJarDebug
+> Task :capawesome-capacitor-google-sign-in:bundleLibRuntimeToJarDebug
 > Task :capacitor-cordova-android-plugins:bundleLibRuntimeToJarDebug
+> Task :capacitor-android:bundleLibRuntimeToJarDebug
 > Task :app:desugarDebugFileDependencies
 > Task :app:processDebugJavaRes NO-SOURCE
 > Task :capacitor-android:processDebugJavaRes NO-SOURCE
+> Task :capacitor-app:processDebugJavaRes NO-SOURCE
 > Task :capacitor-cordova-android-plugins:processDebugJavaRes NO-SOURCE
+> Task :capacitor-preferences:processDebugJavaRes NO-SOURCE
 > Task :capacitor-share:processDebugJavaRes NO-SOURCE
+> Task :capawesome-capacitor-google-sign-in:processDebugJavaRes NO-SOURCE
+> Task :capacitor-app:bundleLibRuntimeToDirDebug
 > Task :app:checkDebugDuplicateClasses
+
+> Task :app:mergeExtDexDebug
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbd, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbo, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.zbb, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbv, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbv, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbi, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 7: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbi, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbp, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbs, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 10: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.zba, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbl, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbn, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbu, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbq, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 6: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbae, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbh, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbg, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbm, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbk, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 17: invokespecial Lcom/google/android/gms/auth/api/signin/internal/zbl;<init>(Lcom/google/android/gms/common/api/GoogleApiClient;)V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.internal.zbi, but was com.google.android.gms.auth.api.signin.internal.zbl.<init>(com.google.android.gms.common.api.GoogleApiClient).
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 20: invokespecial Lcom/google/android/gms/auth/api/signin/internal/zbl;<init>(Lcom/google/android/gms/common/api/GoogleApiClient;)V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.internal.zbk, but was com.google.android.gms.auth.api.signin.internal.zbl.<init>(com.google.android.gms.common.api.GoogleApiClient).
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbw, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbc, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbe, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbj, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbr, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbay, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 6: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbak, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbt, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.signin.internal.zbu, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 2: invokespecial Ljava/lang/Object;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.auth.api.identity.zbb, but was java.lang.Object.<init>().
+WARNING: /home/runner/.gradle/caches/8.14.3/transforms/31cc9e342edd2990684e1f7c92fdc5da/transformed/play-services-auth-21.5.0-runtime.jar: D8: Invalid stack map table at instruction index 6: invokespecial Lcom/google/android/gms/common/api/Api$AbstractClientBuilder;<init>()V, error: Constructor mismatch, expected constructor from com.google.android.gms.internal.auth-api.zbw, but was com.google.android.gms.common.api.Api$AbstractClientBuilder.<init>().
 
 > Task :capacitor-filesystem:compileDebugKotlin
 w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/filesystem/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemPlugin.kt:335:31 'fun downloadFile(call: PluginCall): Unit' is deprecated. Use @capacitor/file-transfer plugin instead.
@@ -684,8 +785,10 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :app:compileDebugJavaWithJavac
 > Task :app:dexBuilderDebug
 > Task :app:mergeDebugGlobalSynthetics
-> Task :capacitor-share:bundleLibRuntimeToDirDebug
 > Task :capacitor-filesystem:bundleLibRuntimeToDirDebug
+> Task :capacitor-preferences:bundleLibRuntimeToDirDebug
+> Task :capacitor-share:bundleLibRuntimeToDirDebug
+> Task :capawesome-capacitor-google-sign-in:bundleLibRuntimeToDirDebug
 > Task :capacitor-android:bundleLibRuntimeToDirDebug
 > Task :capacitor-cordova-android-plugins:bundleLibRuntimeToDirDebug
 > Task :app:mergeProjectDexDebug
@@ -693,25 +796,34 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capacitor-android:mergeDebugJniLibFolders
 > Task :capacitor-android:mergeDebugNativeLibs NO-SOURCE
 > Task :capacitor-android:copyDebugJniLibsProjectOnly
+> Task :capacitor-app:mergeDebugJniLibFolders
+> Task :capacitor-app:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-app:copyDebugJniLibsProjectOnly
 > Task :capacitor-cordova-android-plugins:mergeDebugJniLibFolders
 > Task :capacitor-cordova-android-plugins:mergeDebugNativeLibs NO-SOURCE
-> Task :app:mergeDebugJavaResource
 > Task :capacitor-cordova-android-plugins:copyDebugJniLibsProjectOnly
 > Task :capacitor-filesystem:mergeDebugJniLibFolders
 > Task :capacitor-filesystem:mergeDebugNativeLibs NO-SOURCE
 > Task :capacitor-filesystem:copyDebugJniLibsProjectOnly
+> Task :capacitor-preferences:mergeDebugJniLibFolders
+> Task :capacitor-preferences:mergeDebugNativeLibs NO-SOURCE
+> Task :capacitor-preferences:copyDebugJniLibsProjectOnly
 > Task :capacitor-share:mergeDebugJniLibFolders
 > Task :capacitor-share:mergeDebugNativeLibs NO-SOURCE
 > Task :capacitor-share:copyDebugJniLibsProjectOnly
-> Task :app:validateSigningDebug
+> Task :capawesome-capacitor-google-sign-in:mergeDebugJniLibFolders
+> Task :capawesome-capacitor-google-sign-in:mergeDebugNativeLibs NO-SOURCE
+> Task :capawesome-capacitor-google-sign-in:copyDebugJniLibsProjectOnly
+> Task :app:mergeDebugJavaResource
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
-> Task :capacitor-android:stripDebugDebugSymbols NO-SOURCE
-> Task :capacitor-android:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-android:checkDebugAarMetadata
-> Task :app:mergeExtDexDebug
+> Task :capacitor-android:stripDebugDebugSymbols NO-SOURCE
+> Task :app:mergeLibDexDebug
+> Task :capacitor-android:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-android:extractDebugAnnotations
 > Task :capacitor-android:extractDeepLinksForAarDebug
 > Task :capacitor-android:mergeDebugGeneratedProguardFiles
@@ -719,11 +831,23 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capacitor-android:prepareDebugArtProfile
 > Task :capacitor-android:prepareLintJarForPublish
 > Task :capacitor-android:mergeDebugJavaResource
-> Task :app:mergeLibDexDebug
-> Task :capacitor-cordova-android-plugins:checkDebugAarMetadata
+> Task :capacitor-app:checkDebugAarMetadata
 > Task :capacitor-android:syncDebugLibJars
 > Task :capacitor-android:bundleDebugAar
 > Task :capacitor-android:assembleDebug
+> Task :capacitor-app:stripDebugDebugSymbols NO-SOURCE
+> Task :capacitor-app:copyDebugJniLibsProjectAndLocalJars
+> Task :capacitor-app:extractDebugAnnotations
+> Task :capacitor-app:extractDeepLinksForAarDebug
+> Task :capacitor-app:mergeDebugGeneratedProguardFiles
+> Task :capacitor-app:mergeDebugConsumerProguardFiles
+> Task :capacitor-app:prepareDebugArtProfile
+> Task :capacitor-app:prepareLintJarForPublish
+> Task :capacitor-app:mergeDebugJavaResource
+> Task :capacitor-cordova-android-plugins:checkDebugAarMetadata
+> Task :capacitor-app:syncDebugLibJars
+> Task :capacitor-app:bundleDebugAar
+> Task :capacitor-app:assembleDebug
 > Task :capacitor-cordova-android-plugins:stripDebugDebugSymbols NO-SOURCE
 > Task :capacitor-cordova-android-plugins:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-cordova-android-plugins:extractDebugAnnotations
@@ -745,14 +869,27 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capacitor-filesystem:mergeDebugConsumerProguardFiles
 > Task :capacitor-filesystem:prepareDebugArtProfile
 > Task :capacitor-filesystem:prepareLintJarForPublish
-> Task :capacitor-share:checkDebugAarMetadata
 > Task :capacitor-filesystem:mergeDebugJavaResource
+> Task :capacitor-preferences:checkDebugAarMetadata
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
 > Task :capacitor-filesystem:syncDebugLibJars
 > Task :capacitor-filesystem:bundleDebugAar
 > Task :capacitor-filesystem:assembleDebug
+> Task :capacitor-preferences:stripDebugDebugSymbols NO-SOURCE
+> Task :capacitor-preferences:copyDebugJniLibsProjectAndLocalJars
+> Task :capacitor-preferences:extractDebugAnnotations
+> Task :capacitor-preferences:extractDeepLinksForAarDebug
+> Task :capacitor-preferences:mergeDebugGeneratedProguardFiles
+> Task :capacitor-preferences:mergeDebugConsumerProguardFiles
+> Task :capacitor-preferences:prepareDebugArtProfile
+> Task :capacitor-preferences:prepareLintJarForPublish
+> Task :capacitor-preferences:mergeDebugJavaResource
+> Task :capacitor-share:checkDebugAarMetadata
+> Task :capacitor-preferences:syncDebugLibJars
+> Task :capacitor-preferences:bundleDebugAar
+> Task :capacitor-preferences:assembleDebug
 > Task :capacitor-share:stripDebugDebugSymbols NO-SOURCE
 > Task :capacitor-share:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-share:extractDebugAnnotations
@@ -762,9 +899,22 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capacitor-share:prepareDebugArtProfile
 > Task :capacitor-share:prepareLintJarForPublish
 > Task :capacitor-share:mergeDebugJavaResource
+> Task :capawesome-capacitor-google-sign-in:checkDebugAarMetadata
 > Task :capacitor-share:syncDebugLibJars
 > Task :capacitor-share:bundleDebugAar
 > Task :capacitor-share:assembleDebug
+> Task :capawesome-capacitor-google-sign-in:stripDebugDebugSymbols NO-SOURCE
+> Task :capawesome-capacitor-google-sign-in:copyDebugJniLibsProjectAndLocalJars
+> Task :capawesome-capacitor-google-sign-in:extractDebugAnnotations
+> Task :capawesome-capacitor-google-sign-in:extractDeepLinksForAarDebug
+> Task :capawesome-capacitor-google-sign-in:mergeDebugGeneratedProguardFiles
+> Task :capawesome-capacitor-google-sign-in:mergeDebugConsumerProguardFiles
+> Task :capawesome-capacitor-google-sign-in:prepareDebugArtProfile
+> Task :capawesome-capacitor-google-sign-in:prepareLintJarForPublish
+> Task :capawesome-capacitor-google-sign-in:mergeDebugJavaResource
+> Task :capawesome-capacitor-google-sign-in:syncDebugLibJars
+> Task :capawesome-capacitor-google-sign-in:bundleDebugAar
+> Task :capawesome-capacitor-google-sign-in:assembleDebug
 
 [Incubating] Problems report is available at: file:///home/runner/work/Gym_Tracker/Gym_Tracker/android/build/reports/problems/problems-report.html
 
@@ -774,9 +924,9 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 2m 2s
-154 actionable tasks: 154 executed
+BUILD SUCCESSFUL in 1m 49s
+244 actionable tasks: 244 executed
 Exit code: 0
 
 RESULT=success
-Finished: 2026-09-05T21:16:08Z
+Finished: 2026-09-05T23:34:04Z
