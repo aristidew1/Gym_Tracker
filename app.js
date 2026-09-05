@@ -51,7 +51,7 @@ import { escapeHtml } from './services/html.js';
 import { insertNotePrompt } from './services/note-editor.js';
 import { getExerciseCompletionState, getWorkoutCompletionProgress } from './services/workout-progress.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
-import { runTour, showTip } from './coachmark.js';
+import { runTour, showTip, resetSeenTips } from './coachmark.js';
 
 // ============================================
 // STATE
@@ -441,6 +441,13 @@ function initOnboarding() {
     openNewProgramEditor();
   });
   document.getElementById('btn-home-empty-explore')?.addEventListener('click', openOnboardingOverlay);
+
+  // Debug-only: replay the onboarding + coachmarks without wiping real data.
+  document.getElementById('btn-debug-onboarding')?.addEventListener('click', () => {
+    localStorage.removeItem(ONBOARDING_KEY);
+    resetSeenTips();
+    openOnboardingOverlay();
+  });
 
   if (shouldShowOnboarding()) openOnboardingOverlay();
 }

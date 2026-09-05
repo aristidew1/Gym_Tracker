@@ -26,6 +26,12 @@ export function hasSeenTip(id) {
   return getSeen().has(id);
 }
 
+// Test-only helper: lets a "replay onboarding" debug button clear every
+// contextual tip's seen flag so they can all be re-triggered.
+export function resetSeenTips() {
+  localStorage.removeItem(SEEN_KEY);
+}
+
 let stylesInjected = false;
 function ensureStyles() {
   if (stylesInjected) return;
