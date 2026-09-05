@@ -44,6 +44,17 @@ import {
   updateNotification,
 } from './notifications.js';
 import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
+import {
+  completeFromUrl,
+  getCurrentUser,
+  initAuth,
+  onAuthChange,
+  sendMagicLink,
+  signInEmail,
+  signInGoogle,
+  signOut,
+  signUpEmail,
+} from './services/auth.js';
 import { getActiveProgram, getProgramById, restorePrograms, saveProgram, setActiveProgram } from './services/program-storage.js';
 import { getOnboardingProgramTemplate } from './data/onboarding-programs.js';
 import { getCustomExercises } from './services/custom-exercises.js';
@@ -317,9 +328,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimerLifecycle();
   initConfirmDialog();
   initSettings();
+  initAccountSettings();
   initBackupReminder();
   initSelectPicker();
   initNotifications();
+  initAuth();
+  if (window.Capacitor?.isNativePlatform()) {
+    window.Capacitor.Plugins.App?.addListener('appUrlOpen', ({ url }) => {
+      if (url?.startsWith('gymtracker://auth-callback')) completeFromUrl(url);
+    });
+  }
   initPrograms();
   initOnboarding();
   initWorkoutDraftPersistence();
@@ -2436,6 +2454,86 @@ function formatRestTime(seconds) {
 // ============================================
 // SETTINGS
 // ============================================
+function initAccountSettings() {
+  const signedOutView = document.getElementById('account-signed-out');
+  const signedInView = document.getElementById('account-signed-in');
+  const signedInLabel = document.getElementById('account-signed-in-label');
+  const emailInput = document.getElementById('auth-email');
+  const passwordInput = document.getElementById('auth-password');
+  const errorEl = document.getElementById('auth-error');
+  const messageEl = document.getElementById('auth-message');
+  const btnSubmit = document.getElementById('btn-auth-submit');
+  const btnSwitchMode = document.getElementById('btn-auth-switch-mode');
+  const btnGoogle = document.getElementById('btn-auth-google');
+  const btnMagicLink = document.getElementById('btn-auth-magic-link');
+  const btnSignOut = document.getElementById('btn-auth-sign-out');
+  if (!signedOutView || !signedInView) return;
+
+  let mode = 'sign-in';
+
+  const showError = (error) => {
+    messageEl.hidden = true;
+    errorEl.textContent = error?.message || t('authError');
+    errorEl.hidden = false;
+  };
+  const showMessage = (key) => {
+    errorEl.hidden = true;
+    messageEl.textContent = t(key);
+    messageEl.hidden = false;
+  };
+
+  const render = ({ user }) => {
+    signedOutView.hidden = !!user;
+    signedInView.hidden = !user;
+    if (user) signedInLabel.textContent = t('authSignedInAs', { email: user.email });
+  };
+
+  render({ user: getCurrentUser() });
+  onAuthChange(render);
+
+  btnSwitchMode.addEventListener('click', () => {
+    mode = mode === 'sign-in' ? 'sign-up' : 'sign-in';
+    btnSubmit.textContent = t(mode === 'sign-in' ? 'authSignIn' : 'authSignUp');
+    btnSwitchMode.textContent = t(mode === 'sign-in' ? 'authSwitchToSignUp' : 'authSwitchToSignIn');
+  });
+
+  btnSubmit.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    if (!email || !password) return;
+    try {
+      if (mode === 'sign-in') await signInEmail({ email, password });
+      else await signUpEmail({ email, password, name: email.split('@')[0] });
+      passwordInput.value = '';
+    } catch (error) {
+      showError(error);
+    }
+  });
+
+  btnGoogle.addEventListener('click', async () => {
+    try {
+      await signInGoogle();
+    } catch (error) {
+      showError(error);
+    }
+  });
+
+  btnMagicLink.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if (!email) return;
+    try {
+      await sendMagicLink({ email });
+      showMessage('authMagicLinkSent');
+    } catch (error) {
+      showError(error);
+    }
+  });
+
+  btnSignOut?.addEventListener('click', async () => {
+    await signOut();
+  });
+}
+
 function initSettings() {
   const overlay = document.getElementById('settings-overlay');
   const btnOpen = document.getElementById('btn-settings');

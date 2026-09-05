@@ -1,18 +1,68 @@
-import { date, index, jsonb, numeric, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, date, index, jsonb, numeric, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
+// Auth tables below match what Better Auth's Drizzle adapter expects (see
+// server/src/auth/auth.js, usePlural: true) — generated once with
+// `npx @better-auth/cli generate` and hand-adjusted to use uuid ids (via the
+// `generateId` override in auth.js) instead of plain text, so the per-user
+// data tables further down can keep referencing user.id as a uuid.
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
+  name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  image: text('image'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const sessions = pgTable('sessions', {
-  token: text('token').primaryKey(),
+  id: uuid('id').primaryKey(),
+  token: text('token').notNull().unique(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-});
+}, (table) => ([
+  index('sessions_user_idx').on(table.userId),
+]));
+
+// Linked sign-in methods per user: one row per (provider, account) — the
+// email/password credential is itself a row here (providerId: "credential")
+// rather than living on the users table, per Better Auth's model.
+export const accounts = pgTable('accounts', {
+  id: uuid('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  accountId: text('account_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  // The stable provider-side identity key (paired with accountId) — e.g.
+  // "local:credential" for email/password, "local:oauth:google" for Google.
+  issuer: text('issuer').notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  idToken: text('id_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+  scope: text('scope'),
+  password: text('password'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ([
+  index('accounts_user_idx').on(table.userId),
+]));
+
+// Short-lived tokens for magic links, password reset, and email verification.
+export const verifications = pgTable('verifications', {
+  id: uuid('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+}, (table) => ([
+  index('verifications_identifier_idx').on(table.identifier),
+]));
 
 // Whole-row-replace, last-write-wins-by-updated_at entities. Each stores its
 // full client-side record shape as JSONB rather than being column-mapped,

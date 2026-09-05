@@ -42,6 +42,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep link used to complete magic-link / Google sign-in
+                 (see server/src/index.js's /auth/complete and
+                 services/auth.js's completeFromUrl). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="gymtracker" android:host="auth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

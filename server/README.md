@@ -1,13 +1,24 @@
 # Muscu Tracker sync server — M1
 
-Backend + multi-device sync API. Currently at **M1**: auth (register/login/logout)
-and a stub `/sync` endpoint (always returns an empty pull, no persistence yet).
-Real push/pull merge logic lands in M3 — see
-`/home/aris/.claude/plans/ancient-tumbling-meerkat.md` for the full phased plan.
+Backend + multi-device sync API. Currently at **M1**: auth (sign-up/sign-in/sign-out,
+via [Better Auth](https://www.better-auth.com), self-hosted) and a stub `/sync`
+endpoint (always returns an empty pull, no persistence yet). Real push/pull
+merge logic lands in M3.
+
+Auth is handled entirely by Better Auth, mounted under `/api/auth/*`
+(`src/index.js`) and backed by the same Postgres database as everything else
+via its Drizzle adapter (`src/auth/auth.js`). It supports email/password,
+Google sign-in, and magic links. Emails (magic link, password reset) are sent
+through your own SMTP account (`src/email/send-email.js`) — no third-party
+auth or email vendor required. `/sync` and future endpoints authenticate by
+calling `auth.api.getSession()` on the incoming request (see
+`src/sync/routes.js`); the client attaches the session token Better Auth
+returns as `Authorization: Bearer <token>` (its `bearer` plugin).
 
 ## Local development
 
-Requires Node 20+ and a Postgres instance. Easiest way to get one locally:
+Requires **Node 22+** (Better Auth's crypto dependencies need Node ≥20.19; a
+`.nvmrc` pins 22) and a Postgres instance. Easiest way to get one locally:
 
 ```bash
 podman run -d --name gymtracker-pg-dev \
@@ -15,12 +26,17 @@ podman run -d --name gymtracker-pg-dev \
   -p 5433:5432 docker.io/library/postgres:15-alpine
 ```
 
+(On this VPS there's already a system Postgres 16 cluster running on the
+default port — see "Deploying to a VPS" below; you don't need a container if
+you're developing directly on it.)
+
 Then:
 
 ```bash
 cd server
+nvm use   # or: nvm install 22
 npm install
-cp .env.example .env   # edit DATABASE_URL to point at the dev container above (port 5433)
+cp .env.example .env   # fill in DATABASE_URL, BETTER_AUTH_SECRET, etc. (see below)
 npx drizzle-kit generate   # only needed after changing src/db/schema.js
 node src/db/migrate.js     # applies migrations in src/db/migrations/
 npm run dev                 # starts the API on :3000 with --watch
@@ -32,9 +48,28 @@ Verify everything works end-to-end:
 ./scripts/smoke-test.sh
 ```
 
-This exercises register → duplicate-register rejection → wrong-password rejection
-→ login → unauthenticated-sync rejection → authenticated sync → logout →
-sync-after-logout rejection. All green is M1's bar for "done."
+This exercises sign-up → duplicate-sign-up rejection → wrong-password rejection
+→ sign-in → unauthenticated-sync rejection → authenticated sync → sign-out →
+sync-after-sign-out rejection. All green is M1's bar for "done."
+
+### Required `.env` values
+
+- `BETTER_AUTH_SECRET` — a real random secret in any non-dev environment
+  (`openssl rand -base64 32`). Better Auth uses this to sign sessions.
+- `BETTER_AUTH_URL` — the public base URL of this API (used for OAuth
+  callbacks and links in emails).
+- `TRUSTED_ORIGINS` — comma-separated list of origins allowed to call the auth
+  API: the deployed web app's origin, plus the Capacitor app's origins
+  (`https://localhost` for Android, `capacitor://localhost` for iOS, per
+  `capacitor.config.json`'s `androidScheme`).
+- `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM` — your SMTP
+  account, used to send magic-link and password-reset emails.
+- `GOOGLE_CLIENT_ID_WEB`/`GOOGLE_CLIENT_ID_ANDROID`/`GOOGLE_CLIENT_ID_IOS` +
+  `GOOGLE_CLIENT_SECRET` — from **Google Cloud Console** (not Firebase): one
+  OAuth 2.0 client per platform, all accepted for Google sign-in (each
+  platform's client mints ID tokens verified server-side against whichever
+  client ID matches). See the client-side `README.md` / `DEVELOPMENT.md` for
+  what to configure on the Android/iOS side.
 
 ## Deploying to a VPS
 
@@ -44,9 +79,10 @@ SSH access to the target VPS exists:
 - `deploy/Caddyfile` — reverse proxy with automatic TLS. Fill in the real
   domain, drop into `/etc/caddy/Caddyfile` (or `Caddyfile.d/`), `systemctl reload caddy`.
 - `deploy/gymtracker-sync.service` — systemd unit for the Node process.
-  Expects the app checked out at `/opt/gymtracker/server` and a real `.env`
-  next to it (not committed — see `.env.example`). Install with
-  `systemctl enable --now gymtracker-sync`.
+  Expects the app checked out at `/opt/gymtracker/server`, a real `.env`
+  next to it (not committed — see `.env.example`), and a Node 22+ binary
+  (point `ExecStart` at the nvm-installed node if the system package manager's
+  Node is older — check with `node -v`).
 - `deploy/pg-backup.sh` + `gymtracker-backup.service` + `gymtracker-backup.timer` —
   daily `pg_dump`, pruned after 14 days locally. **The off-box copy step in
   `pg-backup.sh` is a TODO** — fill in an `rclone` remote or `scp` target
@@ -70,6 +106,7 @@ CREATE DATABASE gymtracker OWNER gymtracker;
 
 ## What's deliberately not here yet
 
-- No password reset flow (needs SMTP infra — explicitly deferred, see plan).
 - No real sync persistence — `/sync` always returns an empty pull (M3).
 - No client integration (`services/sync.js` doesn't exist yet — M2/M3).
+  `services/auth.js` (sign-up/sign-in/sign-out/magic-link/Google) does exist
+  on the client and talks to this server's `/api/auth/*`.

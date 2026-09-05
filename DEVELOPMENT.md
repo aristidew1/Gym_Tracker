@@ -28,6 +28,19 @@ Les vérifications de la logique métier se lancent avec :
 npm test
 ```
 
+## Compte (Better Auth)
+
+`services/auth.js` parle au serveur de sync self-hosted (`server/`, voir son
+propre README). Après avoir ajouté `@capacitor/preferences`, `@capacitor/app`
+et `@capawesome/capacitor-google-sign-in`, relancer `npm install` puis
+`npm run sync:android` / `sync:ios` pour que Capacitor les enregistre côté
+natif. Le lien magique et Google (mobile) redirigent vers le custom URL scheme
+`gymtracker://auth-callback`, déjà déclaré dans `AndroidManifest.xml` et
+`Info.plist` — Google Sign-In natif nécessite en plus de créer les clients
+OAuth (Google Cloud Console, pas Firebase) et de renseigner le `GIDClientID` /
+schéma d'URL inversé dans `Info.plist` une fois le client iOS créé (voir le
+commentaire TODO dans ce fichier).
+
 ## Installation et contrôle sur le téléphone
 
 Dans un terminal `zsh` interactif, l’alias `apkmuscu` installe l’APK de debug

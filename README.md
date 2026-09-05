@@ -36,12 +36,16 @@ npm install
 - `app.js`, `index.html`, `index.css`: main application interface.
 - `data/`: exercise catalogue, default program, and progression rules.
 - `models/`: workout data schemas, validation, and migrations.
-- `services/`: program storage and progression logic.
+- `services/`: program storage and progression logic; `services/auth.js` is the
+  account client (email/password, Google, magic link — see `server/README.md`
+  for the backend it talks to).
 - `storage.js`: local persistence, imports, and exports.
 - `tests/`: automated Node.js tests.
 - `android/`: Capacitor Android project and native notification integration.
 - `ios/`: Capacitor iOS project.
 - `www/`: generated copy of the web source files used by Capacitor.
+- `server/`: self-hosted sync backend (Fastify + Postgres + Better Auth) — see
+  `server/README.md`.
 
 ## Development workflow
 

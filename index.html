@@ -288,6 +288,34 @@
           <button class="btn-settings-close" id="btn-settings-close">✕</button>
         </div>
 
+        <div class="settings-section" id="account-section">
+          <h3 class="settings-section-title" data-i18n="account">Compte</h3>
+          <p class="settings-row-desc" data-i18n="accountDesc">Connecte-toi pour retrouver tes données sur tes autres appareils.</p>
+
+          <div class="account-form" id="account-signed-out">
+            <label>
+              <span data-i18n="authEmail">Email</span>
+              <input type="email" id="auth-email" autocomplete="email" />
+            </label>
+            <label>
+              <span data-i18n="authPassword">Mot de passe</span>
+              <input type="password" id="auth-password" autocomplete="current-password" />
+            </label>
+            <p class="account-error" id="auth-error" hidden></p>
+            <p class="account-message" id="auth-message" hidden></p>
+            <button type="button" class="settings-action-btn" id="btn-auth-submit" data-i18n="authSignIn">Se connecter</button>
+            <button type="button" class="account-link-btn" id="btn-auth-switch-mode" data-i18n="authSwitchToSignUp">Pas de compte ? Créer un compte</button>
+            <div class="account-divider" aria-hidden="true"></div>
+            <button type="button" class="settings-action-btn" id="btn-auth-google" data-i18n="authGoogle">Continuer avec Google</button>
+            <button type="button" class="account-link-btn" id="btn-auth-magic-link" data-i18n="authMagicLink">Recevoir un lien de connexion</button>
+          </div>
+
+          <div class="account-signed-in" id="account-signed-in" hidden>
+            <p id="account-signed-in-label"></p>
+            <button type="button" class="settings-action-btn" id="btn-auth-sign-out" data-i18n="authSignOut">Se déconnecter</button>
+          </div>
+        </div>
+
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="language">Langue</h3>
           <div class="settings-row">

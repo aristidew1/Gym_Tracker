@@ -24,6 +24,23 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Deep link used to complete magic-link / Google sign-in (see
+	     server/src/index.js's /auth/complete and services/auth.js's
+	     completeFromUrl). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gymtracker</string>
+			</array>
+		</dict>
+		<!-- TODO once the iOS Google OAuth client exists (Google Cloud
+		     Console): add GIDClientID below, and a second dict here with
+		     CFBundleURLSchemes containing the reversed iOS client ID
+		     (com.googleusercontent.apps.YOUR_IOS_CLIENT_ID), per
+		     @capawesome/capacitor-google-sign-in's setup docs. -->
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
