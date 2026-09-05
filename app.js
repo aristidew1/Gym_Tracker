@@ -46,12 +46,13 @@ import {
 import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
 import { getActiveProgram, getProgramById, restorePrograms, saveProgram, setActiveProgram } from './services/program-storage.js';
 import { getOnboardingProgramTemplate } from './data/onboarding-programs.js';
+import { getCustomExercises } from './services/custom-exercises.js';
 import { formatLocalDate, localDateToDayNumber } from './services/date-utils.js';
 import { escapeHtml } from './services/html.js';
 import { insertNotePrompt } from './services/note-editor.js';
 import { getExerciseCompletionState, getWorkoutCompletionProgress } from './services/workout-progress.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
-import { runTour, showTip, resetSeenTips } from './coachmark.js';
+import { runTour, showTip, markAllTipsSeen } from './coachmark.js';
 
 // ============================================
 // STATE
@@ -75,9 +76,15 @@ const state = {
   exerciseNotes: {},
   openNoteEditors: new Set(),
   confirmCallback: null,
+  confirmCancelCallback: null,
 };
 
 const ONBOARDING_KEY = 'muscu_onboarding_completed';
+const TIPS_BOOTSTRAPPED_KEY = 'muscu_tips_bootstrapped';
+const LAST_EXPORT_KEY = 'muscu_last_export_at';
+const EXPORT_REMINDER_SNOOZE_KEY = 'muscu_export_reminder_snoozed_until';
+const EXPORT_REMINDER_INTERVAL_DAYS = 30;
+const EXPORT_REMINDER_SNOOZE_DAYS = 14;
 const THEME_KEY = 'muscu_theme';
 const STYLE_KEY = 'muscu_visual_style';
 const VISUAL_STYLES = ['default', 'piste', 'nothing'];
@@ -298,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNativeSafeAreaInsets();
   window.addEventListener('resize', updateNativeSafeAreaInsets);
   window.addEventListener('orientationchange', updateNativeSafeAreaInsets);
+  bootstrapOneTimeTips();
   translateDocument();
   initNavigation();
   initSupplements();
@@ -309,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimerLifecycle();
   initConfirmDialog();
   initSettings();
+  initBackupReminder();
   initSelectPicker();
   initNotifications();
   initPrograms();
@@ -345,20 +354,41 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function shouldShowOnboarding() {
-  if (localStorage.getItem(ONBOARDING_KEY) === 'true') return false;
+// True only while the app is still untouched: nothing recorded, no program of
+// their own, no supplement. Anything else means the user already has data worth
+// protecting, whether or not they went through the onboarding.
+function isPristineFirstRun() {
   const summary = getExportSummary();
   return summary.workouts === 0
     && summary.programs === 0
     && summary.supplements === 0
-    && !summary.baseProgramCustomized;
+    && !summary.baseProgramCustomized
+    && getCustomExercises().length === 0
+    && !getActiveWorkoutDraft();
+}
+
+function shouldShowOnboarding() {
+  if (localStorage.getItem(ONBOARDING_KEY) === 'true') return false;
+  return isPristineFirstRun();
+}
+
+// The one-time contextual hints, each shown at most once ever. They live in
+// several modules (rest timer, home supplements, program editor, settings).
+const ONE_TIME_TIP_IDS = ['rest-timer-fullscreen', 'supplements-check-tap', 'intensity-technique', 'settings-advanced'];
+
+// Decided once, on the first launch after this code ships. Someone updating the
+// app has no seen-tips record yet, so every hint would fire at once for
+// features they've been using for months — mark them all seen instead. A fresh
+// install is left alone and still gets the four tips as it meets each feature.
+function bootstrapOneTimeTips() {
+  if (localStorage.getItem(TIPS_BOOTSTRAPPED_KEY) === 'true') return;
+  localStorage.setItem(TIPS_BOOTSTRAPPED_KEY, 'true');
+  if (!shouldShowOnboarding()) markAllTipsSeen(ONE_TIME_TIP_IDS);
 }
 
 function completeOnboarding() {
   localStorage.setItem(ONBOARDING_KEY, 'true');
-  const overlay = document.getElementById('onboarding-overlay');
-  overlay?.classList.remove('active');
-  overlay?.setAttribute('aria-hidden', 'true');
+  closeOnboardingOverlay();
 }
 
 // Each step spotlights a real element of the actual UI (navigating between
@@ -374,32 +404,50 @@ const MAIN_TOUR_STEPS = [
   { view: 'home', target: '#btn-settings', title: 'tourSettingsTitle', body: 'tourSettingsDesc' },
 ];
 
-function localizedTourSteps() {
-  return MAIN_TOUR_STEPS.map((step) => ({ ...step, title: t(step.title), body: t(step.body) }));
+// Keep the first-run walkthrough light. The complete seven-step guide remains
+// available from Settings > Help once the user wants the full tour.
+const INITIAL_TOUR_STEPS = [MAIN_TOUR_STEPS[0], MAIN_TOUR_STEPS[2], MAIN_TOUR_STEPS[6]];
+
+function localizedTourSteps(steps = MAIN_TOUR_STEPS) {
+  return steps.map((step) => ({ ...step, title: t(step.title), body: t(step.body) }));
 }
 
-function startMainTour(onFinish = () => doNavigate('home')) {
-  runTour(localizedTourSteps(), { navigate: doNavigate, onFinish });
+function startMainTour(onFinish = () => doNavigate('home'), { complete = false } = {}) {
+  const steps = complete ? MAIN_TOUR_STEPS : INITIAL_TOUR_STEPS;
+  runTour(localizedTourSteps(steps), { navigate: doNavigate, onFinish });
 }
 
+let onboardingPreviousFocus = null;
 
 function openOnboardingOverlay() {
   const overlay = document.getElementById('onboarding-overlay');
-  overlay?.classList.add('active');
-  overlay?.setAttribute('aria-hidden', 'false');
+  if (!overlay) return;
+  if (!overlay.classList.contains('active')) onboardingPreviousFocus = document.activeElement;
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => {
+    overlay.querySelector('[data-onboarding-program].primary, button')?.focus({ preventScroll: true });
+  });
 }
 
 function closeOnboardingOverlay() {
   const overlay = document.getElementById('onboarding-overlay');
+  const ownedFocus = overlay?.contains(document.activeElement);
   overlay?.classList.remove('active');
   overlay?.setAttribute('aria-hidden', 'true');
+  if (ownedFocus && onboardingPreviousFocus?.isConnected && typeof onboardingPreviousFocus.focus === 'function') {
+    onboardingPreviousFocus.focus({ preventScroll: true });
+  }
+  onboardingPreviousFocus = null;
 }
 
 function skipOnboarding() {
-  // A skip leaves the user with no program at all: the home screen then
-  // invites them to create or pick one whenever they're ready, instead of
-  // forcing a choice up front.
-  restorePrograms([], null);
+  // On a genuine first run a skip leaves the user with no program at all: the
+  // home screen then invites them to create or pick one whenever they're ready,
+  // instead of forcing a choice up front. The overlay is also reachable later
+  // on (debug button, "Explorer" on the empty home), so anyone who already has
+  // data keeps every program they built.
+  if (isPristineFirstRun()) restorePrograms([], null);
   completeOnboarding();
   doNavigate('home');
 }
@@ -427,14 +475,17 @@ function initOnboarding() {
     });
   });
   overlay.querySelector('[data-onboarding-action="import"]')?.addEventListener('click', () => {
-    closeOnboardingOverlay();
-    document.getElementById('btn-import-programs')?.click();
+    const input = document.getElementById('import-programs-file-input');
+    if (!input) return;
+    input.dataset.importSource = 'onboarding';
+    input.click();
   });
   document.getElementById('btn-onboarding-skip')?.addEventListener('click', skipOnboarding);
-  window.addEventListener('programs:imported', () => {
+  window.addEventListener('programs:imported', (event) => {
+    if (event.detail?.source !== 'onboarding') return;
     completeOnboarding();
     startMainTour(() => doNavigate('programs'));
-  }, { once: true });
+  });
 
   document.getElementById('btn-home-empty-create')?.addEventListener('click', () => {
     doNavigate('programs');
@@ -442,11 +493,28 @@ function initOnboarding() {
   });
   document.getElementById('btn-home-empty-explore')?.addEventListener('click', openOnboardingOverlay);
 
-  // Debug-only: replay the onboarding + coachmarks without wiping real data.
-  document.getElementById('btn-debug-onboarding')?.addEventListener('click', () => {
-    localStorage.removeItem(ONBOARDING_KEY);
-    resetSeenTips();
-    openOnboardingOverlay();
+  // aria-modal does not constrain keyboard navigation by itself. Keep Tab
+  // inside the welcome dialog; Escape only hides it, without marking the
+  // onboarding complete, so it stays reachable from the empty home.
+  overlay.addEventListener('keydown', (event) => {
+    if (!overlay.classList.contains('active')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeOnboardingOverlay();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 
   if (shouldShowOnboarding()) openOnboardingOverlay();
@@ -688,7 +756,84 @@ function renderHomeDate() {
   dateElement.textContent = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+// True once there's real data worth losing and no recent export to fall back
+// on. Disabling Android's auto-backup (see isPristineFirstRun's comment)
+// removed the only safety net users had, so this nudges toward the existing
+// manual export instead of silently relying on the OS.
+function shouldShowBackupReminder() {
+  const summary = getExportSummary();
+  if (summary.workouts === 0 && summary.programs === 0 && summary.supplements === 0) return false;
+
+  const snoozedUntil = Number(localStorage.getItem(EXPORT_REMINDER_SNOOZE_KEY));
+  if (snoozedUntil && Date.now() < snoozedUntil) return false;
+
+  const lastExportAt = localStorage.getItem(LAST_EXPORT_KEY);
+  if (!lastExportAt) return true;
+  const daysSinceExport = (Date.now() - new Date(lastExportAt).getTime()) / (1000 * 60 * 60 * 24);
+  return daysSinceExport >= EXPORT_REMINDER_INTERVAL_DAYS;
+}
+
+function renderBackupReminder() {
+  const banner = document.getElementById('backup-reminder');
+  if (!banner) return;
+  banner.hidden = !shouldShowBackupReminder();
+}
+
+async function downloadJsonFile(data, fileName) {
+  if (window.Capacitor?.isNativePlatform()) {
+    const Filesystem = window.Capacitor.Plugins.Filesystem;
+    await Filesystem.writeFile({
+      path: fileName,
+      data,
+      directory: 'DOCUMENTS',
+      encoding: 'utf8',
+    });
+    return;
+  }
+
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportFullBackup() {
+  const data = exportData();
+  const summary = getExportSummary();
+  if (summary.workouts === 0 && summary.programs === 0) {
+    showToast(t('noDataExport'), 'error');
+    return;
+  }
+
+  const dateStr = formatLocalDate();
+  const fileName = `muscu_tracker_${dateStr}.json`;
+
+  try {
+    await downloadJsonFile(data, fileName);
+    localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString());
+    showToast(t('exportedData'), 'success');
+    renderBackupReminder();
+  } catch (err) {
+    console.error('Data download failed:', err);
+    showToast(t('exportError'), 'error');
+  }
+}
+
+function initBackupReminder() {
+  document.getElementById('btn-backup-reminder-export')?.addEventListener('click', exportFullBackup);
+  document.getElementById('btn-backup-reminder-dismiss')?.addEventListener('click', () => {
+    localStorage.setItem(EXPORT_REMINDER_SNOOZE_KEY, String(Date.now() + EXPORT_REMINDER_SNOOZE_DAYS * 24 * 60 * 60 * 1000));
+    renderBackupReminder();
+  });
+}
+
 function renderHome() {
+  renderBackupReminder();
   const program = getActiveProgram();
   const emptyState = document.getElementById('home-empty-state');
   const homeStats = document.getElementById('home-stats');
@@ -2250,7 +2395,9 @@ function formatMetric(value) {
 function initConfirmDialog() {
   document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
     document.getElementById('confirm-overlay').classList.remove('active');
+    state.confirmCancelCallback?.();
     state.confirmCallback = null;
+    state.confirmCancelCallback = null;
   });
 
   document.getElementById('btn-confirm-ok').addEventListener('click', () => {
@@ -2259,13 +2406,15 @@ function initConfirmDialog() {
       state.confirmCallback();
       state.confirmCallback = null;
     }
+    state.confirmCancelCallback = null;
   });
 }
 
-function showConfirm(title, message, callback) {
+function showConfirm(title, message, callback, onCancel = null) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-message').textContent = message;
   state.confirmCallback = callback;
+  state.confirmCancelCallback = onCancel;
   document.getElementById('confirm-overlay').classList.add('active');
 }
 
@@ -2297,6 +2446,13 @@ function initSettings() {
   const btnExportPrograms = document.getElementById('btn-export-programs');
   const btnImportPrograms = document.getElementById('btn-import-programs');
   const programsFileInput = document.getElementById('import-programs-file-input');
+  let settingsTipTimer = null;
+  let replayGuideTimer = null;
+  const cancelSettingsTip = () => {
+    if (settingsTipTimer === null) return;
+    clearTimeout(settingsTipTimer);
+    settingsTipTimer = null;
+  };
   const languageSelect = document.getElementById('settings-language');
   languageSelect.value = getLanguage();
   languageSelect.addEventListener('change', () => setLanguage(languageSelect.value));
@@ -2341,10 +2497,16 @@ function initSettings() {
 
   // Open/close settings
   btnOpen.addEventListener('click', () => {
+    if (replayGuideTimer !== null) {
+      clearTimeout(replayGuideTimer);
+      replayGuideTimer = null;
+    }
     overlay.classList.add('active');
     // The settings panel slides up over 0.35s (see .settings-panel's
     // transform transition) — wait it out so the target's rect is settled.
-    setTimeout(() => {
+    cancelSettingsTip();
+    settingsTipTimer = setTimeout(() => {
+      settingsTipTimer = null;
       showTip('settings-advanced', {
         target: document.getElementById('settings-style')?.closest('.settings-row'),
         title: t('tipSettingsTitle'),
@@ -2354,59 +2516,34 @@ function initSettings() {
   });
 
   btnClose.addEventListener('click', () => {
+    cancelSettingsTip();
     overlay.classList.remove('active');
+  });
+
+  // Replay the guided tour. The panel slides back down over 0.35s (see
+  // .settings-panel's transform transition), so let it clear the screen before
+  // the first step measures the element it spotlights.
+  document.getElementById('btn-replay-guide')?.addEventListener('click', () => {
+    if (replayGuideTimer !== null) return;
+    cancelSettingsTip();
+    overlay.classList.remove('active');
+    replayGuideTimer = setTimeout(() => {
+      replayGuideTimer = null;
+      document.getElementById('btn-settings')?.focus({ preventScroll: true });
+      startMainTour(undefined, { complete: true });
+    }, 400);
   });
 
   // Close on backdrop click
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
+      cancelSettingsTip();
       overlay.classList.remove('active');
     }
   });
 
-  async function downloadJsonFile(data, fileName) {
-    if (window.Capacitor?.isNativePlatform()) {
-      const Filesystem = window.Capacitor.Plugins.Filesystem;
-      await Filesystem.writeFile({
-        path: fileName,
-        data,
-        directory: 'DOCUMENTS',
-        encoding: 'utf8',
-      });
-      return;
-    }
-
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  }
-
   // Download data
-  btnExport.addEventListener('click', async () => {
-    const data = exportData();
-    const summary = getExportSummary();
-    if (summary.workouts === 0 && summary.programs === 0) {
-      showToast(t('noDataExport'), 'error');
-      return;
-    }
-
-    const dateStr = formatLocalDate();
-    const fileName = `muscu_tracker_${dateStr}.json`;
-
-    try {
-      await downloadJsonFile(data, fileName);
-      showToast(t('exportedData'), 'success');
-    } catch (err) {
-      console.error('Data download failed:', err);
-      showToast(t('exportError'), 'error');
-    }
-  });
+  btnExport.addEventListener('click', exportFullBackup);
 
   // Export programs only — workout history is never included in this file.
   btnExportPrograms.addEventListener('click', async () => {
@@ -2496,10 +2633,21 @@ function initSettings() {
 
   // Import programs only. Existing workout records stay untouched.
   btnImportPrograms.addEventListener('click', () => {
+    programsFileInput.dataset.importSource = 'settings';
     programsFileInput.click();
   });
 
+  // The Programs view has another ordinary launcher for this same hidden
+  // input. Mark it in capture phase, before that view forwards the click.
+  document.addEventListener('click', (event) => {
+    if (event.target.closest?.('[data-action="import-programs-from-list"]')) {
+      programsFileInput.dataset.importSource = 'settings';
+    }
+  }, true);
+
   programsFileInput.addEventListener('change', (e) => {
+    const importSource = programsFileInput.dataset.importSource || 'settings';
+    delete programsFileInput.dataset.importSource;
     const file = e.target.files[0];
     if (!file) return;
 
@@ -2513,21 +2661,28 @@ function initSettings() {
           return;
         }
 
+        if (importSource === 'onboarding') closeOnboardingOverlay();
         showConfirm(
           t('importPrograms'), t('programsImportConfirm'),
           () => {
             if (!importProgramsData(content)) {
               showToast(t('importError'), 'error');
+              if (importSource === 'onboarding') openOnboardingOverlay();
               return;
             }
             showToast(t('importedPrograms'), 'success');
-            window.dispatchEvent(new Event('programs:imported'));
+            window.dispatchEvent(new CustomEvent('programs:imported', {
+              detail: { source: importSource },
+            }));
             renderHome();
             renderPrograms();
             refreshStatsSelector();
             updateCharts();
             updateNotification();
-          }
+          },
+          () => {
+            if (importSource === 'onboarding') openOnboardingOverlay();
+          },
         );
       } catch {
         showToast(t('invalidJson'), 'error');

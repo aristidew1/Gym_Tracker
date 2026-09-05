@@ -1,0 +1,7 @@
+[Unit]
+Description=Muscu Tracker Postgres backup
+
+[Service]
+Type=oneshot
+User=postgres
+ExecStart=/opt/gymtracker/server/deploy/pg-backup.sh

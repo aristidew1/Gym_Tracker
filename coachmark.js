@@ -6,6 +6,15 @@ import { t } from './i18n.js';
 import { escapeHtml } from './services/html.js';
 
 const SEEN_KEY = 'muscu_seen_coachmarks';
+const TIP_AUTO_DISMISS_MS = 8000;
+// Views animate in (translate + fade), so a target keeps moving for a few
+// frames after it lands in the DOM. Re-measure until its rect stops changing,
+// with a hard cap so a permanently animated target can't spin forever.
+const SETTLE_MS = 600;
+const SETTLE_STABLE_FRAMES = 2;
+
+let uid = 0;
+const activeTips = new Set();
 
 function getSeen() {
   try {
@@ -16,14 +25,30 @@ function getSeen() {
   }
 }
 
+function saveSeen(seen) {
+  localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+}
+
 function markSeen(id) {
   const seen = getSeen();
   seen.add(id);
-  localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+  saveSeen(seen);
 }
 
 export function hasSeenTip(id) {
   return getSeen().has(id);
+}
+
+// Lets the app suppress onboarding tips wholesale for users who are not new:
+// someone upgrading already uses these features and shouldn't be taught them.
+// Unions into what is stored, so resetSeenTips() still clears everything.
+export function markAllTipsSeen(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  const seen = getSeen();
+  for (const id of ids) {
+    if (id) seen.add(id);
+  }
+  saveSeen(seen);
 }
 
 // Test-only helper: lets a "replay onboarding" debug button clear every
@@ -45,6 +70,9 @@ function ensureStyles() {
       box-shadow: 0 0 0 9999px rgba(4, 6, 12, 0.74);
       transition: top 0.22s ease, left 0.22s ease, width 0.22s ease, height 0.22s ease;
     }
+    /* Easing is only wanted when the spotlight travels from one step to the
+       next; while tracking scroll it would make the halo float behind. */
+    .coachmark-hole.coachmark-instant { transition: none; }
     .coachmark-hole.tip {
       box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.9), 0 0 0 9999px rgba(4, 6, 12, 0.02);
     }
@@ -88,6 +116,62 @@ function resolveTarget(target) {
   return null;
 }
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function focusableIn(root) {
+  return [...root.querySelectorAll(FOCUSABLE)].filter((el) => !el.disabled);
+}
+
+// Keeps Tab inside the bubble: the scrim only blocks the mouse, so without
+// this the keyboard walks into the content hidden behind it.
+function trapFocus(bubble, event) {
+  if (event.key !== 'Tab') return;
+  const items = focusableIn(bubble);
+  if (!items.length) {
+    event.preventDefault();
+    bubble.focus({ preventScroll: true });
+    return;
+  }
+  const first = items[0];
+  const last = items[items.length - 1];
+  const active = document.activeElement;
+  if (event.shiftKey && (active === first || active === bubble || !bubble.contains(active))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || active === bubble || !bubble.contains(active))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function canRestoreFocus(element) {
+  if (!element?.isConnected || element.disabled || typeof element.focus !== 'function') return false;
+  if (element.closest?.('[aria-hidden="true"]')) return false;
+  const overlay = element.closest?.('[class*="overlay"]');
+  if (overlay && !overlay.classList.contains('active')) return false;
+  const style = getComputedStyle(element);
+  return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+}
+
+function getTopActiveOverlay() {
+  return [...document.querySelectorAll('[class*="overlay"].active')]
+    .filter((element) => canRestoreFocus(element))
+    .sort((left, right) => (Number.parseInt(getComputedStyle(left).zIndex, 10) || 0) - (Number.parseInt(getComputedStyle(right).zIndex, 10) || 0))
+    .at(-1) || null;
+}
+
+// Only called when the coachmark still owns focus. If its original trigger is
+// now inside a closed sheet, use a visible control from the active app view.
+function restoreFocus(previous) {
+  const activeOverlay = getTopActiveOverlay();
+  const previousIsExposed = !activeOverlay || activeOverlay.contains(previous);
+  const fallbackRoot = activeOverlay || document.querySelector('.view.active') || document;
+  const fallback = focusableIn(fallbackRoot).find((element) => canRestoreFocus(element))
+    || document.querySelector('.nav-btn.active:not(:disabled)');
+  const target = previousIsExposed && canRestoreFocus(previous) ? previous : fallback;
+  if (canRestoreFocus(target)) target.focus({ preventScroll: true });
+}
+
 function positionHole(hole, rect) {
   const pad = 6;
   hole.style.top = `${rect.top - pad}px`;
@@ -110,28 +194,92 @@ function positionBubble(bubble, rect) {
   bubble.style.left = `${left}px`;
 }
 
+function rectKey(rect) {
+  return `${rect.top}:${rect.left}:${rect.width}:${rect.height}`;
+}
+
+function hasRunningAnimation(element) {
+  for (let current = element; current; current = current.parentElement) {
+    if (typeof current.getAnimations !== 'function') continue;
+    if (current.getAnimations().some((animation) => ['pending', 'running'].includes(animation.playState))) return true;
+  }
+  return false;
+}
+
 // Keeps the spotlight glued to its target across layout shifts (scroll,
 // resize, or the tour navigating between views).
 function trackTarget(el, hole, bubble) {
-  const update = () => {
-    const rect = el.getBoundingClientRect();
+  const apply = (rect) => {
     positionHole(hole, rect);
     positionBubble(bubble, rect);
   };
+  const update = () => apply(el.getBoundingClientRect());
+
   // A target revealed by expanding a section (e.g. "advanced options") can
   // land below the fold — bring it fully into view before spotlighting it.
   const rect = el.getBoundingClientRect();
   const fits = rect.top >= 0 && rect.bottom <= window.innerHeight;
   if (!fits) el.scrollIntoView({ block: 'center' });
   update();
-  const resizeObserver = new ResizeObserver(update);
+
+  let settleFrame = null;
+  let trackFrame = null;
+  const goInstant = () => hole.classList.add('coachmark-instant');
+
+  // The target can still be animating (including through an ancestor): its
+  // size need not change, so ResizeObserver stays silent. Poll until both the
+  // rect and its animation chain settle, while retaining step-to-step easing.
+  const settleUntil = performance.now() + SETTLE_MS;
+  let stableFrames = 0;
+  let lastKey = rectKey(el.getBoundingClientRect());
+  const settle = () => {
+    const next = el.getBoundingClientRect();
+    const key = rectKey(next);
+    if (key === lastKey) {
+      stableFrames += 1;
+    } else {
+      stableFrames = 0;
+      lastKey = key;
+      apply(next);
+    }
+    if ((stableFrames >= SETTLE_STABLE_FRAMES && !hasRunningAnimation(el)) || performance.now() >= settleUntil) {
+      settleFrame = null;
+      return;
+    }
+    settleFrame = requestAnimationFrame(settle);
+  };
+  settleFrame = requestAnimationFrame(settle);
+
+  // Scroll fires far more often than once per frame on a phone; coalesce.
+  const scheduleUpdate = () => {
+    goInstant();
+    if (trackFrame !== null) return;
+    trackFrame = requestAnimationFrame(() => {
+      trackFrame = null;
+      update();
+    });
+  };
+
+  // ResizeObserver always fires once for the initial observation — ignoring it
+  // keeps the step-to-step easing from being cancelled the moment it starts.
+  let observed = false;
+  const resizeObserver = new ResizeObserver(() => {
+    if (!observed) {
+      observed = true;
+      return;
+    }
+    scheduleUpdate();
+  });
   resizeObserver.observe(el);
-  window.addEventListener('resize', update);
-  window.addEventListener('scroll', update, true);
+  window.addEventListener('resize', scheduleUpdate);
+  window.addEventListener('scroll', scheduleUpdate, true);
   return () => {
+    if (settleFrame !== null) cancelAnimationFrame(settleFrame);
+    if (trackFrame !== null) cancelAnimationFrame(trackFrame);
+    hole.classList.remove('coachmark-instant');
     resizeObserver.disconnect();
-    window.removeEventListener('resize', update);
-    window.removeEventListener('scroll', update, true);
+    window.removeEventListener('resize', scheduleUpdate);
+    window.removeEventListener('scroll', scheduleUpdate, true);
   };
 }
 
@@ -139,33 +287,78 @@ export function runTour(steps, { navigate, onFinish = () => {} } = {}) {
   ensureStyles();
   let index = 0;
   let cleanup = null;
+  let renderFrame = null;
+  let finished = false;
+  const previousFocus = document.activeElement;
+  uid += 1;
+  const titleId = `coachmark-title-${uid}`;
+  const bodyId = `coachmark-body-${uid}`;
   const catcher = document.createElement('div');
   catcher.className = 'coachmark-catcher';
   const hole = document.createElement('div');
   hole.className = 'coachmark-hole';
   const bubble = document.createElement('div');
   bubble.className = 'coachmark-bubble';
+  bubble.setAttribute('role', 'dialog');
+  bubble.setAttribute('aria-modal', 'true');
+  bubble.setAttribute('aria-labelledby', titleId);
+  bubble.setAttribute('aria-describedby', bodyId);
+  bubble.tabIndex = -1;
   document.body.append(catcher, hole, bubble);
 
   const teardown = () => {
     cleanup?.();
+    cleanup = null;
+    if (renderFrame !== null) cancelAnimationFrame(renderFrame);
+    renderFrame = null;
+    document.removeEventListener('keydown', onKeyDown, true);
+    const owned = bubble.contains(document.activeElement);
     catcher.remove();
     hole.remove();
     bubble.remove();
+    return owned;
   };
 
   const finish = () => {
-    teardown();
-    onFinish();
+    if (finished) return;
+    finished = true;
+    const shouldRestoreFocus = teardown();
+    try {
+      onFinish();
+    } finally {
+      const active = document.activeElement;
+      if (shouldRestoreFocus && (active === document.body || active === document.documentElement || !canRestoreFocus(active))) {
+        restoreFocus(previousFocus);
+      }
+    }
   };
 
+  // Escape is the standard way out of a modal dialog, so it means the same
+  // thing as "Passer le guide" — including running onFinish.
+  function onKeyDown(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      finish();
+      return;
+    }
+    trapFocus(bubble, event);
+  }
+  document.addEventListener('keydown', onKeyDown, true);
+
   const renderStep = () => {
+    if (renderFrame !== null) cancelAnimationFrame(renderFrame);
+    renderFrame = null;
     cleanup?.();
+    cleanup = null;
+    if (finished) return;
     const step = steps[index];
     if (!step) return finish();
     if (step.view) navigate?.(step.view);
 
-    requestAnimationFrame(() => {
+    renderFrame = requestAnimationFrame(() => {
+      renderFrame = null;
+      if (finished) return;
       const el = resolveTarget(step.target);
       if (!el) {
         index += 1;
@@ -174,19 +367,23 @@ export function runTour(steps, { navigate, onFinish = () => {} } = {}) {
       const isLast = index === steps.length - 1;
       bubble.innerHTML = `
         <p class="coachmark-step">${escapeHtml(t('tourStep', { current: index + 1, total: steps.length }))}</p>
-        <h3>${escapeHtml(step.title)}</h3>
-        <p>${escapeHtml(step.body)}</p>
+        <h3 id="${titleId}">${escapeHtml(step.title)}</h3>
+        <p id="${bodyId}">${escapeHtml(step.body)}</p>
         <div class="coachmark-actions">
           <button type="button" class="coachmark-skip">${escapeHtml(t('tourSkip'))}</button>
           <button type="button" class="coachmark-next">${escapeHtml(t(isLast ? 'tourDone' : 'tourNext'))}</button>
         </div>
       `;
       bubble.querySelector('.coachmark-skip').addEventListener('click', finish);
-      bubble.querySelector('.coachmark-next').addEventListener('click', () => {
+      bubble.querySelector('.coachmark-next').addEventListener('click', (event) => {
+        event.currentTarget.disabled = true;
         index += 1;
         renderStep();
       });
       cleanup = trackTarget(el, hole, bubble);
+      // Focus the dialog itself so the whole step is announced, and without
+      // scrolling — that would move the target we just spotlighted.
+      bubble.focus({ preventScroll: true });
     });
   };
 
@@ -194,45 +391,80 @@ export function runTour(steps, { navigate, onFinish = () => {} } = {}) {
 }
 
 export function showTip(id, { target, title, body } = {}) {
-  if (hasSeenTip(id)) return;
+  if (hasSeenTip(id) || activeTips.has(id)) return;
   const el = resolveTarget(target);
   if (!el) return;
-  markSeen(id);
   ensureStyles();
 
+  const previousFocus = document.activeElement;
+  uid += 1;
+  const titleId = `coachmark-title-${uid}`;
+  const bodyId = `coachmark-body-${uid}`;
   const hole = document.createElement('div');
   hole.className = 'coachmark-hole tip';
   const bubble = document.createElement('div');
   bubble.className = 'coachmark-bubble tip';
+  // A tip doesn't block the app, so it is a dialog but not a modal one.
+  bubble.setAttribute('role', 'dialog');
+  bubble.setAttribute('aria-modal', 'false');
+  bubble.setAttribute('aria-labelledby', titleId);
+  bubble.setAttribute('aria-describedby', bodyId);
+  bubble.tabIndex = -1;
   bubble.innerHTML = `
     <button type="button" class="coachmark-close" aria-label="${escapeHtml(t('dismissTip'))}">✕</button>
-    <h3>${escapeHtml(title)}</h3>
-    <p>${escapeHtml(body)}</p>
+    <h3 id="${titleId}">${escapeHtml(title)}</h3>
+    <p id="${bodyId}">${escapeHtml(body)}</p>
     <div class="coachmark-actions">
       <button type="button" class="coachmark-gotit">${escapeHtml(t('gotIt'))}</button>
     </div>
   `;
   document.body.append(hole, bubble);
+  activeTips.add(id);
 
+  let closed = false;
   let autoDismissTimer = null;
-  const dismiss = () => {
-    cleanup();
+  let untrack = null;
+  // A tip is only ever burned when the user actually acknowledges it. Merely
+  // going away (timeout, tapping elsewhere, Escape) leaves it unseen, so an
+  // unread hint gets another chance instead of being lost forever.
+  const close = (acknowledged) => {
+    if (closed) return;
+    closed = true;
+    activeTips.delete(id);
+    if (acknowledged) markSeen(id);
     clearTimeout(autoDismissTimer);
-    document.removeEventListener('pointerdown', onOutsidePointerDown, true);
+    document.removeEventListener('pointerdown', onPointerDown, true);
+    document.removeEventListener('keydown', onKeyDown, true);
+    el.removeEventListener('click', onTargetClick);
+    untrack?.();
+    const owned = bubble.contains(document.activeElement);
     hole.remove();
     bubble.remove();
+    if (owned) restoreFocus(previousFocus);
   };
-  // A tip isn't blocking, so it must not linger indefinitely: a tap
-  // anywhere else, or simply enough time passing, clears it on its own.
-  const onOutsidePointerDown = (event) => {
-    if (bubble.contains(event.target)) return;
-    dismiss();
-  };
-  bubble.querySelector('.coachmark-close').addEventListener('click', dismiss);
-  bubble.querySelector('.coachmark-gotit').addEventListener('click', dismiss);
-  el.addEventListener('click', dismiss, { once: true });
-  document.addEventListener('pointerdown', onOutsidePointerDown, true);
-  autoDismissTimer = setTimeout(dismiss, 8000);
 
-  const cleanup = trackTarget(el, hole, bubble);
+  // Using the spotlighted control is the strongest possible "understood".
+  function onTargetClick() {
+    close(true);
+  }
+  function onPointerDown(event) {
+    if (bubble.contains(event.target)) return;
+    close(el.contains(event.target));
+  }
+  function onKeyDown(event) {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    close(false);
+  }
+
+  bubble.querySelector('.coachmark-close').addEventListener('click', () => close(true));
+  bubble.querySelector('.coachmark-gotit').addEventListener('click', () => close(true));
+  el.addEventListener('click', onTargetClick);
+  document.addEventListener('pointerdown', onPointerDown, true);
+  document.addEventListener('keydown', onKeyDown, true);
+  autoDismissTimer = setTimeout(() => close(false), TIP_AUTO_DISMISS_MS);
+
+  untrack = trackTarget(el, hole, bubble);
+  bubble.focus({ preventScroll: true });
 }

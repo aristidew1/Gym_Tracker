@@ -21,7 +21,6 @@
           <p class="home-date" id="home-date" aria-hidden="true"></p>
           <h1>Muscu Tracker</h1>
         </div>
-        <button class="btn-settings" id="btn-debug-onboarding" title="Tester l'onboarding" style="margin-right: 8px; font-size: 1.1rem;">🧪</button>
         <button class="btn-settings" id="btn-settings" title="Paramètres" data-i18n-title="settings">
           <svg class="icon-glyph icon-glyph--md" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
@@ -39,6 +38,17 @@
         <div class="stat-card">
           <div class="stat-value" id="stat-month">0</div>
           <div class="stat-label" data-i18n="thisMonth">Ce mois</div>
+        </div>
+      </div>
+
+      <div class="backup-reminder" id="backup-reminder" hidden>
+        <div class="backup-reminder-text">
+          <strong data-i18n="backupReminderTitle">Pense à sauvegarder</strong>
+          <p data-i18n="backupReminderDesc">Aucune sauvegarde récente. Télécharge tes données pour ne rien perdre en cas de changement d’appareil.</p>
+        </div>
+        <div class="backup-reminder-actions">
+          <button type="button" class="backup-reminder-export" id="btn-backup-reminder-export" data-i18n="backupReminderExport">Exporter</button>
+          <button type="button" class="backup-reminder-dismiss" id="btn-backup-reminder-dismiss" aria-label="Ignorer le rappel de sauvegarde" data-i18n-aria-label="backupReminderDismiss">✕</button>
         </div>
       </div>
 
@@ -287,6 +297,17 @@
         </div>
 
         <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="help">Aide</h3>
+          <div class="settings-row settings-action-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label" data-i18n="replayGuide">Revoir le guide</div>
+              <div class="settings-row-desc" data-i18n="replayGuideDesc">Relance la visite guidée de l’application.</div>
+            </div>
+            <button class="settings-action-btn" id="btn-replay-guide"><span aria-hidden="true">✨</span><span data-i18n="replay">Revoir</span></button>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="appearance">Apparence</h3>
           <div class="settings-row">
             <div class="settings-row-info"><div class="settings-row-label" data-i18n="theme">Thème</div></div>
@@ -383,6 +404,7 @@
         <div class="onboarding-mark" aria-hidden="true">🏋️</div>
         <h1 id="onboarding-title" data-i18n="onboardingTitle">Bienvenue dans Muscu Tracker</h1>
         <p data-i18n="onboardingDescription">Choisis un point de départ adapté. Tout restera modifiable.</p>
+        <p class="onboarding-tour-note" data-i18n="onboardingTourNote">Ensuite : visite express de 3 étapes · environ 30 secondes.</p>
         <div class="onboarding-programs" aria-label="Programmes proposés" data-i18n-aria-label="onboardingProgramsLabel">
           <button type="button" class="onboarding-program-option primary" data-onboarding-program="starter_full_body">
             <span class="onboarding-program-heading"><span aria-hidden="true">🌱</span><strong data-i18n="onboardingBeginner">Full body débutant</strong><small data-i18n="recommended">Recommandé</small></span>

@@ -10,5 +10,8 @@ android/capacitor-cordova-android-plugins/
 android/app/src/main/assets/
 android/app/src/main/res/xml/config.xml
 
+# Server secrets
+server/.env
+
 # Operating-system metadata
 .DS_Store

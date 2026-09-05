@@ -1,0 +1,3 @@
+sync.your-domain.example {
+	reverse_proxy localhost:3000
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=Muscu Tracker sync API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=gymtracker
+WorkingDirectory=/opt/gymtracker/server
+EnvironmentFile=/opt/gymtracker/server/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/gymtracker/server
+
+[Install]
+WantedBy=multi-user.target

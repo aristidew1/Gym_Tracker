@@ -1,0 +1,25 @@
+{
+  "name": "gymtracker-server",
+  "version": "0.1.0",
+  "description": "Backend + multi-device sync API for Muscu Tracker",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "node --test tests/*.test.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node src/db/migrate.js"
+  },
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.36.4",
+    "fastify": "^5.1.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.28.1"
+  }
+}
