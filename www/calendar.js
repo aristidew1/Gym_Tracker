@@ -15,8 +15,6 @@ let currentYear  = now.getFullYear();
 let currentMonth = now.getMonth(); // 0-indexed
 let detailDate = null;
 let supplementDetailsOpen = false;
-let lastGridStartOffset = 0;
-let lastGridTotalDays = 0;
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -45,13 +43,6 @@ export function initCalendar() {
       currentYear++;
     }
     renderCalendar(currentYear, currentMonth);
-  });
-
-  // Re-align the legend hint on resize/rotation, since its position is
-  // computed in pixels from the last rendered grid layout.
-  window.addEventListener('resize', () => {
-    const container = document.getElementById('calendar-days');
-    if (container?.offsetParent) positionLegendToggle(container, lastGridStartOffset, lastGridTotalDays);
   });
 
   // Initial render for today's month
@@ -154,10 +145,6 @@ export function renderCalendar(year, month) {
     container.appendChild(cell);
   }
 
-  lastGridStartOffset = startOffset;
-  lastGridTotalDays = totalDays;
-  positionLegendToggle(container, startOffset, totalDays);
-
   // ── 5. Update streak display ────────────────────────────────────────────
   const stats = getStats(getActiveProgram());
   const streakEl = document.getElementById('cal-streak-value');
@@ -166,25 +153,6 @@ export function renderCalendar(year, month) {
   }
   const streakLabel = document.getElementById('cal-streak-label');
   if (streakLabel) streakLabel.textContent = t(stats.streakUnit === 'week' ? 'consecutiveWeeks' : 'consecutiveWorkouts');
-}
-
-/**
- * positionLegendToggle(container, startOffset, totalDays)
- * Aligns the "i" legend hint with the row of the month's last day, using
- * the empty grid space to its right. Falls back to a new row underneath
- * when the last day already fills the rightmost column (Sunday).
- */
-function positionLegendToggle(container, startOffset, totalDays) {
-  const legendDetails = document.getElementById('calendar-legend-details');
-  const lastDayCell = container.lastElementChild;
-  if (!legendDetails || !lastDayCell) return;
-  const lastCol = (startOffset + totalDays - 1) % 7; // 0 = Monday … 6 = Sunday
-  const rowGap = 4; // must match the .calendar-days gap in index.css
-  const toggleHeight = 26; // must match .calendar-legend-toggle in index.css
-  const top = lastCol === 6
-    ? lastDayCell.offsetTop + lastDayCell.offsetHeight + rowGap
-    : lastDayCell.offsetTop + (lastDayCell.offsetHeight - toggleHeight) / 2;
-  legendDetails.style.top = `${container.offsetTop + top}px`;
 }
 
 function supplementStatusState(status) {
@@ -204,20 +172,37 @@ function renderCalendarLegend() {
   const program = getActiveProgram();
   legend.replaceChildren();
   legend.setAttribute('aria-label', t('calendarLegend'));
-  (program?.sessionOrder || []).forEach((sessionId) => {
-    const session = program.sessions[sessionId];
-    if (!session) return;
-    const item = document.createElement('span');
-    item.className = 'calendar-legend-item';
-    const dot = document.createElement('span');
-    dot.className = 'calendar-legend-dot';
-    dot.style.setProperty('--legend-color-rgb', session.colorRgb || '77, 124, 255');
-    const name = document.createElement('span');
-    name.textContent = localizeText(session.name);
-    item.append(dot, name);
-    legend.appendChild(item);
-  });
+
+  const sessionIds = (program?.sessionOrder || []).filter((sessionId) => program.sessions[sessionId]);
+  if (sessionIds.length > 0) {
+    const group = document.createElement('div');
+    group.className = 'calendar-legend-group';
+    const title = document.createElement('span');
+    title.className = 'calendar-legend-group-title';
+    title.textContent = t('calendarLegendSessionsTitle');
+    group.appendChild(title);
+    sessionIds.forEach((sessionId) => {
+      const session = program.sessions[sessionId];
+      const item = document.createElement('span');
+      item.className = 'calendar-legend-item';
+      const dot = document.createElement('span');
+      dot.className = 'calendar-legend-dot';
+      dot.style.setProperty('--legend-color-rgb', session.colorRgb || '77, 124, 255');
+      const name = document.createElement('span');
+      name.textContent = localizeText(session.name);
+      item.append(dot, name);
+      group.appendChild(item);
+    });
+    legend.appendChild(group);
+  }
+
   if (getSupplements().length > 0) {
+    const group = document.createElement('div');
+    group.className = 'calendar-legend-group';
+    const title = document.createElement('span');
+    title.className = 'calendar-legend-group-title';
+    title.textContent = t('calendarLegendSupplementsTitle');
+    group.appendChild(title);
     const complete = document.createElement('span');
     complete.className = 'calendar-legend-item supplement-legend-item';
     complete.innerHTML = `<span class="supplement-calendar-dot complete"></span><span>${t('supplementsTakenCalendar')}</span>`;
@@ -227,7 +212,8 @@ function renderCalendarLegend() {
     const incomplete = document.createElement('span');
     incomplete.className = 'calendar-legend-item supplement-legend-item';
     incomplete.innerHTML = `<span class="supplement-calendar-dot incomplete"></span><span>${t('supplementsMissingCalendar')}</span>`;
-    legend.append(complete, partial, incomplete);
+    group.append(complete, partial, incomplete);
+    legend.appendChild(group);
   }
 }
 

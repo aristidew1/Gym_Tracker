@@ -1640,64 +1640,81 @@ body::before {
   position: relative;
 }
 
-/* Positioned by JS (calendar.js) to sit flush with the last row of day
-   cells, using the empty grid space to the right of the month's last day. */
+/* A collapsible "Légende" section below the calendar grid: a single-line
+   summary when closed, expanding in place — no floating popover, no JS
+   positioning to keep in sync with the grid layout. */
 .calendar-legend-details {
-  position: absolute;
-  right: 0;
-  z-index: 5;
-  margin: 0;
+  margin: 0 0 12px;
 }
 
 .calendar-legend-toggle {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid var(--border-glass);
-  background: var(--bg-surface);
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
   color: var(--text-secondary);
-  font-size: .72rem;
-  font-weight: 700;
-  font-style: italic;
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
   list-style: none;
 }
 
 .calendar-legend-toggle::-webkit-details-marker { display: none; }
 
+.calendar-legend-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
 .calendar-legend-details[open] .calendar-legend-toggle {
   color: var(--text-primary);
-  border-color: var(--accent);
+}
+
+.calendar-legend-details[open] .calendar-legend-chevron {
+  transform: rotate(-180deg);
 }
 
 .calendar-legend {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
   display: flex;
   flex-direction: column;
-  flex-wrap: nowrap;
-  gap: 7px;
-  align-items: flex-start;
-  width: max-content;
-  max-width: 220px;
-  margin: 0;
+  gap: 10px;
+  margin: 4px 0 0;
   padding: 10px 12px;
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .35);
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
+  animation: calendar-legend-reveal 0.18s ease;
+}
+
+@keyframes calendar-legend-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.calendar-legend-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calendar-legend-group-title {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .calendar-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .calendar-legend-dot {
