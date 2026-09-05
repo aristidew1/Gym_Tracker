@@ -9,8 +9,17 @@ import { t } from '../i18n.js';
 const API_BASE = 'http://localhost:3000';
 const TOKEN_KEY = 'muscu_auth_token';
 
+// The Web OAuth client ID — not a secret (it ships in every Google Sign-In
+// app, web or native), unlike GOOGLE_CLIENT_SECRET which stays server-only.
+// The @capawesome/capacitor-google-sign-in plugin requires this exact one
+// even on Android/iOS: it's used as the server client ID so our backend can
+// verify the resulting idToken. Keep in sync with GOOGLE_CLIENT_ID_WEB in
+// server/.env.
+const GOOGLE_WEB_CLIENT_ID = '250549621804-7skohanlo9bu7s28e50uenfadnu24uj8.apps.googleusercontent.com';
+
 let currentToken = null;
 let currentUser = null;
+let googleSignInInitialized = false;
 const listeners = new Set();
 
 function notify() {
@@ -171,6 +180,10 @@ export async function sendMagicLink({ email }) {
 export async function signInGoogle() {
   const native = getNativePlugin('GoogleSignIn');
   if (native) {
+    if (!googleSignInInitialized) {
+      await native.initialize({ clientId: GOOGLE_WEB_CLIENT_ID });
+      googleSignInInitialized = true;
+    }
     const result = await native.signIn();
     const idToken = result?.idToken || result?.authentication?.idToken;
     if (!idToken) throw new Error(t('authError'));
