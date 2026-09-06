@@ -6,6 +6,7 @@ import {
   createWorkoutRecord,
   getWorkoutSessionId,
   migratePrograms,
+  migrateWorkout,
   migrateWorkouts,
   validateProgram,
   validateWorkout,
@@ -20,6 +21,7 @@ import {
 import { getSupplementsBackup, restoreSupplementsBackup } from './supplements.js';
 import { localDateToDayNumber, parseLocalDate } from './services/date-utils.js';
 import { getProgressionProximity } from './services/progression-engine.js';
+import { nowIso } from './services/entity-meta.js';
 
 const STORAGE_KEY = 'muscu_workouts';
 const ACTIVE_WORKOUT_KEY = 'muscu_active_workout';
@@ -51,7 +53,32 @@ function readStoredWorkouts() {
 }
 
 export function getWorkouts() {
+  return readStoredWorkouts().filter((workout) => !workout.deletedAt);
+}
+
+// Unfiltered accessor (tombstones included) for the sync layer only — every
+// UI-facing reader in this file goes through the filtered getWorkouts().
+export function getAllWorkoutsRaw() {
   return readStoredWorkouts();
+}
+
+// Sync layer only: writes back a merged raw array (pushed/pulled). Re-runs
+// each record through migrateWorkout/validateWorkout so a network response is
+// never trusted blindly — malformed records are dropped rather than corrupt
+// local storage.
+export function replaceAllWorkoutsRaw(records) {
+  if (!Array.isArray(records)) return;
+  const valid = records
+    .map((workout) => migrateWorkout(workout))
+    .filter((workout) => validateWorkout(workout).length === 0);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(valid));
+  emitWorkoutsChanged();
+}
+
+function emitWorkoutsChanged() {
+  if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('workouts:changed'));
+  }
 }
 
 // Kept separately from history: an interrupted session is not a completed workout.
@@ -84,14 +111,15 @@ export function saveWorkout(workout) {
   const record = createWorkoutRecord(workout, generateId());
   const errors = validateWorkout(record);
   if (errors.length > 0) throw new Error(`Séance invalide : ${errors.join(' ')}`);
-  const workouts = getWorkouts();
+  const workouts = getAllWorkoutsRaw();
   workouts.push(record);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+  emitWorkoutsChanged();
   return record;
 }
 
 export function updateWorkout(id, workout) {
-  const workouts = getWorkouts();
+  const workouts = getAllWorkoutsRaw();
   const index = workouts.findIndex((item) => item.id === id);
   if (index < 0) return null;
 
@@ -101,18 +129,27 @@ export function updateWorkout(id, workout) {
     ...workout,
     id,
     date: workout.date || previous.date,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso(),
   }, id, previous.savedAt);
   const errors = validateWorkout(record);
   if (errors.length > 0) throw new Error(`Séance invalide : ${errors.join(' ')}`);
   workouts[index] = record;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+  emitWorkoutsChanged();
   return record;
 }
 
+// Soft delete: the record stays in storage as a tombstone (deletedAt set) so
+// the deletion itself can be synced to other devices — see getWorkouts()
+// (filters tombstones out) vs. getAllWorkoutsRaw() (includes them).
 export function deleteWorkout(id) {
-  const workouts = getWorkouts().filter((workout) => workout.id !== id);
+  const workouts = getAllWorkoutsRaw();
+  const index = workouts.findIndex((workout) => workout.id === id);
+  if (index < 0) return;
+  const timestamp = nowIso();
+  workouts[index] = { ...workouts[index], deletedAt: timestamp, updatedAt: timestamp };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+  emitWorkoutsChanged();
 }
 
 export function getLastWorkout(sessionId, programId = null) {
@@ -500,6 +537,7 @@ export function importData(jsonString) {
   if (data.programs && !restorePrograms(data.programs, data.activeProgramId)) return false;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data.workouts));
   restoreSupplementsBackup(data);
+  emitWorkoutsChanged();
   return true;
 }
 

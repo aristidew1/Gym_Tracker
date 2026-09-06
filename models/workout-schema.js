@@ -1,6 +1,7 @@
 import { getExerciseById, getExerciseDisplayName } from '../data/exercises.js';
 import { DEFAULT_PROGRAM } from '../data/default-program.js';
 import { formatLocalDate } from '../services/date-utils.js';
+import { nowIso } from '../services/entity-meta.js';
 
 export const CURRENT_WORKOUT_SCHEMA_VERSION = 2;
 export const CURRENT_PROGRAM_SCHEMA_VERSION = 4;
@@ -119,6 +120,11 @@ export function migrateWorkout(workout) {
     sessionType: sessionId,
     date: workout.date || formatLocalDate(new Date(workout.savedAt || Date.now())),
     exercises,
+    // Sync bookkeeping. updatedAt falls back to savedAt (a real historical
+    // timestamp) rather than "now", so a device syncing for the first time
+    // doesn't make every pre-existing workout look like it just changed.
+    updatedAt: workout.updatedAt || workout.savedAt || nowIso(),
+    deletedAt: workout.deletedAt ?? null,
   };
 }
 
@@ -185,6 +191,15 @@ export function migrateProgram(program) {
     ...rest,
     schemaVersion: CURRENT_PROGRAM_SCHEMA_VERSION,
     trainingFrequency,
+    // Sync bookkeeping. Unlike workouts, programs have no pre-existing
+    // historical timestamp to fall back on — this updatedAt is a migration-
+    // time fabrication for any program that predates sync, not real edit
+    // history. services/sync-adapters.js treats a pulled program whose id
+    // already exists locally with different data as a conflict to duplicate
+    // rather than overwrite, specifically because this timestamp can't be
+    // trusted for last-write-wins.
+    updatedAt: program.updatedAt || nowIso(),
+    deletedAt: program.deletedAt ?? null,
   };
 }
 

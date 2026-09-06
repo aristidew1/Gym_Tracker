@@ -2837,6 +2837,8 @@ body::before {
 .account-message { color: var(--text-secondary); font-size: .78rem; margin: 0; }
 .account-signed-in { display: grid; gap: 10px; margin-top: 10px; }
 .account-signed-in p { color: var(--text-primary); font-size: .85rem; margin: 0; }
+.account-sync-status { color: var(--text-secondary) !important; font-size: .78rem !important; }
+.account-signed-in-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 :root.light-theme .account-form input { background: #fff; color: var(--text-primary); border-color: rgba(37, 51, 82, .18); }
 
 /* Action buttons */

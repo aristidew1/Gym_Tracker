@@ -70,7 +70,9 @@ export const verifications = pgTable('verifications', {
 // models/workout-schema.js) and the server never needs to query inside them.
 function replaceableEntity(name, extraColumns = {}) {
   return pgTable(name, {
-    id: uuid('id').notNull(),
+    // Client-generated ids (e.g. "program_<uuid>", or time+random for
+    // workouts) — not necessarily bare RFC4122 uuids, hence text not uuid.
+    id: text('id').notNull(),
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     data: jsonb('data').notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
@@ -86,7 +88,7 @@ export const workouts = replaceableEntity('workouts');
 export const programs = replaceableEntity('programs');
 
 export const customExercises = pgTable('custom_exercises', {
-  id: uuid('id').notNull(),
+  id: text('id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   muscleCategory: text('muscle_category'),
@@ -97,7 +99,7 @@ export const customExercises = pgTable('custom_exercises', {
 ]));
 
 export const supplements = pgTable('supplements', {
-  id: uuid('id').notNull(),
+  id: text('id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   dose: numeric('dose'),
@@ -116,7 +118,7 @@ export const supplements = pgTable('supplements', {
 export const supplementLog = pgTable('supplement_log', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   logDate: date('log_date').notNull(),
-  supplementId: uuid('supplement_id').notNull(),
+  supplementId: text('supplement_id').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => ([

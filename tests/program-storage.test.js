@@ -74,3 +74,47 @@ test('stored programs with the former day frequency are migrated without losing 
   assert.deepEqual(migrated.trainingFrequency, { mode: 'interval', intervalDays: 5 });
   assert.deepEqual(JSON.parse(values.get('muscu_programs'))[0].trainingFrequency, { mode: 'interval', intervalDays: 5 });
 });
+
+test('deleting a custom program tombstones it instead of removing it, so getPrograms excludes it but the raw record survives for sync', () => {
+  values.clear();
+  const customProgram = structuredClone(DEFAULT_PROGRAM);
+  customProgram.id = 'replacement_program';
+  customProgram.name = 'Programme de remplacement';
+  store.saveProgram(customProgram);
+
+  store.deleteProgram(customProgram.id);
+
+  assert.equal(store.getProgramById(customProgram.id), null);
+  const raw = store.getAllProgramsRaw().find((program) => program.id === customProgram.id);
+  assert.ok(raw, 'the tombstoned record must still exist in raw storage');
+  assert.ok(raw.deletedAt, 'deletedAt must be set');
+});
+
+test('deleting the unmodified base program still materializes a real tombstone row for sync', () => {
+  values.clear();
+  const customProgram = structuredClone(DEFAULT_PROGRAM);
+  customProgram.id = 'replacement_program';
+  customProgram.name = 'Programme de remplacement';
+  store.saveProgram(customProgram);
+
+  store.deleteProgram(DEFAULT_PROGRAM.id);
+
+  const raw = store.getAllProgramsRaw().find((program) => program.id === DEFAULT_PROGRAM.id);
+  assert.ok(raw, 'a tombstone row must be materialized even though the base program was never customized');
+  assert.ok(raw.deletedAt);
+});
+
+test('saveProgram clears deletedAt, so re-saving a previously deleted program un-deletes it', () => {
+  values.clear();
+  const customProgram = structuredClone(DEFAULT_PROGRAM);
+  customProgram.id = 'replacement_program';
+  customProgram.name = 'Programme de remplacement';
+  const saved = store.saveProgram(customProgram);
+  store.saveProgram({ ...structuredClone(DEFAULT_PROGRAM), id: 'other_program', name: 'Autre' });
+  store.deleteProgram(saved.id);
+  assert.equal(store.getProgramById(saved.id), null);
+
+  store.saveProgram({ ...saved, name: 'Ressuscité' });
+
+  assert.equal(store.getProgramById(saved.id).name, 'Ressuscité');
+});

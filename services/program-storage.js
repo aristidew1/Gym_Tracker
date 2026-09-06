@@ -1,5 +1,6 @@
 import { DEFAULT_PROGRAM } from '../data/default-program.js';
 import { migrateProgram, migratePrograms, validateProgram } from '../models/workout-schema.js';
+import { nowIso } from './entity-meta.js';
 import { t } from '../i18n.js';
 
 const PROGRAMS_KEY = 'muscu_programs';
@@ -10,7 +11,11 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function readStoredPrograms() {
+// Unfiltered (tombstones included) — the only safe base for a read-modify-
+// write cycle (saveProgram, deleteProgram, appendPrograms), since writing
+// back a filtered array would silently drop any pending deletion. Also used
+// directly by the sync layer.
+export function readStoredProgramsRaw() {
   try {
     const value = JSON.parse(localStorage.getItem(PROGRAMS_KEY) || '[]');
     if (!Array.isArray(value)) return [];
@@ -21,6 +26,26 @@ function readStoredPrograms() {
   } catch {
     return [];
   }
+}
+
+// Display-facing: excludes soft-deleted programs.
+function readStoredPrograms() {
+  return readStoredProgramsRaw().filter((program) => !program.deletedAt);
+}
+
+export function getAllProgramsRaw() {
+  return readStoredProgramsRaw();
+}
+
+// Sync layer only: writes back a merged raw array. Re-validates every record
+// so a network response is never trusted blindly.
+export function replaceAllProgramsRaw(records) {
+  if (!Array.isArray(records)) return;
+  const valid = records
+    .map((program) => migrateProgram(program))
+    .filter((program) => validateProgram(program).length === 0);
+  writeStoredPrograms(valid);
+  emitChange();
 }
 
 function writeStoredPrograms(programs) {
@@ -63,7 +88,14 @@ function makeUniqueProgramName(name, existingNames) {
 export function getPrograms() {
   const storedPrograms = readStoredPrograms();
   const savedBaseProgram = storedPrograms.find((program) => program.id === DEFAULT_PROGRAM.id);
-  const baseProgramDeleted = localStorage.getItem(BASE_PROGRAM_DELETED_KEY) === 'true';
+  // The base program's deletion is a real tombstone once this device has
+  // gone through deleteProgram() since sync landed; the legacy flag is kept
+  // as a fallback for installs that deleted it before that (nothing in raw
+  // storage to check yet on those installs).
+  const baseProgramRaw = readStoredProgramsRaw().find((program) => program.id === DEFAULT_PROGRAM.id);
+  const baseProgramDeleted = baseProgramRaw
+    ? Boolean(baseProgramRaw.deletedAt)
+    : localStorage.getItem(BASE_PROGRAM_DELETED_KEY) === 'true';
   return [
     ...(baseProgramDeleted ? [] : [{ ...clone(savedBaseProgram || DEFAULT_PROGRAM), builtIn: true }]),
     ...storedPrograms
@@ -94,11 +126,13 @@ export function getActiveProgram() {
 export function saveProgram(program) {
   const next = migrateProgram(clone(program));
   next.id = next.id || makeId();
+  next.updatedAt = nowIso();
+  next.deletedAt = null;
   delete next.builtIn;
   const errors = validateProgram(next);
   if (errors.length) throw new Error(errors.join(' '));
 
-  const programs = readStoredPrograms();
+  const programs = readStoredProgramsRaw();
   const index = programs.findIndex((item) => item.id === next.id);
   if (index === -1) {
     programs.push(next);
@@ -121,11 +155,27 @@ export function duplicateProgram(id) {
   return saveProgram(copy);
 }
 
+// Soft delete: the program stays in storage as a tombstone (deletedAt set)
+// so the deletion itself can be synced — see getPrograms()/readStoredPrograms
+// (filter tombstones out) vs. readStoredProgramsRaw() (includes them).
 export function deleteProgram(id) {
   const availablePrograms = getPrograms();
-  if (!availablePrograms.some((program) => program.id === id)) throw new Error(t('programNotFound'));
+  const target = availablePrograms.find((program) => program.id === id);
+  if (!target) throw new Error(t('programNotFound'));
   if (availablePrograms.length === 1) throw new Error(t('lastProgramDelete'));
-  const programs = readStoredPrograms().filter((program) => program.id !== id);
+
+  const programs = readStoredProgramsRaw();
+  const index = programs.findIndex((program) => program.id === id);
+  const timestamp = nowIso();
+  if (index === -1) {
+    // The built-in program is only persisted once customized — deleting it
+    // unmodified still needs a real tombstone row for sync to see, so
+    // materialize one from its display data.
+    const { builtIn, ...data } = target;
+    programs.push({ ...data, deletedAt: timestamp, updatedAt: timestamp });
+  } else {
+    programs[index] = { ...programs[index], deletedAt: timestamp, updatedAt: timestamp };
+  }
   writeStoredPrograms(programs);
   if (id === DEFAULT_PROGRAM.id) localStorage.setItem(BASE_PROGRAM_DELETED_KEY, 'true');
   if (localStorage.getItem(ACTIVE_PROGRAM_KEY) === id || !getProgramById(localStorage.getItem(ACTIVE_PROGRAM_KEY))) {
@@ -180,8 +230,8 @@ export function appendPrograms(programs) {
   ))) return false;
 
   const existingNames = new Set(getPrograms().map((program) => normalizeProgramName(program.name)));
-  const nextPrograms = readStoredPrograms();
-  const usedIds = new Set(getPrograms().map((program) => program.id));
+  const nextPrograms = readStoredProgramsRaw();
+  const usedIds = new Set(nextPrograms.map((program) => program.id));
 
   migratedPrograms.forEach((program) => {
     const next = clone(program);
@@ -192,6 +242,8 @@ export function appendPrograms(programs) {
       next.id = makeId();
     } while (usedIds.has(next.id));
     usedIds.add(next.id);
+    next.updatedAt = nowIso();
+    next.deletedAt = null;
     delete next.builtIn;
     nextPrograms.push(next);
   });

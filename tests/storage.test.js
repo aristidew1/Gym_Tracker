@@ -315,6 +315,36 @@ test('progression candidates are ordered by the most recently logged exercise fi
   assert.deepEqual(candidates.map((candidate) => candidate.exerciseId), ['dumbbell_curl', 'barbell_back_squat']);
 });
 
+test('deleting a workout tombstones it instead of removing it, so getWorkouts excludes it but the raw record survives for sync', () => {
+  values.clear();
+  const saved = storage.saveWorkout({
+    programId: 'custom', sessionId: 'one', exercises: [{
+      programExerciseId: 'press_main', exerciseId: 'barbell_bench_press', exerciseName: 'Développé couché',
+      sets: [{ setNumber: 1, type: 'working', weight: 80, reps: 8, rir: 2, completed: true }],
+    }],
+  });
+
+  storage.deleteWorkout(saved.id);
+
+  assert.equal(storage.getWorkouts().some((workout) => workout.id === saved.id), false);
+  const raw = storage.getAllWorkoutsRaw().find((workout) => workout.id === saved.id);
+  assert.ok(raw, 'the tombstoned record must still exist in raw storage');
+  assert.ok(raw.deletedAt, 'deletedAt must be set');
+  assert.equal(raw.updatedAt, raw.deletedAt);
+});
+
+test('a pre-existing workout without updatedAt is backfilled from savedAt, not the current time', () => {
+  values.clear();
+  values.set('muscu_workouts', JSON.stringify([{
+    id: 'old', date: '2026-02-01', savedAt: '2026-02-01T10:00:00.000Z', sessionType: 'A',
+    exercises: [{ exerciseId: 'tractions_lestees', exerciseName: 'Tractions lestées', sets: [{ weight: 10, reps: 5 }] }],
+  }]));
+
+  const [workout] = storage.getWorkouts();
+  assert.equal(workout.updatedAt, '2026-02-01T10:00:00.000Z');
+  assert.equal(workout.deletedAt, null);
+});
+
 test('versioned imports reject unsupported future backup versions', () => {
   values.clear();
   const fullBackup = JSON.parse(storage.exportData());

@@ -37,6 +37,7 @@ const FR = {
   replayGuide: 'Revoir le guide complet', replayGuideDesc: 'Visite les 7 fonctions principales sans modifier tes programmes ni tes données.', replay: 'Lancer',
   backupReminderTitle: 'Pense à sauvegarder', backupReminderDesc: 'Aucune sauvegarde récente. Télécharge tes données pour ne rien perdre en cas de changement d’appareil.', backupReminderExport: 'Exporter', backupReminderDismiss: 'Ignorer le rappel de sauvegarde',
   account: 'Compte', accountDesc: 'Connecte-toi pour retrouver tes données sur tes autres appareils.', authEmail: 'Email', authPassword: 'Mot de passe', authSignIn: 'Se connecter', authSignUp: 'Créer un compte', authSwitchToSignUp: 'Pas de compte ? Créer un compte', authSwitchToSignIn: 'Déjà un compte ? Se connecter', authGoogle: 'Continuer avec Google', authMagicLink: 'Recevoir un lien de connexion', authMagicLinkSent: 'Lien envoyé ! Vérifie ta boîte mail.', authError: 'Impossible de se connecter. Vérifie tes identifiants.', authSignedInAs: 'Connecté en tant que {email}', authSignOut: 'Se déconnecter',
+  syncNow: 'Synchroniser maintenant', syncStatusIdle: 'Dernière synchro : {time}', syncStatusIdleNever: 'Pas encore synchronisé', syncStatusSyncing: 'Synchronisation…', syncStatusError: 'Échec de la synchronisation, nouvelle tentative…',
 };
 
 const EN = {
@@ -93,6 +94,7 @@ const EN = {
   replayGuide: 'Replay full guide', replayGuideDesc: 'Tour the 7 main features without changing your programs or data.', replay: 'Start',
   backupReminderTitle: 'Remember to back up', backupReminderDesc: 'No recent backup. Export your data so you don’t lose it if you switch devices.', backupReminderExport: 'Export', backupReminderDismiss: 'Dismiss backup reminder',
   account: 'Account', accountDesc: 'Sign in to find your data on your other devices.', authEmail: 'Email', authPassword: 'Password', authSignIn: 'Sign in', authSignUp: 'Create an account', authSwitchToSignUp: 'No account? Create one', authSwitchToSignIn: 'Already have an account? Sign in', authGoogle: 'Continue with Google', authMagicLink: 'Send me a sign-in link', authMagicLinkSent: 'Link sent! Check your inbox.', authError: 'Unable to sign in. Check your credentials.', authSignedInAs: 'Signed in as {email}', authSignOut: 'Sign out',
+  syncNow: 'Sync now', syncStatusIdle: 'Last synced: {time}', syncStatusIdleNever: 'Not synced yet', syncStatusSyncing: 'Syncing…', syncStatusError: 'Sync failed, retrying…',
 };
 
 const TEXT_EN = {

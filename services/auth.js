@@ -62,7 +62,9 @@ async function setSession(token, user) {
   notify();
 }
 
-async function apiFetch(path, options = {}) {
+// Exported for services/sync.js — same bearer-token + credentials plumbing,
+// reused rather than duplicated for the /sync endpoint.
+export async function apiFetch(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (currentToken) headers.Authorization = `Bearer ${currentToken}`;
 

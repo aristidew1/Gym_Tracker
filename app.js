@@ -55,6 +55,7 @@ import {
   signOut,
   signUpEmail,
 } from './services/auth.js';
+import { getSyncStatus, initSync, onSyncStatusChange, syncNow } from './services/sync.js';
 import { getActiveProgram, getProgramById, restorePrograms, saveProgram, setActiveProgram } from './services/program-storage.js';
 import { getOnboardingProgramTemplate } from './data/onboarding-programs.js';
 import { getCustomExercises } from './services/custom-exercises.js';
@@ -333,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSelectPicker();
   initNotifications();
   initAuth();
+  initSync();
   if (window.Capacitor?.isNativePlatform()) {
     window.Capacitor.Plugins.App?.addListener('appUrlOpen', ({ url }) => {
       if (url?.startsWith('gymtracker://auth-callback')) completeFromUrl(url);
@@ -361,6 +363,19 @@ document.addEventListener('DOMContentLoaded', () => {
     updateNotification();
   });
   window.addEventListener('program:changed', () => {
+    if (state.currentView !== 'workout') {
+      renderHome();
+      refreshStatsSelector();
+      updateCharts();
+      const now = new Date();
+      renderCalendar(now.getFullYear(), now.getMonth());
+      updateNotification();
+    }
+  });
+  // Fires both for local edits and after a sync pull merges in remote
+  // changes (see services/sync-adapters.js) — refresh the same views a
+  // program change would, minus renderPrograms (a workout doesn't affect it).
+  window.addEventListener('workouts:changed', () => {
     if (state.currentView !== 'workout') {
       renderHome();
       refreshStatsSelector();
@@ -2467,6 +2482,8 @@ function initAccountSettings() {
   const btnGoogle = document.getElementById('btn-auth-google');
   const btnMagicLink = document.getElementById('btn-auth-magic-link');
   const btnSignOut = document.getElementById('btn-auth-sign-out');
+  const syncStatusEl = document.getElementById('account-sync-status');
+  const btnSyncNow = document.getElementById('btn-sync-now');
   if (!signedOutView || !signedInView) return;
 
   let mode = 'sign-in';
@@ -2532,6 +2549,17 @@ function initAccountSettings() {
   btnSignOut?.addEventListener('click', async () => {
     await signOut();
   });
+
+  const renderSyncStatus = ({ status, lastSyncedAt }) => {
+    if (!syncStatusEl) return;
+    if (status === 'syncing') syncStatusEl.textContent = t('syncStatusSyncing');
+    else if (status === 'error') syncStatusEl.textContent = t('syncStatusError');
+    else if (lastSyncedAt) syncStatusEl.textContent = t('syncStatusIdle', { time: new Date(lastSyncedAt).toLocaleTimeString() });
+    else syncStatusEl.textContent = t('syncStatusIdleNever');
+  };
+  renderSyncStatus(getSyncStatus());
+  onSyncStatusChange(renderSyncStatus);
+  btnSyncNow?.addEventListener('click', () => syncNow());
 }
 
 function initSettings() {
