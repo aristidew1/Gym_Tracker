@@ -326,10 +326,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initConfirmDialog();
   initSettings();
   initAuthScreen();
-  initAccountSettings();
+  initAccountView();
+  initAccountRow();
   initBackupReminder();
   initSyncPrompt();
-  initSyncIndicator();
+  initAccountButton();
   initSelectPicker();
   initNotifications();
   initAuth();
@@ -366,7 +367,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPrograms();
     if (state.currentView === 'workout') { renderChoices(); renderExercises(); }
     updateNotification();
-    renderSyncIndicator();
+    renderAccountButton();
+    renderAccountRow();
   });
   window.addEventListener('program:changed', () => {
     if (state.currentView !== 'workout') {
@@ -901,26 +903,13 @@ function initBackupReminder() {
   onSyncStatusChange(renderBackupReminder);
 }
 
-// Opens Settings and scrolls straight to the Account section — used for
-// signed-in account management (sync status, sign out), which stays a
-// Settings row rather than a dedicated screen.
-function openAccountSettings() {
-  document.getElementById('settings-overlay')?.classList.add('active');
-  requestAnimationFrame(() => {
-    document.getElementById('account-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}
-
-// Shared by the backup reminder, the post-first-workout sync prompt, and the
-// home sync indicator — every entry point into "go deal with your account".
-// Signed out, the action on offer really is "sign in / create an account",
-// so jump straight to the dedicated screen instead of routing through
-// Settings. Signed in (the sync indicator's error/expired case), there's
-// nothing to sign into from scratch — "Synchroniser maintenant" and "Se
-// déconnecter" (then sign back in) live in Settings > Account, same as ever.
+// Shared by the backup reminder, the post-first-workout sync prompt, the
+// header account button, and the settings account row — every entry point
+// into "go deal with your account". Routes straight into the auth screen
+// overlay: its sign-in view when signed out, its account view (sync status,
+// sign out — see initAccountView) when already signed in.
 function openAccountEntryPoint() {
-  if (getCurrentUser()) openAccountSettings();
-  else openAuthScreen();
+  openAuthScreen({ mode: getCurrentUser() ? 'account' : 'auth' });
 }
 
 // ============================================
@@ -1012,44 +1001,86 @@ function initSyncPrompt() {
 }
 
 // ============================================
-// HOME SYNC INDICATOR
+// HEADER ACCOUNT BUTTON
 // ============================================
-// Visible only while signed in — signed-out users already get the account
-// pitch from the backup reminder and the post-first-workout prompt, so this
-// stays quiet for them rather than adding a third nag.
-function renderSyncIndicator() {
-  const indicator = document.getElementById('sync-indicator');
-  if (!indicator) return;
+// Always visible, signed in or out — the permanent, discoverable entry point
+// into the account that used to be missing (Settings was the only way in).
+// Once signed in it also carries the sync state as a small badge dot: quiet
+// while everything's fine, clearly flagged on error/expired session, and
+// animated while a sync is in flight.
+function renderAccountButton() {
+  const btn = document.getElementById('btn-account');
+  const dot = document.getElementById('btn-account-sync-dot');
+  if (!btn || !dot) return;
   const user = getCurrentUser();
-  indicator.hidden = !user;
-  if (!user) return;
+  btn.classList.remove('btn-account--syncing', 'btn-account--error', 'btn-account--expired');
+  if (!user) {
+    dot.hidden = true;
+    btn.setAttribute('aria-label', t('accountButtonSignedOut'));
+    return;
+  }
 
+  dot.hidden = false;
   const { status } = getSyncStatus();
-  indicator.classList.remove('sync-indicator--syncing', 'sync-indicator--error', 'sync-indicator--expired');
   let label;
   if (status === 'syncing') {
-    indicator.classList.add('sync-indicator--syncing');
+    btn.classList.add('btn-account--syncing');
     label = t('syncStatusSyncing');
   } else if (status === 'error') {
-    indicator.classList.add('sync-indicator--error');
+    btn.classList.add('btn-account--error');
     label = t('syncStatusError');
   } else if (status === 'expired') {
-    indicator.classList.add('sync-indicator--expired');
+    btn.classList.add('btn-account--expired');
     label = t('syncStatusExpired');
   } else {
     label = t('syncIndicatorSynced');
   }
-  indicator.setAttribute('aria-label', label);
-  indicator.title = label;
+  btn.setAttribute('aria-label', label);
 }
 
-function initSyncIndicator() {
-  const indicator = document.getElementById('sync-indicator');
-  if (!indicator) return;
-  indicator.addEventListener('click', openAccountEntryPoint);
-  renderSyncIndicator();
-  onAuthChange(renderSyncIndicator);
-  onSyncStatusChange(renderSyncIndicator);
+function initAccountButton() {
+  const btn = document.getElementById('btn-account');
+  if (!btn) return;
+  btn.addEventListener('click', openAccountEntryPoint);
+  renderAccountButton();
+  onAuthChange(renderAccountButton);
+  onSyncStatusChange(renderAccountButton);
+}
+
+// ============================================
+// SETTINGS ACCOUNT ROW
+// ============================================
+// The only account-related UI left in Settings: a single row, in both
+// states, that opens the auth screen overlay (see openAccountEntryPoint) —
+// email, sync status and sign-out now live only in its account view
+// (initAccountView), not duplicated here.
+function renderAccountRow() {
+  const label = document.getElementById('account-row-label');
+  const desc = document.getElementById('account-row-desc');
+  const btn = document.getElementById('btn-account-row-open');
+  if (!label || !btn) return;
+  const user = getCurrentUser();
+  if (user) {
+    label.removeAttribute('data-i18n');
+    label.textContent = user.email;
+    if (desc) desc.hidden = true;
+    btn.dataset.i18n = 'accountManage';
+    btn.textContent = t('accountManage');
+  } else {
+    label.dataset.i18n = 'accountRowSignedOut';
+    label.textContent = t('accountRowSignedOut');
+    if (desc) desc.hidden = false;
+    btn.dataset.i18n = 'accountOpen';
+    btn.textContent = t('accountOpen');
+  }
+}
+
+function initAccountRow() {
+  const btn = document.getElementById('btn-account-row-open');
+  if (!btn) return;
+  btn.addEventListener('click', openAccountEntryPoint);
+  renderAccountRow();
+  onAuthChange(renderAccountRow);
 }
 
 function renderHome() {
@@ -2658,26 +2689,31 @@ function formatRestTime(seconds) {
 }
 
 // ============================================
-// AUTH SCREEN (dedicated sign-in / password-reset overlay)
+// AUTH SCREEN (dedicated sign-in / password-reset / account overlay)
 // ============================================
-// Split out of what used to be initAccountSettings(): this owns the
-// full-screen sign-in/sign-up/reset flow, while initAccountSettings() below
-// keeps only the connected-account row in Settings. Kept as top-level
-// functions (not part of initAuthScreen()'s closure) because they're also
-// called from account entry points elsewhere (openAccountEntryPoint,
-// the "sign in" row in Settings, the startup password-reset check).
+// One overlay, three mutually-exclusive views: 'auth' (sign-in/sign-up),
+// 'reset' (password reset) and 'account' (signed-in management — see
+// initAccountView). Kept as top-level functions (not part of any init...()
+// closure) because they're also called from account entry points elsewhere
+// (openAccountEntryPoint, the settings account row, the startup
+// password-reset check).
 let authScreenPreviousFocus = null;
 let pendingResetToken = null;
+
+const AUTH_SCREEN_TITLE_IDS = { auth: 'auth-screen-title', reset: 'auth-reset-title', account: 'auth-screen-account-title' };
+const AUTH_SCREEN_FOCUS_TARGETS = { reset: 'auth-new-password', account: 'btn-sync-now' };
 
 function setAuthScreenView(view) {
   const overlay = document.getElementById('auth-screen-overlay');
   const signInView = document.getElementById('auth-screen-signin');
   const resetView = document.getElementById('auth-screen-reset');
-  if (!overlay || !signInView || !resetView) return;
-  signInView.hidden = view === 'reset';
+  const accountView = document.getElementById('auth-screen-account');
+  if (!overlay || !signInView || !resetView || !accountView) return;
+  signInView.hidden = view !== 'auth';
   resetView.hidden = view !== 'reset';
+  accountView.hidden = view !== 'account';
   // aria-labelledby must track whichever title is actually visible.
-  overlay.setAttribute('aria-labelledby', view === 'reset' ? 'auth-reset-title' : 'auth-screen-title');
+  overlay.setAttribute('aria-labelledby', AUTH_SCREEN_TITLE_IDS[view] || AUTH_SCREEN_TITLE_IDS.auth);
 }
 
 function openAuthScreen({ mode = 'auth', token = null, error = null } = {}) {
@@ -2693,7 +2729,7 @@ function openAuthScreen({ mode = 'auth', token = null, error = null } = {}) {
     if (errorEl) { errorEl.textContent = error; errorEl.hidden = false; }
   }
   requestAnimationFrame(() => {
-    document.getElementById(mode === 'reset' ? 'auth-new-password' : 'btn-auth-google')?.focus({ preventScroll: true });
+    document.getElementById(AUTH_SCREEN_FOCUS_TARGETS[mode] || 'btn-auth-google')?.focus({ preventScroll: true });
   });
 }
 
@@ -2951,33 +2987,25 @@ function initAuthScreen() {
 }
 
 // ============================================
-// SETTINGS
+// AUTH SCREEN — ACCOUNT VIEW (signed-in management: email, sync, sign out)
 // ============================================
-// Signed-out: just a status row + a button opening the dedicated auth
-// screen (initAuthScreen above). Signed-in: account management proper
-// (sync status, sign out) stays here — there's nothing left to "sign into".
-function initAccountSettings() {
-  const signedOutRow = document.getElementById('account-signed-out');
-  const signedInView = document.getElementById('account-signed-in');
+// The 'account' view of the auth screen overlay (see setAuthScreenView) —
+// reached from the header account button, the settings account row, and
+// every other account entry point once signed in. There's nothing left to
+// "sign into" here, so unlike initAuthScreen this only wires status display
+// and two actions.
+function initAccountView() {
   const signedInLabel = document.getElementById('account-signed-in-label');
-  const btnAccountOpen = document.getElementById('btn-account-open');
-  const btnSignOut = document.getElementById('btn-auth-sign-out');
   const syncStatusEl = document.getElementById('account-sync-status');
   const btnSyncNow = document.getElementById('btn-sync-now');
-  if (!signedOutRow || !signedInView) return;
+  const btnSignOut = document.getElementById('btn-auth-sign-out');
+  if (!signedInLabel) return;
 
   const render = ({ user }) => {
-    signedOutRow.hidden = !!user;
-    signedInView.hidden = !user;
     if (user) signedInLabel.textContent = t('authSignedInAs', { email: user.email });
   };
   render({ user: getCurrentUser() });
   onAuthChange(render);
-
-  btnAccountOpen?.addEventListener('click', () => openAuthScreen());
-  btnSignOut?.addEventListener('click', async () => {
-    await signOut();
-  });
 
   const renderSyncStatus = ({ status, lastSyncedAt }) => {
     if (!syncStatusEl) return;
@@ -2989,7 +3017,14 @@ function initAccountSettings() {
   };
   renderSyncStatus(getSyncStatus());
   onSyncStatusChange(renderSyncStatus);
+
   btnSyncNow?.addEventListener('click', () => syncNow());
+  // Leaving the account view open with no account left to show would be
+  // confusing — close the overlay once the sign-out actually completes.
+  btnSignOut?.addEventListener('click', async () => {
+    await signOut();
+    closeAuthScreen();
+  });
 }
 
 function initSettings() {

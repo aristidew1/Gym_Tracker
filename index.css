@@ -4187,14 +4187,17 @@ body::before {
 :root[data-style="nothing"] .coachmark-gotit { background: var(--accent); color: #fff; }
 :root[data-style="nothing"] .stats-overview-row-value { color: var(--text-primary); }
 
-/* --- Sync visibility: home indicator, backup-reminder account offer, post-first-workout prompt --- */
-.sync-indicator { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.sync-indicator-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-secondary); opacity: .55; transition: background-color .2s, box-shadow .2s, opacity .2s; }
-.sync-indicator--syncing .sync-indicator-dot { background: var(--accent); opacity: 1; animation: syncIndicatorPulse 1.1s ease-in-out infinite; }
-.sync-indicator--error .sync-indicator-dot,
-.sync-indicator--expired .sync-indicator-dot { width: 10px; height: 10px; background: var(--danger); opacity: 1; box-shadow: 0 0 0 3px rgba(var(--danger-rgb), .18); }
+/* --- Header account button: always visible, doubles as the sync-status
+   badge (backup-reminder account offer, post-first-workout prompt route
+   into the same overlay via openAccountEntryPoint) --- */
+.btn-account { position: relative; width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--bg-glass); border: 1px solid var(--border-glass); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); flex-shrink: 0; }
+.btn-account:hover { background: var(--bg-card-hover); }
+.btn-account-sync-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--text-secondary); opacity: .55; transition: background-color .2s, box-shadow .2s, opacity .2s; }
+.btn-account--syncing .btn-account-sync-dot { background: var(--accent); opacity: 1; animation: syncIndicatorPulse 1.1s ease-in-out infinite; }
+.btn-account--error .btn-account-sync-dot,
+.btn-account--expired .btn-account-sync-dot { width: 10px; height: 10px; background: var(--danger); opacity: 1; box-shadow: 0 0 0 3px rgba(var(--danger-rgb), .18); }
 @keyframes syncIndicatorPulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
-:root.reduce-motion .sync-indicator--syncing .sync-indicator-dot { animation: none; }
+:root.reduce-motion .btn-account--syncing .btn-account-sync-dot { animation: none; }
 
 .backup-reminder-account { padding: 7px 14px; border: 1px solid rgba(var(--accent-rgb), .55); border-radius: var(--radius-md); background: rgba(var(--accent-rgb), .14); color: var(--accent); font-size: .82rem; font-weight: 600; cursor: pointer; }
 :root.light-theme .backup-reminder-account { background: rgba(var(--accent-rgb), .1); }
@@ -4210,7 +4213,7 @@ body::before {
 .sync-prompt-accept { min-height: 44px; border: 0; border-radius: var(--radius-md); background: var(--accent); color: #fff; font: inherit; font-size: .92rem; font-weight: 700; cursor: pointer; }
 .sync-prompt-later { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: .82rem; padding: 8px; cursor: pointer; }
 
-/* --- Auth screen: dedicated sign-in / password-reset overlay --- */
+/* --- Auth screen: sign-in / password-reset / signed-in account overlay --- */
 /* Reached from Settings (z-index 1000) and must sit above it, so it opens on
    top rather than replacing the panel underneath; also above onboarding
    (1200) so a password-reset deep link always wins if both were ever pending
