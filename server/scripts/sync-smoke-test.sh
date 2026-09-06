@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# M2 verification: push a workout, confirm it round-trips through a pull, and
-# that last-write-wins + tombstones behave as designed.
+# M2/M3 verification: push a workout, confirm it round-trips through a pull,
+# and that last-write-wins + tombstones behave as designed. Also covers the
+# M3 entities (customExercises, supplements, supplementLog, settings,
+# seenFlags), each with its own merge rule.
 # Usage: BASE_URL=http://localhost:3000 ./sync-smoke-test.sh
 set -euo pipefail
 
@@ -50,6 +52,57 @@ PUSH5=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
   "changes": { "workouts": [{"id":"smoke-w1","data":{"v":"second"},"updatedAt":"2026-06-02T00:00:00.000Z","deletedAt":"2026-06-02T00:00:00.000Z"}], "programs": [] }
 }')
 echo "$PUSH5" | grep -q '"deletedAt":"2026-06-02T00:00:00.000Z"' || fail "tombstone was not persisted/returned"
+
+echo "== customExercises: named columns round-trip and respect last-write-wins =="
+PUSH6=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "customExercises": [{"id":"smoke-ex1","name":"Curl smoke","muscleCategory":"biceps","updatedAt":"2026-01-01T00:00:00.000Z","deletedAt":null}] }
+}')
+echo "$PUSH6" | grep -q '"name":"Curl smoke"' || fail "pushed custom exercise not echoed back"
+PUSH7=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "customExercises": [{"id":"smoke-ex1","name":"STALE","muscleCategory":"biceps","updatedAt":"2020-01-01T00:00:00.000Z","deletedAt":null}] }
+}')
+echo "$PUSH7" | grep -q '"name":"Curl smoke"' || fail "a stale custom exercise write must not overwrite a newer one"
+
+echo "== supplements: numeric dose round-trips through the jsonb-free named columns =="
+PUSH8=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "supplements": [{"id":"smoke-sup1","name":"Creatine smoke","dose":"5","unit":"g","createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-01-01T00:00:00.000Z","deletedAt":null}] }
+}')
+echo "$PUSH8" | grep -q '"dose":"5"' || fail "supplement dose did not round-trip"
+echo "$PUSH8" | grep -q '"createdAt":"2026-01-01"' || fail "supplement createdAt should come back as a plain date, not a full timestamp"
+
+echo "== supplementLog: composite (logDate, supplementId) key upserts correctly =="
+PUSH9=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "supplementLog": [{"logDate":"2026-01-01","supplementId":"smoke-sup1","updatedAt":"2026-01-01T00:00:00.000Z","deletedAt":null}] }
+}')
+echo "$PUSH9" | grep -q '"logDate":"2026-01-01"' || fail "pushed supplement log entry not echoed back"
+
+echo "== settings: last-write-wins per key, no tombstone column needed =="
+PUSH10=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "settings": [{"key":"muscu_theme","value":"dark","updatedAt":"2026-01-01T00:00:00.000Z"}] }
+}')
+echo "$PUSH10" | grep -q '"value":"dark"' || fail "pushed setting not echoed back"
+PUSH11=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "settings": [{"key":"muscu_theme","value":"light","updatedAt":"2020-01-01T00:00:00.000Z"}] }
+}')
+echo "$PUSH11" | grep -q '"value":"dark"' || fail "a stale setting write must not overwrite a newer one"
+
+echo "== seenFlags: insert-only, a repeat push of the same flag is a harmless no-op =="
+PUSH12=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "seenFlags": [{"flagType":"coachmark","flagId":"smoke-tip","seenAt":"2026-01-01T00:00:00.000Z"}] }
+}')
+echo "$PUSH12" | grep -q '"flagId":"smoke-tip"' || fail "pushed seen flag not echoed back"
+PUSH13=$(curl -sf -X POST "$BASE_URL/sync" "${AUTH[@]}" -d '{
+  "since": null,
+  "changes": { "seenFlags": [{"flagType":"coachmark","flagId":"smoke-tip","seenAt":"2099-01-01T00:00:00.000Z"}] }
+}')
+echo "$PUSH13" | grep -q '"seenAt":"2026-01-01T00:00:00.000Z"' || fail "a repeat seen-flag push must keep the original seenAt, not overwrite it"
 
 echo "== an unauthenticated push is rejected =="
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/sync" -H 'Content-Type: application/json' -d '{"since":null,"changes":{}}')

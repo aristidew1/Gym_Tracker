@@ -6,7 +6,17 @@
 import { DEFAULT_PROGRAM } from '../data/default-program.js';
 import { getAllWorkoutsRaw, replaceAllWorkoutsRaw } from '../storage.js';
 import { appendPrograms, getAllProgramsRaw, replaceAllProgramsRaw } from './program-storage.js';
-import { mergeById } from './entity-meta.js';
+import { getAllCustomExercisesRaw, replaceAllCustomExercisesRaw } from './custom-exercises.js';
+import {
+  getAllSupplementLogRaw,
+  getAllSupplementsRaw,
+  replaceAllSupplementLogRaw,
+  replaceAllSupplementsRaw,
+} from '../supplements.js';
+import { getAllSettingsRaw, applySettingsPull } from './settings-sync.js';
+import { getAllSeenTipsRaw, mergeSeenTipsRaw } from '../coachmark.js';
+import { getAllSeenProgramNotesRaw, mergeSeenProgramNotesRaw } from './program-notes.js';
+import { mergeByKey, mergeById } from './entity-meta.js';
 
 // Every program id is a per-device crypto.randomUUID() *except* the one
 // built-in program, which shares the same fixed id (DEFAULT_PROGRAM.id) on
@@ -52,9 +62,36 @@ function applyWorkoutsPull(remoteRecords) {
   replaceAllWorkoutsRaw(mergeById(local, remoteRaw));
 }
 
+function applyCustomExercisesPull(remoteRecords) {
+  if (remoteRecords.length === 0) return;
+  const local = getAllCustomExercisesRaw();
+  replaceAllCustomExercisesRaw(mergeById(local, remoteRecords));
+}
+
+function applySupplementsPull(remoteRecords) {
+  if (remoteRecords.length === 0) return;
+  const local = getAllSupplementsRaw();
+  replaceAllSupplementsRaw(mergeById(local, remoteRecords));
+}
+
+const supplementLogKey = (entry) => `${entry.logDate}|${entry.supplementId}`;
+
+function applySupplementLogPull(remoteRecords) {
+  if (remoteRecords.length === 0) return;
+  const local = getAllSupplementLogRaw();
+  replaceAllSupplementLogRaw(mergeByKey(local, remoteRecords, supplementLogKey));
+}
+
 export function applyPull(changes) {
   applyWorkoutsPull(changes?.workouts || []);
   applyProgramsPull(changes?.programs || []);
+  applyCustomExercisesPull(changes?.customExercises || []);
+  applySupplementsPull(changes?.supplements || []);
+  applySupplementLogPull(changes?.supplementLog || []);
+  applySettingsPull(changes?.settings || []);
+  const seenFlags = changes?.seenFlags || [];
+  mergeSeenTipsRaw(seenFlags.filter((flag) => flag.flagType === 'coachmark'));
+  mergeSeenProgramNotesRaw(seenFlags.filter((flag) => flag.flagType === 'program_note'));
 }
 
 function toPushRecord(raw) {
@@ -68,5 +105,11 @@ export function buildPushPayload(since) {
   return {
     workouts: getAllWorkoutsRaw().filter(changedSince).map(toPushRecord),
     programs: getAllProgramsRaw().filter(changedSince).map(toPushRecord),
+    customExercises: getAllCustomExercisesRaw().filter(changedSince),
+    supplements: getAllSupplementsRaw().filter(changedSince),
+    supplementLog: getAllSupplementLogRaw().filter(changedSince),
+    settings: getAllSettingsRaw().filter(changedSince),
+    seenFlags: [...getAllSeenTipsRaw(), ...getAllSeenProgramNotesRaw()]
+      .filter((flag) => !cutoff || new Date(flag.seenAt) > cutoff),
   };
 }

@@ -10,6 +10,7 @@ globalThis.localStorage = {
 
 const customExercises = await import('../services/custom-exercises.js');
 const exercises = await import('../data/exercises.js');
+const { mergeById } = await import('../services/entity-meta.js');
 
 test('a custom exercise can be created, listed, updated and deleted', () => {
   values.clear();
@@ -47,4 +48,30 @@ test('an unknown custom exercise id resolves to null instead of throwing', () =>
   values.clear();
   assert.equal(exercises.getExerciseById('custom_does_not_exist'), null);
   assert.equal(exercises.getExerciseDisplayName('custom_does_not_exist'), 'Exercice inconnu');
+});
+
+test('deleting a custom exercise leaves a tombstone for sync instead of removing it', () => {
+  values.clear();
+  const created = customExercises.createCustomExercise({ name: 'Curl marteau maison', muscleCategory: 'biceps' });
+  assert.ok(customExercises.deleteCustomExercise(created.id));
+
+  assert.equal(customExercises.getCustomExercises().length, 0);
+  const raw = customExercises.getAllCustomExercisesRaw().find((entry) => entry.id === created.id);
+  assert.ok(raw.deletedAt, 'a deleted custom exercise should stay in raw storage as a tombstone');
+  assert.ok(raw.updatedAt >= created.updatedAt);
+
+  // Deleting the same id again is a no-op, not a second tombstone bump.
+  assert.equal(customExercises.deleteCustomExercise(created.id), false);
+});
+
+test('replaceAllCustomExercisesRaw merges a pull by last-write-wins', () => {
+  values.clear();
+  const created = customExercises.createCustomExercise({ name: 'Presse locale', muscleCategory: 'quadriceps' });
+
+  customExercises.replaceAllCustomExercisesRaw(customExercises.getAllCustomExercisesRaw());
+  assert.equal(customExercises.getCustomExercises().length, 1);
+
+  const remoteNewer = { id: created.id, name: 'Presse distante', muscleCategory: 'quadriceps', updatedAt: '2999-01-01T00:00:00.000Z', deletedAt: null };
+  customExercises.replaceAllCustomExercisesRaw(mergeById(customExercises.getAllCustomExercisesRaw(), [remoteNewer]));
+  assert.equal(customExercises.getCustomExerciseById(created.id).name, 'Presse distante');
 });

@@ -4,8 +4,10 @@
 //  - showTip(): a single, non-blocking contextual hint shown once ever.
 import { t } from './i18n.js';
 import { escapeHtml } from './services/html.js';
+import { nowIso } from './services/entity-meta.js';
 
 const SEEN_KEY = 'muscu_seen_coachmarks';
+const FLAG_TYPE = 'coachmark';
 const TIP_AUTO_DISMISS_MS = 8000;
 // Views animate in (translate + fade), so a target keeps moving for a few
 // frames after it lands in the DOM. Re-measure until its rect stops changing,
@@ -16,27 +18,30 @@ const SETTLE_STABLE_FRAMES = 2;
 let uid = 0;
 const activeTips = new Set();
 
-function getSeen() {
+// Stored as { [id]: seenAtIso } rather than a plain array of ids — sync (M3)
+// needs a per-flag timestamp (see getAllSeenTipsRaw/mergeSeenTipsRaw below).
+function getSeenMap() {
   try {
     const value = JSON.parse(localStorage.getItem(SEEN_KEY));
-    return Array.isArray(value) ? new Set(value) : new Set();
+    if (Array.isArray(value)) return {}; // pre-M3 shape: no timestamps to recover, start fresh
+    return value && typeof value === 'object' ? value : {};
   } catch {
-    return new Set();
+    return {};
   }
 }
 
-function saveSeen(seen) {
-  localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+function saveSeenMap(seen) {
+  localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
 }
 
 function markSeen(id) {
-  const seen = getSeen();
-  seen.add(id);
-  saveSeen(seen);
+  const seen = getSeenMap();
+  if (id in seen) return;
+  saveSeenMap({ ...seen, [id]: nowIso() });
 }
 
 export function hasSeenTip(id) {
-  return getSeen().has(id);
+  return id in getSeenMap();
 }
 
 // Lets the app suppress onboarding tips wholesale for users who are not new:
@@ -44,17 +49,36 @@ export function hasSeenTip(id) {
 // Unions into what is stored, so resetSeenTips() still clears everything.
 export function markAllTipsSeen(ids) {
   if (!Array.isArray(ids) || ids.length === 0) return;
-  const seen = getSeen();
+  const seen = getSeenMap();
+  const timestamp = nowIso();
+  const next = { ...seen };
   for (const id of ids) {
-    if (id) seen.add(id);
+    if (id && !(id in next)) next[id] = timestamp;
   }
-  saveSeen(seen);
+  saveSeenMap(next);
 }
 
 // Test-only helper: lets a "replay onboarding" debug button clear every
 // contextual tip's seen flag so they can all be re-triggered.
 export function resetSeenTips() {
   localStorage.removeItem(SEEN_KEY);
+}
+
+// Sync layer only: this flagType's rows as { flagType, flagId, seenAt }.
+export function getAllSeenTipsRaw() {
+  return Object.entries(getSeenMap()).map(([flagId, seenAt]) => ({ flagType: FLAG_TYPE, flagId, seenAt }));
+}
+
+// Sync layer only: union-merges pulled { flagId, seenAt } rows into local
+// storage — a locally-unknown id is added, an already-known one is untouched.
+export function mergeSeenTipsRaw(remoteEntries) {
+  if (!Array.isArray(remoteEntries) || remoteEntries.length === 0) return;
+  const seen = getSeenMap();
+  const next = { ...seen };
+  for (const entry of remoteEntries) {
+    if (entry?.flagId && !(entry.flagId in next)) next[entry.flagId] = entry.seenAt;
+  }
+  saveSeenMap(next);
 }
 
 let stylesInjected = false;

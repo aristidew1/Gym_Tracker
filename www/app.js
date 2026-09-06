@@ -65,6 +65,13 @@ import { insertNotePrompt } from './services/note-editor.js';
 import { getExerciseCompletionState, getWorkoutCompletionProgress } from './services/workout-progress.js';
 import { getLanguage, localizeText, setLanguage, t, translateDocument } from './i18n.js';
 import { runTour, showTip, markAllTipsSeen } from './coachmark.js';
+import { hasSeenProgramNote, markProgramNoteSeen } from './services/program-notes.js';
+import { installSettingsSyncBridge } from './services/settings-sync.js';
+
+// Installed before any setting is read/written below (setTheme/setVisualStyle
+// run at the bottom of this section) so every write to a synced preference is
+// timestamped for sync from the very first one.
+installSettingsSyncBridge();
 
 // ============================================
 // STATE
@@ -101,24 +108,6 @@ const THEME_KEY = 'muscu_theme';
 const STYLE_KEY = 'muscu_visual_style';
 const VISUAL_STYLES = ['default', 'piste', 'nothing'];
 const ACCESSIBILITY_KEY = 'muscu_accessibility';
-const SEEN_PROGRAM_NOTES_KEY = 'muscu_seen_program_notes';
-
-function getSeenProgramNotes() {
-  try {
-    const value = JSON.parse(localStorage.getItem(SEEN_PROGRAM_NOTES_KEY));
-    return Array.isArray(value) ? new Set(value) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function markProgramNoteSeen(noteKey) {
-  const seen = getSeenProgramNotes();
-  if (seen.has(noteKey)) return;
-  seen.add(noteKey);
-  localStorage.setItem(SEEN_PROGRAM_NOTES_KEY, JSON.stringify([...seen]));
-}
-
 function getAccessibilityPreferences() {
   try {
     return {
@@ -1795,7 +1784,7 @@ function createExerciseCard(exercise, block, session, autoTimer = true) {
   const note = resolvedExercise.note;
   if (note) {
     const noteKey = `${exercise.id}::${note}`;
-    const alreadySeen = getSeenProgramNotes().has(noteKey);
+    const alreadySeen = hasSeenProgramNote(noteKey);
     const noteDiv = document.createElement('details');
     noteDiv.className = 'exercise-note';
     noteDiv.open = !alreadySeen;

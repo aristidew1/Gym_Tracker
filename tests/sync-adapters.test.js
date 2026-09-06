@@ -13,6 +13,10 @@ const programStore = await import('../services/program-storage.js');
 const syncAdapters = await import('../services/sync-adapters.js');
 const { mergeById } = await import('../services/entity-meta.js');
 const { DEFAULT_PROGRAM } = await import('../data/default-program.js');
+const customExercises = await import('../services/custom-exercises.js');
+const supplements = await import('../supplements.js');
+const coachmark = await import('../coachmark.js');
+const programNotes = await import('../services/program-notes.js');
 
 function makeWorkout(overrides = {}) {
   return storage.saveWorkout({
@@ -104,4 +108,41 @@ test('buildPushPayload only includes records changed since the given cursor, tom
   assert.equal(ids.includes(deletedAfterCutoff.id), true, 'a tombstone must be pushed like any other change');
   const tombstone = payload.workouts.find((record) => record.id === deletedAfterCutoff.id);
   assert.ok(tombstone.deletedAt);
+});
+
+test('buildPushPayload and applyPull round-trip every M3 entity', () => {
+  values.clear();
+  const exercise = customExercises.createCustomExercise({ name: 'Curl pupitre maison', muscleCategory: 'biceps' });
+  const supplement = supplements.addSupplement({ name: 'Créatine', dose: '5', unit: 'g' });
+  supplements.toggleSupplementTaken(supplement.id, '2026-01-01');
+  localStorage.setItem('muscu_theme', 'light');
+  coachmark.markAllTipsSeen(['tip_local']);
+  programNotes.markProgramNoteSeen('local::note');
+
+  const payload = syncAdapters.buildPushPayload(null);
+  assert.deepEqual(payload.customExercises.map((r) => r.id), [exercise.id]);
+  assert.deepEqual(payload.supplements.map((r) => r.id), [supplement.id]);
+  assert.deepEqual(payload.supplementLog.map((r) => r.supplementId), [supplement.id]);
+  assert.ok(payload.settings.some((r) => r.key === 'muscu_theme' && r.value === 'light'));
+  assert.ok(payload.seenFlags.some((r) => r.flagType === 'coachmark' && r.flagId === 'tip_local'));
+  assert.ok(payload.seenFlags.some((r) => r.flagType === 'program_note' && r.flagId === 'local::note'));
+
+  // A remote pull, all newer, must land through each entity's own store.
+  syncAdapters.applyPull({
+    customExercises: [{ id: 'remote_ex', name: 'Presse distante', muscleCategory: 'quadriceps', updatedAt: '2026-06-01T00:00:00.000Z', deletedAt: null }],
+    supplements: [{ id: 'remote_sup', name: 'Zinc', dose: null, unit: null, createdAt: '2026-01-01', updatedAt: '2026-06-01T00:00:00.000Z', deletedAt: null }],
+    supplementLog: [{ logDate: '2026-02-01', supplementId: 'remote_sup', updatedAt: '2026-06-01T00:00:00.000Z', deletedAt: null }],
+    settings: [{ key: 'muscu_theme', value: 'dark', updatedAt: '2999-01-01T00:00:00.000Z' }],
+    seenFlags: [
+      { flagType: 'coachmark', flagId: 'tip_remote', seenAt: '2026-06-01T00:00:00.000Z' },
+      { flagType: 'program_note', flagId: 'remote::note', seenAt: '2026-06-01T00:00:00.000Z' },
+    ],
+  });
+
+  assert.equal(customExercises.getCustomExerciseById('remote_ex').name, 'Presse distante');
+  assert.equal(supplements.getSupplements().find((s) => s.id === 'remote_sup').name, 'Zinc');
+  assert.deepEqual(supplements.getTakenSupplementIds('2026-02-01'), ['remote_sup']);
+  assert.equal(localStorage.getItem('muscu_theme'), 'dark');
+  assert.equal(coachmark.hasSeenTip('tip_remote'), true);
+  assert.equal(programNotes.hasSeenProgramNote('remote::note'), true);
 });

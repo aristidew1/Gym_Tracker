@@ -102,6 +102,9 @@ export function initSync() {
 
   window.addEventListener('workouts:changed', scheduleDebouncedSync);
   window.addEventListener('program:changed', scheduleDebouncedSync);
+  window.addEventListener('customExercises:changed', scheduleDebouncedSync);
+  window.addEventListener('supplements:changed', scheduleDebouncedSync);
+  window.addEventListener('settings:changed', scheduleDebouncedSync);
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncOnForeground();
