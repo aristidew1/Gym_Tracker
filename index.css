@@ -175,6 +175,17 @@
   padding: 0;
 }
 
+/* The browser's own `[hidden] { display: none }` is a user-agent rule, so ANY
+   author rule setting a display wins over it — `.settings-row { display: flex }`
+   or `.backup-reminder { display: flex }` silently defeated `el.hidden = true`
+   everywhere, leaving "not signed in" showing while signed in and making the
+   backup banner's dismiss button do nothing. Toggling `.hidden` is the
+   codebase's standard way to show/hide, so enforce it once here rather than
+   patching each component with its own `.foo[hidden]` rule. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   font-size: 16px;
   width: 100%;
