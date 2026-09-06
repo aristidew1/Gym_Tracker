@@ -3419,7 +3419,7 @@ body::before {
 
 @media (max-width: 340px) {
   .view-header { gap: 8px; }
-  .view-header > div { flex: 1; min-width: 0; }
+  .view-header > div:first-child { flex: 1; min-width: 0; }
   .view-header h1 {
     font-size: 1.32rem;
     letter-spacing: -0.035em;
@@ -4190,7 +4190,15 @@ body::before {
 /* --- Header account button: always visible, doubles as the sync-status
    badge (backup-reminder account offer, post-first-workout prompt route
    into the same overlay via openAccountEntryPoint) --- */
-.btn-account { position: relative; width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--bg-glass); border: 1px solid var(--border-glass); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); flex-shrink: 0; }
+/* Groups the account + settings buttons so .view-header's space-between still
+   splits two children (title | actions) — with three, the account button ends
+   up centred in the header with a gap on either side. */
+.view-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+/* Round, unlike the gear's rounded square: two identical 44px grey glyph
+   buttons side by side read as icon soup, and identity deserves to look like
+   identity — hence the initial standing in for the glyph once signed in. */
+.btn-account { position: relative; width: 44px; height: 44px; border-radius: 50%; background: var(--bg-glass); border: 1px solid var(--border-glass); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); flex-shrink: 0; }
+.btn-account-initial { font-size: .95rem; font-weight: 800; color: var(--accent); line-height: 1; }
 .btn-account:hover { background: var(--bg-card-hover); }
 .btn-account-sync-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--text-secondary); opacity: .55; transition: background-color .2s, box-shadow .2s, opacity .2s; }
 .btn-account--syncing .btn-account-sync-dot { background: var(--accent); opacity: 1; animation: syncIndicatorPulse 1.1s ease-in-out infinite; }

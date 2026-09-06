@@ -1011,15 +1011,27 @@ function initSyncPrompt() {
 function renderAccountButton() {
   const btn = document.getElementById('btn-account');
   const dot = document.getElementById('btn-account-sync-dot');
+  const glyph = document.getElementById('btn-account-glyph');
+  const initial = document.getElementById('btn-account-initial');
   if (!btn || !dot) return;
   const user = getCurrentUser();
   btn.classList.remove('btn-account--syncing', 'btn-account--error', 'btn-account--expired');
   if (!user) {
     dot.hidden = true;
+    if (glyph) glyph.hidden = false;
+    if (initial) initial.hidden = true;
     btn.setAttribute('aria-label', t('accountButtonSignedOut'));
     return;
   }
 
+  // Signed in, the generic person glyph gives way to the account's own
+  // initial: it tells the two header buttons apart at a glance, and doubles
+  // as the confirmation that this device is signed in as someone.
+  if (glyph && initial) {
+    initial.textContent = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
+    glyph.hidden = true;
+    initial.hidden = false;
+  }
   dot.hidden = false;
   const { status } = getSyncStatus();
   let label;
