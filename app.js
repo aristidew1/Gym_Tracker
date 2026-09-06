@@ -1028,16 +1028,15 @@ function initSyncPrompt() {
 // animated while a sync is in flight.
 function renderAccountButton() {
   const btn = document.getElementById('btn-account');
-  const dot = document.getElementById('btn-account-sync-dot');
-  const glyph = document.getElementById('btn-account-glyph');
   const initial = document.getElementById('btn-account-initial');
-  if (!btn || !dot) return;
+  if (!btn) return;
   const user = getCurrentUser();
-  btn.classList.remove('btn-account--syncing', 'btn-account--error', 'btn-account--expired');
+  // The glyph/initial swap is driven by a class on the button rather than by
+  // `hidden` on each child: `hidden` is an HTMLElement property, so setting
+  // it on the inline <svg> silently created a JS expando instead of the
+  // attribute, and the person icon never went away.
+  btn.classList.remove('btn-account--identified', 'btn-account--syncing', 'btn-account--error', 'btn-account--expired');
   if (!user) {
-    dot.hidden = true;
-    if (glyph) glyph.hidden = false;
-    if (initial) initial.hidden = true;
     btn.setAttribute('aria-label', t('accountButtonSignedOut'));
     return;
   }
@@ -1045,12 +1044,12 @@ function renderAccountButton() {
   // Signed in, the generic person glyph gives way to the account's own
   // initial: it tells the two header buttons apart at a glance, and doubles
   // as the confirmation that this device is signed in as someone.
-  if (glyph && initial) {
-    initial.textContent = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
-    glyph.hidden = true;
-    initial.hidden = false;
-  }
-  dot.hidden = false;
+  if (initial) initial.textContent = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
+  btn.classList.add('btn-account--identified');
+
+  // The badge dot only appears when sync has something to say. A permanent
+  // "all good" dot is noise next to the initial, and trains the eye to
+  // ignore the very thing that must stand out when it turns red.
   const { status } = getSyncStatus();
   let label;
   if (status === 'syncing') {
