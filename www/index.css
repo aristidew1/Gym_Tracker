@@ -4198,11 +4198,11 @@ body::before {
    buttons side by side read as icon soup, and identity deserves to look like
    identity — hence the initial standing in for the glyph once signed in. */
 .btn-account { position: relative; width: 44px; height: 44px; border-radius: 50%; background: var(--bg-glass); border: 1px solid var(--border-glass); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); flex-shrink: 0; }
-/* Plain text colour, not --accent: that resolves to red under the "nothing"
-   style, and a red letter in a header reads as an alert rather than as you. */
-.btn-account-initial { font-size: .95rem; font-weight: 800; color: var(--text-primary); line-height: 1; display: none; }
-.btn-account--identified .btn-account-glyph { display: none; }
-.btn-account--identified .btn-account-initial { display: block; }
+/* Signed in, the same glyph fills in — the outline/filled pair reads at a
+   glance at 22px and, unlike a colour change, carries no alert connotation
+   (--accent is red under the "nothing" style). The open shoulders path closes
+   when filled, which is exactly how a solid "user" icon is drawn. */
+.btn-account--identified .btn-account-glyph { fill: currentColor; }
 .btn-account:hover { background: var(--bg-card-hover); }
 /* Hidden unless sync is syncing/failing/expired — see renderAccountButton(). */
 .btn-account-sync-dot { display: none; position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--text-secondary); transition: background-color .2s, box-shadow .2s; }

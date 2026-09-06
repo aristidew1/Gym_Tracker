@@ -1028,23 +1028,21 @@ function initSyncPrompt() {
 // animated while a sync is in flight.
 function renderAccountButton() {
   const btn = document.getElementById('btn-account');
-  const initial = document.getElementById('btn-account-initial');
   if (!btn) return;
   const user = getCurrentUser();
-  // The glyph/initial swap is driven by a class on the button rather than by
-  // `hidden` on each child: `hidden` is an HTMLElement property, so setting
-  // it on the inline <svg> silently created a JS expando instead of the
-  // attribute, and the person icon never went away.
+  // Everything visual hangs off classes on the button rather than `hidden` on
+  // each child: `hidden` is an HTMLElement property, so setting it on the
+  // inline <svg> silently created a JS expando instead of the attribute and
+  // the icon never changed at all.
   btn.classList.remove('btn-account--identified', 'btn-account--syncing', 'btn-account--error', 'btn-account--expired');
   if (!user) {
     btn.setAttribute('aria-label', t('accountButtonSignedOut'));
     return;
   }
 
-  // Signed in, the generic person glyph gives way to the account's own
-  // initial: it tells the two header buttons apart at a glance, and doubles
-  // as the confirmation that this device is signed in as someone.
-  if (initial) initial.textContent = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
+  // Signed in: the same person glyph, filled instead of outlined. That single
+  // bit is all there is to say — which account you're in is a question a
+  // single-account app never raises.
   btn.classList.add('btn-account--identified');
 
   // The badge dot only appears when sync has something to say. A permanent

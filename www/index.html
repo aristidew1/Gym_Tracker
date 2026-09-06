@@ -25,11 +25,11 @@
              a third one would float the account button mid-header. -->
         <div class="view-header-actions">
           <button type="button" class="btn-account" id="btn-account" aria-label="Compte — non connecté" data-i18n-aria-label="accountButtonSignedOut">
-            <!-- Visibility is class-driven from the button (see
-                 .btn-account--identified): `hidden` can't be used on the
-                 inline <svg>, since that property only exists on HTMLElement. -->
+            <!-- One glyph in both states: outline signed out, filled in once
+                 signed in (see .btn-account--identified). An initial would
+                 always render the same letter for a single-account app —
+                 no information, and it promises a profile that doesn't exist. -->
             <svg class="icon-glyph icon-glyph--md btn-account-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span class="btn-account-initial" id="btn-account-initial" aria-hidden="true"></span>
             <span class="btn-account-sync-dot" aria-hidden="true"></span>
           </button>
           <button class="btn-settings" id="btn-settings" title="Paramètres" data-i18n-title="settings">
