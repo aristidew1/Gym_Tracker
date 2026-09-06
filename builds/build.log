@@ -1,13 +1,13 @@
 Gym Tracker Android STABLE TEST build
 Package: fr.aris.gymtrack.test
 Signing: dedicated stable test key
-Commit: 5f1ff3802128aa38bebc22642c10872afb9cc107
-Started: 2026-09-06T00:33:03Z
+Commit: 3fcb6c0e569280ead123b2ac3f1acf2329cf0ed8
+Started: 2026-09-06T15:37:25Z
 
 ===== npm ci =====
 npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
 
-added 105 packages, and audited 106 packages in 1s
+added 105 packages, and audited 106 packages in 2s
 
 12 packages are looking for funding
   run `npm fund` for details
@@ -35,546 +35,636 @@ TAP version 13
 # Subtest: accessibility controls persist their changes
 ok 1 - accessibility controls persist their changes
   ---
-  duration_ms: 1.015493
+  duration_ms: 1.587347
   type: 'test'
   ...
 # Subtest: accessibility preferences have visible effects
 ok 2 - accessibility preferences have visible effects
   ---
-  duration_ms: 0.226145
+  duration_ms: 0.343092
   type: 'test'
   ...
 # Subtest: AI example follows the program-only import contract
 ok 3 - AI example follows the program-only import contract
   ---
-  duration_ms: 3.111633
+  duration_ms: 3.447854
   type: 'test'
   ...
 # Subtest: AI prompt follows the active application language and complete catalog
 ok 4 - AI prompt follows the active application language and complete catalog
   ---
-  duration_ms: 5.242825
+  duration_ms: 3.600209
   type: 'test'
   ...
 # Subtest: copyText uses the asynchronous Clipboard API
 ok 5 - copyText uses the asynchronous Clipboard API
   ---
-  duration_ms: 1.215388
+  duration_ms: 1.576256
   type: 'test'
   ...
 # Subtest: copyText falls back to a temporary textarea
 ok 6 - copyText falls back to a temporary textarea
   ---
-  duration_ms: 0.398329
+  duration_ms: 0.485928
   type: 'test'
   ...
 # Subtest: copyText reports failure when neither copy mechanism is available
 ok 7 - copyText reports failure when neither copy mechanism is available
   ---
-  duration_ms: 0.237782
+  duration_ms: 0.236452
+  type: 'test'
+  ...
+# Subtest: markAllTipsSeen and getAllSeenTipsRaw expose seen tips as timestamped sync rows
+ok 8 - markAllTipsSeen and getAllSeenTipsRaw expose seen tips as timestamped sync rows
+  ---
+  duration_ms: 2.412069
+  type: 'test'
+  ...
+# Subtest: mergeSeenTipsRaw unions a pull in without overwriting an already-known tip
+ok 9 - mergeSeenTipsRaw unions a pull in without overwriting an already-known tip
+  ---
+  duration_ms: 0.487842
   type: 'test'
   ...
 # Subtest: a custom exercise can be created, listed, updated and deleted
-ok 8 - a custom exercise can be created, listed, updated and deleted
+ok 10 - a custom exercise can be created, listed, updated and deleted
   ---
-  duration_ms: 2.286112
+  duration_ms: 2.152664
   type: 'test'
   ...
 # Subtest: creating a custom exercise without a name or category is rejected
-ok 9 - creating a custom exercise without a name or category is rejected
+ok 11 - creating a custom exercise without a name or category is rejected
   ---
-  duration_ms: 0.21644
+  duration_ms: 0.176129
   type: 'test'
   ...
 # Subtest: custom exercises behave like built-in ones in the exercise catalogue
-ok 10 - custom exercises behave like built-in ones in the exercise catalogue
+ok 12 - custom exercises behave like built-in ones in the exercise catalogue
   ---
-  duration_ms: 0.726134
+  duration_ms: 1.319115
   type: 'test'
   ...
 # Subtest: an unknown custom exercise id resolves to null instead of throwing
-ok 11 - an unknown custom exercise id resolves to null instead of throwing
+ok 13 - an unknown custom exercise id resolves to null instead of throwing
   ---
-  duration_ms: 1.16962
+  duration_ms: 0.227686
+  type: 'test'
+  ...
+# Subtest: deleting a custom exercise leaves a tombstone for sync instead of removing it
+ok 14 - deleting a custom exercise leaves a tombstone for sync instead of removing it
+  ---
+  duration_ms: 0.291485
+  type: 'test'
+  ...
+# Subtest: replaceAllCustomExercisesRaw merges a pull by last-write-wins
+ok 15 - replaceAllCustomExercisesRaw merges a pull by last-write-wins
+  ---
+  duration_ms: 0.319838
   type: 'test'
   ...
 # Subtest: calendar dates preserve their local calendar day
-ok 12 - calendar dates preserve their local calendar day
+ok 16 - calendar dates preserve their local calendar day
   ---
-  duration_ms: 1.325871
+  duration_ms: 1.656807
   type: 'test'
   ...
 # Subtest: expanded exercise catalogue has unique IDs and every exercise has a muscle category
-ok 13 - expanded exercise catalogue has unique IDs and every exercise has a muscle category
+ok 17 - expanded exercise catalogue has unique IDs and every exercise has a muscle category
   ---
-  duration_ms: 1.004937
+  duration_ms: 1.127537
   type: 'test'
   ...
 # Subtest: pull-ups are available after selecting the back category
-ok 14 - pull-ups are available after selecting the back category
+ok 18 - pull-ups are available after selecting the back category
   ---
-  duration_ms: 0.253174
+  duration_ms: 0.306423
   type: 'test'
   ...
 # Subtest: every muscle category contains exercises
-ok 15 - every muscle category contains exercises
+ok 19 - every muscle category contains exercises
   ---
-  duration_ms: 1.181257
+  duration_ms: 0.425185
   type: 'test'
   ...
 # Subtest: every muscle category maps to exactly one push/pull/legs stats group
-ok 16 - every muscle category maps to exactly one push/pull/legs stats group
+ok 20 - every muscle category maps to exactly one push/pull/legs stats group
   ---
-  duration_ms: 0.225834
+  duration_ms: 0.247673
   type: 'test'
   ...
 # Subtest: the conventional deadlift counts as both a legs and a pull stats exercise
-ok 17 - the conventional deadlift counts as both a legs and a pull stats exercise
+ok 21 - the conventional deadlift counts as both a legs and a pull stats exercise
   ---
-  duration_ms: 0.841655
+  duration_ms: 0.888982
   type: 'test'
   ...
 # Subtest: common barbell movements also expose their dumbbell variants
-ok 18 - common barbell movements also expose their dumbbell variants
+ok 22 - common barbell movements also expose their dumbbell variants
   ---
-  duration_ms: 0.204122
+  duration_ms: 0.177803
   type: 'test'
   ...
 # Subtest: user-provided HTML is escaped before template rendering
-ok 19 - user-provided HTML is escaped before template rendering
+ok 23 - user-provided HTML is escaped before template rendering
   ---
-  duration_ms: 0.996143
+  duration_ms: 1.227644
   type: 'test'
   ...
 # Subtest: language preference is persistent and translates interface strings
-ok 20 - language preference is persistent and translates interface strings
+ok 24 - language preference is persistent and translates interface strings
   ---
-  duration_ms: 1.347864
+  duration_ms: 1.65364
   type: 'test'
   ...
 # Subtest: every exercise and muscle category has an English display name
-ok 21 - every exercise and muscle category has an English display name
+ok 25 - every exercise and muscle category has an English display name
   ---
-  duration_ms: 1.682924
+  duration_ms: 2.127316
   type: 'test'
   ...
 # Subtest: a note prompt starts on a new line and places the cursor after its label
-ok 22 - a note prompt starts on a new line and places the cursor after its label
+ok 26 - a note prompt starts on a new line and places the cursor after its label
   ---
-  duration_ms: 1.158694
+  duration_ms: 1.386351
   type: 'test'
   ...
 # Subtest: a note prompt replaces the current selection without exceeding the limit
-ok 23 - a note prompt replaces the current selection without exceeding the limit
+ok 27 - a note prompt replaces the current selection without exceeding the limit
   ---
-  duration_ms: 0.200196
+  duration_ms: 0.306934
   type: 'test'
   ...
 # Subtest: weekly notification recommendations follow the calendar-week target
-ok 24 - weekly notification recommendations follow the calendar-week target
+ok 28 - weekly notification recommendations follow the calendar-week target
   ---
-  duration_ms: 2.438597
+  duration_ms: 2.705286
   type: 'test'
   ...
 # Subtest: a completed weekly target waits until the next Monday
-ok 25 - a completed weekly target waits until the next Monday
+ok 29 - a completed weekly target waits until the next Monday
   ---
-  duration_ms: 0.313063
+  duration_ms: 0.384448
   type: 'test'
   ...
 # Subtest: first-run templates are distinct valid programs
-ok 26 - first-run templates are distinct valid programs
+ok 30 - first-run templates are distinct valid programs
   ---
-  duration_ms: 1.826202
+  duration_ms: 2.898368
   type: 'test'
   ...
 # Subtest: every first-run template references known exercises and unique item ids
-ok 27 - every first-run template references known exercises and unique item ids
+ok 31 - every first-run template references known exercises and unique item ids
   ---
-  duration_ms: 0.545356
+  duration_ms: 0.915191
   type: 'test'
   ...
 # Subtest: templates are cloned before they are edited
-ok 28 - templates are cloned before they are edited
+ok 32 - templates are cloned before they are edited
   ---
-  duration_ms: 0.332762
+  duration_ms: 0.530191
   type: 'test'
   ...
 # Subtest: existing programs start compact while new programs guide the first edit
-ok 29 - existing programs start compact while new programs guide the first edit
+ok 33 - existing programs start compact while new programs guide the first edit
   ---
-  duration_ms: 1.151103
+  duration_ms: 1.286024
   type: 'test'
   ...
 # Subtest: summaries expose useful information without advanced fields
-ok 30 - summaries expose useful information without advanced fields
+ok 34 - summaries expose useful information without advanced fields
   ---
-  duration_ms: 1.351629
+  duration_ms: 1.25208
   type: 'test'
   ...
 # Subtest: summaries omit optional targets that are not configured
-ok 31 - summaries omit optional targets that are not configured
+ok 35 - summaries omit optional targets that are not configured
   ---
-  duration_ms: 0.341025
+  duration_ms: 0.267009
   type: 'test'
   ...
 # Subtest: the program menu opens upward near the bottom of the viewport
-ok 32 - the program menu opens upward near the bottom of the viewport
+ok 36 - the program menu opens upward near the bottom of the viewport
   ---
-  duration_ms: 0.789929
+  duration_ms: 1.210032
   type: 'test'
   ...
 # Subtest: the program menu keeps opening downward when it fits
-ok 33 - the program menu keeps opening downward when it fits
+ok 37 - the program menu keeps opening downward when it fits
   ---
-  duration_ms: 0.80455
+  duration_ms: 0.197239
+  type: 'test'
+  ...
+# Subtest: markProgramNoteSeen and getAllSeenProgramNotesRaw expose seen notes as timestamped sync rows
+ok 38 - markProgramNoteSeen and getAllSeenProgramNotesRaw expose seen notes as timestamped sync rows
+  ---
+  duration_ms: 2.160638
+  type: 'test'
+  ...
+# Subtest: mergeSeenProgramNotesRaw unions a pull in without overwriting an already-known note
+ok 39 - mergeSeenProgramNotesRaw unions a pull in without overwriting an already-known note
+  ---
+  duration_ms: 0.390851
   type: 'test'
   ...
 # Subtest: program library saves, activates and deletes custom programs without touching the preset
-ok 34 - program library saves, activates and deletes custom programs without touching the preset
+ok 40 - program library saves, activates and deletes custom programs without touching the preset
   ---
-  duration_ms: 17.263868
+  duration_ms: 21.178053
   type: 'test'
   ...
 # Subtest: editing the base program keeps its id instead of creating a copy
-ok 35 - editing the base program keeps its id instead of creating a copy
+ok 41 - editing the base program keeps its id instead of creating a copy
   ---
-  duration_ms: 4.406088
+  duration_ms: 4.982663
   type: 'test'
   ...
 # Subtest: the base program can be deleted when another program is available
-ok 36 - the base program can be deleted when another program is available
+ok 42 - the base program can be deleted when another program is available
   ---
-  duration_ms: 15.414873
+  duration_ms: 14.388043
   type: 'test'
   ...
 # Subtest: the last available program cannot be deleted
-ok 37 - the last available program cannot be deleted
+ok 43 - the last available program cannot be deleted
   ---
-  duration_ms: 1.907131
+  duration_ms: 1.581205
   type: 'test'
   ...
 # Subtest: stored programs with the former day frequency are migrated without losing them
-ok 38 - stored programs with the former day frequency are migrated without losing them
+ok 44 - stored programs with the former day frequency are migrated without losing them
   ---
-  duration_ms: 2.166886
+  duration_ms: 2.508429
   type: 'test'
   ...
 # Subtest: deleting a custom program tombstones it instead of removing it, so getPrograms excludes it but the raw record survives for sync
-ok 39 - deleting a custom program tombstones it instead of removing it, so getPrograms excludes it but the raw record survives for sync
+ok 45 - deleting a custom program tombstones it instead of removing it, so getPrograms excludes it but the raw record survives for sync
   ---
-  duration_ms: 5.422622
+  duration_ms: 6.681218
   type: 'test'
   ...
 # Subtest: deleting the unmodified base program still materializes a real tombstone row for sync
-ok 40 - deleting the unmodified base program still materializes a real tombstone row for sync
+ok 46 - deleting the unmodified base program still materializes a real tombstone row for sync
   ---
-  duration_ms: 4.757217
+  duration_ms: 7.641803
   type: 'test'
   ...
 # Subtest: saveProgram clears deletedAt, so re-saving a previously deleted program un-deletes it
-ok 41 - saveProgram clears deletedAt, so re-saving a previously deleted program un-deletes it
+ok 47 - saveProgram clears deletedAt, so re-saving a previously deleted program un-deletes it
   ---
-  duration_ms: 10.320287
+  duration_ms: 18.124215
   type: 'test'
   ...
 # Subtest: editing an existing program starts with compact disclosure controls
-ok 42 - editing an existing program starts with compact disclosure controls
+ok 48 - editing an existing program starts with compact disclosure controls
   ---
-  duration_ms: 5.878657
+  duration_ms: 3.590992
+  type: 'test'
+  ...
+# Subtest: a tracked key written before the bridge is installed is backfilled with a stable updatedAt
+ok 49 - a tracked key written before the bridge is installed is backfilled with a stable updatedAt
+  ---
+  duration_ms: 1.763305
+  type: 'test'
+  ...
+# Subtest: installSettingsSyncBridge timestamps writes to tracked keys without changing how they read back
+ok 50 - installSettingsSyncBridge timestamps writes to tracked keys without changing how they read back
+  ---
+  duration_ms: 1.249365
+  type: 'test'
+  ...
+# Subtest: applySettingsPull only applies a remote row newer than what is already recorded
+ok 51 - applySettingsPull only applies a remote row newer than what is already recorded
+  ---
+  duration_ms: 0.658411
   type: 'test'
   ...
 # Subtest: storage migrates old local data in place and keeps the next session generic
-ok 43 - storage migrates old local data in place and keeps the next session generic
+ok 52 - storage migrates old local data in place and keeps the next session generic
   ---
-  duration_ms: 1.742017
+  duration_ms: 3.667786
   type: 'test'
   ...
 # Subtest: storage saves versioned records and looks them up by program exercise id
-ok 44 - storage saves versioned records and looks them up by program exercise id
+ok 53 - storage saves versioned records and looks them up by program exercise id
   ---
-  duration_ms: 0.8311
+  duration_ms: 1.144358
   type: 'test'
   ...
 # Subtest: an interrupted workout draft is separate from completed workout history
-ok 45 - an interrupted workout draft is separate from completed workout history
+ok 54 - an interrupted workout draft is separate from completed workout history
   ---
-  duration_ms: 0.294566
+  duration_ms: 0.394938
   type: 'test'
   ...
 # Subtest: storage updates a recorded workout in place without changing its date or id
-ok 46 - storage updates a recorded workout in place without changing its date or id
+ok 55 - storage updates a recorded workout in place without changing its date or id
   ---
-  duration_ms: 0.388144
+  duration_ms: 0.528738
   type: 'test'
   ...
 # Subtest: last exercise data follows the exercise across programs and sessions
-ok 47 - last exercise data follows the exercise across programs and sessions
+ok 56 - last exercise data follows the exercise across programs and sessions
   ---
-  duration_ms: 1.310128
+  duration_ms: 0.833949
   type: 'test'
   ...
 # Subtest: the previous workout lookup stays within the same program and session
-ok 48 - the previous workout lookup stays within the same program and session
+ok 57 - the previous workout lookup stays within the same program and session
   ---
-  duration_ms: 0.418559
+  duration_ms: 1.746124
   type: 'test'
   ...
 # Subtest: interval streak follows the active program frequency
-ok 49 - interval streak follows the active program frequency
+ok 58 - interval streak follows the active program frequency
   ---
-  duration_ms: 1.269528
+  duration_ms: 1.795857
   type: 'test'
   ...
 # Subtest: weekly streak counts consecutive weeks that reach their workout target
-ok 50 - weekly streak counts consecutive weeks that reach their workout target
+ok 59 - weekly streak counts consecutive weeks that reach their workout target
   ---
-  duration_ms: 1.11515
+  duration_ms: 1.871307
   type: 'test'
   ...
 # Subtest: backup exports and restores workouts, custom programs, and the active program
-ok 51 - backup exports and restores workouts, custom programs, and the active program
+ok 60 - backup exports and restores workouts, custom programs, and the active program
   ---
-  duration_ms: 15.133757
+  duration_ms: 22.755091
   type: 'test'
   ...
 # Subtest: program-only backup adds programs without changing workout history or the active program
-ok 52 - program-only backup adds programs without changing workout history or the active program
+ok 61 - program-only backup adds programs without changing workout history or the active program
   ---
-  duration_ms: 26.102934
+  duration_ms: 47.70824
   type: 'test'
   ...
 # Subtest: a single program can be exported for sharing
-ok 53 - a single program can be exported for sharing
+ok 62 - a single program can be exported for sharing
   ---
-  duration_ms: 0.926791
+  duration_ms: 1.218828
   type: 'test'
   ...
 # Subtest: storage still imports the legacy workout-array export format
-ok 54 - storage still imports the legacy workout-array export format
+ok 63 - storage still imports the legacy workout-array export format
   ---
-  duration_ms: 0.418899
+  duration_ms: 0.609079
   type: 'test'
   ...
 # Subtest: supplements persist daily intake and are included in full backups
-ok 55 - supplements persist daily intake and are included in full backups
+ok 64 - supplements persist daily intake and are included in full backups
   ---
-  duration_ms: 3.268435
+  duration_ms: 5.654679
   type: 'test'
   ...
 # Subtest: backup summary includes supplements and edits to the built-in program
-ok 56 - backup summary includes supplements and edits to the built-in program
+ok 65 - backup summary includes supplements and edits to the built-in program
   ---
-  duration_ms: 2.821654
+  duration_ms: 4.329242
   type: 'test'
   ...
 # Subtest: all-time personal records track the best set ever logged per exercise, dated when it was first reached
-ok 57 - all-time personal records track the best set ever logged per exercise, dated when it was first reached
+ok 66 - all-time personal records track the best set ever logged per exercise, dated when it was first reached
   ---
-  duration_ms: 0.608209
+  duration_ms: 0.933625
   type: 'test'
   ...
 # Subtest: progression candidates surface exercises within one set of the top of their rep range
-ok 58 - progression candidates surface exercises within one set of the top of their rep range
+ok 67 - progression candidates surface exercises within one set of the top of their rep range
   ---
-  duration_ms: 0.59497
+  duration_ms: 0.951349
   type: 'test'
   ...
 # Subtest: progression candidates are ordered by the most recently logged exercise first
-ok 59 - progression candidates are ordered by the most recently logged exercise first
+ok 68 - progression candidates are ordered by the most recently logged exercise first
   ---
-  duration_ms: 0.390036
+  duration_ms: 0.563433
   type: 'test'
   ...
 # Subtest: deleting a workout tombstones it instead of removing it, so getWorkouts excludes it but the raw record survives for sync
-ok 60 - deleting a workout tombstones it instead of removing it, so getWorkouts excludes it but the raw record survives for sync
+ok 69 - deleting a workout tombstones it instead of removing it, so getWorkouts excludes it but the raw record survives for sync
   ---
-  duration_ms: 0.31106
+  duration_ms: 0.443348
   type: 'test'
   ...
 # Subtest: a pre-existing workout without updatedAt is backfilled from savedAt, not the current time
-ok 61 - a pre-existing workout without updatedAt is backfilled from savedAt, not the current time
+ok 70 - a pre-existing workout without updatedAt is backfilled from savedAt, not the current time
   ---
-  duration_ms: 0.172435
+  duration_ms: 0.294701
   type: 'test'
   ...
 # Subtest: versioned imports reject unsupported future backup versions
-ok 62 - versioned imports reject unsupported future backup versions
+ok 71 - versioned imports reject unsupported future backup versions
   ---
-  duration_ms: 2.131163
+  duration_ms: 3.790805
+  type: 'test'
+  ...
+# Subtest: a supplement can be added, taken, and removed
+ok 72 - a supplement can be added, taken, and removed
+  ---
+  duration_ms: 5.041863
+  type: 'test'
+  ...
+# Subtest: deleting a supplement tombstones it and its log history instead of removing them
+ok 73 - deleting a supplement tombstones it and its log history instead of removing them
+  ---
+  duration_ms: 0.908989
+  type: 'test'
+  ...
+# Subtest: an old-format supplement log ({ date: [ids] }) migrates transparently to per-entry records
+ok 74 - an old-format supplement log ({ date: [ids] }) migrates transparently to per-entry records
+  ---
+  duration_ms: 0.530111
+  type: 'test'
+  ...
+# Subtest: replaceAllSupplementLogRaw merges a pull by last-write-wins per (date, supplement)
+ok 75 - replaceAllSupplementLogRaw merges a pull by last-write-wins per (date, supplement)
+  ---
+  duration_ms: 0.532696
+  type: 'test'
+  ...
+# Subtest: a supplement created before M3 (missing updatedAt/deletedAt) is backfilled on read
+ok 76 - a supplement created before M3 (missing updatedAt/deletedAt) is backfilled on read
+  ---
+  duration_ms: 0.448058
   type: 'test'
   ...
 # Subtest: mergeById keeps the remote record only if strictly newer than local
-ok 63 - mergeById keeps the remote record only if strictly newer than local
+ok 77 - mergeById keeps the remote record only if strictly newer than local
   ---
-  duration_ms: 1.235438
+  duration_ms: 1.456362
   type: 'test'
   ...
 # Subtest: applying a workouts pull merges by last-write-wins and survives a concurrent local edit
-ok 64 - applying a workouts pull merges by last-write-wins and survives a concurrent local edit
+ok 78 - applying a workouts pull merges by last-write-wins and survives a concurrent local edit
   ---
-  duration_ms: 1.610312
+  duration_ms: 2.351054
   type: 'test'
   ...
 # Subtest: a pulled program with a fresh id merges normally
-ok 65 - a pulled program with a fresh id merges normally
+ok 79 - a pulled program with a fresh id merges normally
   ---
-  duration_ms: 4.024904
+  duration_ms: 3.465217
   type: 'test'
   ...
 # Subtest: a pulled base program that conflicts with a locally-customized one is appended as a new program, not overwritten
-ok 66 - a pulled base program that conflicts with a locally-customized one is appended as a new program, not overwritten
+ok 80 - a pulled base program that conflicts with a locally-customized one is appended as a new program, not overwritten
   ---
-  duration_ms: 13.451048
+  duration_ms: 13.787871
   type: 'test'
   ...
 # Subtest: buildPushPayload only includes records changed since the given cursor, tombstones included
-ok 67 - buildPushPayload only includes records changed since the given cursor, tombstones included
+ok 81 - buildPushPayload only includes records changed since the given cursor, tombstones included
   ---
-  duration_ms: 1.068951
+  duration_ms: 1.768515
+  type: 'test'
+  ...
+# Subtest: buildPushPayload and applyPull round-trip every M3 entity
+ok 82 - buildPushPayload and applyPull round-trip every M3 entity
+  ---
+  duration_ms: 3.280391
   type: 'test'
   ...
 # Subtest: workout progress counts only fully completed visible exercises
-ok 68 - workout progress counts only fully completed visible exercises
+ok 83 - workout progress counts only fully completed visible exercises
   ---
-  duration_ms: 2.030413
+  duration_ms: 1.588309
   type: 'test'
   ...
 # Subtest: a resolved exercise choice joins workout progress
-ok 69 - a resolved exercise choice joins workout progress
+ok 84 - a resolved exercise choice joins workout progress
   ---
-  duration_ms: 0.237691
+  duration_ms: 0.191878
   type: 'test'
   ...
 # Subtest: exercise progress counts a drop set only after every segment is complete
-ok 70 - exercise progress counts a drop set only after every segment is complete
+ok 85 - exercise progress counts a drop set only after every segment is complete
   ---
-  duration_ms: 0.210662
+  duration_ms: 0.16595
   type: 'test'
   ...
 # Subtest: an explicitly emptied exercise is counted as skipped
-ok 71 - an explicitly emptied exercise is counted as skipped
+ok 86 - an explicitly emptied exercise is counted as skipped
   ---
-  duration_ms: 0.218033
+  duration_ms: 0.172552
   type: 'test'
   ...
 # Subtest: legacy workout is migrated to the versioned schema without losing its sets
-ok 72 - legacy workout is migrated to the versioned schema without losing its sets
+ok 87 - legacy workout is migrated to the versioned schema without losing its sets
   ---
-  duration_ms: 2.05518
+  duration_ms: 3.006309
   type: 'test'
   ...
 # Subtest: a finished workout is dated by the local calendar day, not the UTC one
-ok 73 - a finished workout is dated by the local calendar day, not the UTC one
+ok 88 - a finished workout is dated by the local calendar day, not the UTC one
   ---
-  duration_ms: 8.000755
+  duration_ms: 5.533793
   type: 'test'
   ...
 # Subtest: method choices retain the pull-up exercise during migration
-ok 74 - method choices retain the pull-up exercise during migration
+ok 89 - method choices retain the pull-up exercise during migration
   ---
-  duration_ms: 2.782336
+  duration_ms: 3.911691
   type: 'test'
   ...
 # Subtest: drop-set segments survive normalization
-ok 75 - drop-set segments survive normalization
+ok 90 - drop-set segments survive normalization
   ---
-  duration_ms: 0.285592
+  duration_ms: 0.399116
   type: 'test'
   ...
 # Subtest: the default preset resolves an exercise choice and an intensity method
-ok 76 - the default preset resolves an exercise choice and an intensity method
+ok 91 - the default preset resolves an exercise choice and an intensity method
   ---
-  duration_ms: 0.371981
+  duration_ms: 0.588861
   type: 'test'
   ...
 # Subtest: manually composed program satisfies the generic schema
-ok 77 - manually composed program satisfies the generic schema
+ok 92 - manually composed program satisfies the generic schema
   ---
-  duration_ms: 0.998657
+  duration_ms: 1.552893
   type: 'test'
   ...
 # Subtest: legacy program frequencies migrate to the polyvalent schema
-ok 78 - legacy program frequencies migrate to the polyvalent schema
+ok 93 - legacy program frequencies migrate to the polyvalent schema
   ---
-  duration_ms: 0.624714
+  duration_ms: 0.904851
   type: 'test'
   ...
 # Subtest: program schema accepts interval and weekly frequencies
-ok 79 - program schema accepts interval and weekly frequencies
+ok 94 - program schema accepts interval and weekly frequencies
   ---
-  duration_ms: 0.502894
+  duration_ms: 0.918497
   type: 'test'
   ...
 # Subtest: double progression only proposes a load increase when all sets reach the top range
-ok 80 - double progression only proposes a load increase when all sets reach the top range
+ok 95 - double progression only proposes a load increase when all sets reach the top range
   ---
-  duration_ms: 0.541651
+  duration_ms: 0.795106
   type: 'test'
   ...
 # Subtest: progression proximity flags an exercise one set away from the top of its rep range
-ok 81 - progression proximity flags an exercise one set away from the top of its rep range
+ok 96 - progression proximity flags an exercise one set away from the top of its rep range
   ---
-  duration_ms: 0.535953
+  duration_ms: 0.800286
   type: 'test'
   ...
 # Subtest: progression proximity marks an exercise ready once every set reaches the top of its rep range
-ok 82 - progression proximity marks an exercise ready once every set reaches the top of its rep range
+ok 97 - progression proximity marks an exercise ready once every set reaches the top of its rep range
   ---
-  duration_ms: 0.203311
+  duration_ms: 0.305621
   type: 'test'
   ...
 # Subtest: progression proximity ignores exercises still more than one set away or without double progression
-ok 83 - progression proximity ignores exercises still more than one set away or without double progression
+ok 98 - progression proximity ignores exercises still more than one set away or without double progression
   ---
-  duration_ms: 0.119246
+  duration_ms: 0.22489
   type: 'test'
   ...
 # Subtest: rest starts fullscreen and can be reduced to a compact bar
-ok 84 - rest starts fullscreen and can be reduced to a compact bar
+ok 99 - rest starts fullscreen and can be reduced to a compact bar
   ---
-  duration_ms: 0.913522
+  duration_ms: 1.387863
   type: 'test'
   ...
 # Subtest: the fullscreen rest timer offers +30s/-30s adjustments above skip and reduce
-ok 85 - the fullscreen rest timer offers +30s/-30s adjustments above skip and reduce
+ok 100 - the fullscreen rest timer offers +30s/-30s adjustments above skip and reduce
   ---
-  duration_ms: 0.381074
+  duration_ms: 0.584613
   type: 'test'
   ...
 # Subtest: workout edit and discard actions live in a labelled secondary menu
-ok 86 - workout edit and discard actions live in a labelled secondary menu
+ok 101 - workout edit and discard actions live in a labelled secondary menu
   ---
-  duration_ms: 0.373452
+  duration_ms: 0.625529
   type: 'test'
   ...
 # Subtest: workout labels describe the action and completion scope
-ok 87 - workout labels describe the action and completion scope
+ok 102 - workout labels describe the action and completion scope
   ---
-  duration_ms: 0.241958
+  duration_ms: 0.330718
   type: 'test'
   ...
 # Subtest: incomplete workouts explain their state before saving
-ok 88 - incomplete workouts explain their state before saving
+ok 103 - incomplete workouts explain their state before saving
   ---
-  duration_ms: 0.218623
+  duration_ms: 0.303517
   type: 'test'
   ...
 # Subtest: irreversible supplement deletion requires a named confirmation
-ok 89 - irreversible supplement deletion requires a named confirmation
+ok 104 - irreversible supplement deletion requires a named confirmation
   ---
-  duration_ms: 0.305722
+  duration_ms: 0.56702
   type: 'test'
   ...
-1..89
-# tests 89
+1..104
+# tests 104
 # suites 0
-# pass 89
+# pass 104
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 597.091445
+# duration_ms 732.954392
 Exit code: 0
 
 ===== sync android =====
@@ -587,18 +677,18 @@ Exit code: 0
 > node scripts/sync-web.js
 
 www synchronisé depuis les sources racines.
-✔ Copying web assets from www to android/app/src/main/assets/public in 7.85ms
-✔ Creating capacitor.config.json in android/app/src/main/assets in 509.26μs
-✔ copy android in 15.18ms
-✔ Updating Android plugins in 950.88μs
+✔ Copying web assets from www to android/app/src/main/assets/public in 9.20ms
+✔ Creating capacitor.config.json in android/app/src/main/assets in 572.74μs
+✔ copy android in 18.33ms
+✔ Updating Android plugins in 1.17ms
 [info] Found 5 Capacitor plugins for android:
        @capacitor/app@8.1.1
        @capacitor/filesystem@8.1.2
        @capacitor/preferences@8.0.1
        @capacitor/share@8.0.1
        @capawesome/capacitor-google-sign-in@0.1.4
-✔ update android in 26.75ms
-[info] Sync finished in 0.058s
+✔ update android in 30.46ms
+[info] Sync finished in 0.066s
 Exit code: 0
 
 ===== gradle assembleDebug =====
@@ -632,28 +722,28 @@ WARNING: Using flatDir should be avoided because it doesn't support any meta-dat
 > Task :capacitor-app:preDebugBuild UP-TO-DATE
 > Task :capacitor-cordova-android-plugins:preBuild UP-TO-DATE
 > Task :capacitor-cordova-android-plugins:preDebugBuild UP-TO-DATE
-> Task :capacitor-app:writeDebugAarMetadata
 > Task :capacitor-android:writeDebugAarMetadata
+> Task :capacitor-app:writeDebugAarMetadata
 > Task :app:javaPreCompileDebug
+> Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
 > Task :capacitor-filesystem:preBuild UP-TO-DATE
 > Task :capacitor-filesystem:preDebugBuild UP-TO-DATE
-> Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
 > Task :capacitor-preferences:preBuild UP-TO-DATE
-> Task :capacitor-filesystem:writeDebugAarMetadata
 > Task :capacitor-preferences:preDebugBuild UP-TO-DATE
+> Task :capacitor-filesystem:writeDebugAarMetadata
 > Task :capacitor-share:preBuild UP-TO-DATE
-> Task :capacitor-preferences:writeDebugAarMetadata
 > Task :capacitor-share:preDebugBuild UP-TO-DATE
+> Task :capacitor-preferences:writeDebugAarMetadata
 > Task :capawesome-capacitor-google-sign-in:preBuild UP-TO-DATE
-> Task :capawesome-capacitor-google-sign-in:preDebugBuild UP-TO-DATE
 > Task :capacitor-share:writeDebugAarMetadata
+> Task :capawesome-capacitor-google-sign-in:preDebugBuild UP-TO-DATE
 > Task :capawesome-capacitor-google-sign-in:writeDebugAarMetadata
 > Task :capacitor-android:processDebugNavigationResources
 > Task :capacitor-app:processDebugNavigationResources
+> Task :app:checkDebugAarMetadata
 > Task :capacitor-cordova-android-plugins:processDebugNavigationResources
 > Task :capacitor-filesystem:processDebugNavigationResources
 > Task :capacitor-preferences:processDebugNavigationResources
-> Task :app:checkDebugAarMetadata
 > Task :capacitor-share:processDebugNavigationResources
 > Task :capawesome-capacitor-google-sign-in:processDebugNavigationResources
 > Task :app:processDebugNavigationResources
@@ -691,10 +781,10 @@ WARNING: Using flatDir should be avoided because it doesn't support any meta-dat
 > Task :capacitor-cordova-android-plugins:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
 > Task :capacitor-filesystem:extractDeepLinksDebug
+> Task :capacitor-cordova-android-plugins:processDebugManifest
+> Task :capacitor-app:processDebugManifest
 > Task :capacitor-android:processDebugManifest
 > Task :capacitor-filesystem:processDebugManifest
-> Task :capacitor-app:processDebugManifest
-> Task :capacitor-cordova-android-plugins:processDebugManifest
 > Task :capacitor-preferences:extractDeepLinksDebug
 > Task :capacitor-preferences:processDebugManifest
 > Task :capacitor-share:extractDeepLinksDebug
@@ -711,21 +801,20 @@ WARNING: Using flatDir should be avoided because it doesn't support any meta-dat
 > Task :capacitor-cordova-android-plugins:compileDebugLibraryResources
 > Task :capacitor-filesystem:compileDebugLibraryResources
 > Task :capacitor-cordova-android-plugins:parseDebugLocalResources
-> Task :capacitor-app:generateDebugRFile
 > Task :capacitor-android:generateDebugRFile
-> Task :capacitor-preferences:compileDebugLibraryResources
-> Task :capacitor-cordova-android-plugins:generateDebugRFile
+> Task :capacitor-app:generateDebugRFile
 > Task :capacitor-filesystem:parseDebugLocalResources
+> Task :capacitor-cordova-android-plugins:generateDebugRFile
+> Task :capacitor-preferences:compileDebugLibraryResources
+> Task :capacitor-filesystem:generateDebugRFile
 > Task :capacitor-preferences:parseDebugLocalResources
 > Task :capacitor-share:compileDebugLibraryResources
-> Task :capacitor-filesystem:generateDebugRFile
-> Task :capacitor-share:parseDebugLocalResources
 > Task :capacitor-preferences:generateDebugRFile
 > Task :capawesome-capacitor-google-sign-in:compileDebugLibraryResources
-> Task :capacitor-share:generateDebugRFile
+> Task :capacitor-share:parseDebugLocalResources
 > Task :capacitor-android:javaPreCompileDebug
+> Task :capacitor-share:generateDebugRFile
 > Task :capacitor-app:javaPreCompileDebug
-> Task :capacitor-cordova-android-plugins:javaPreCompileDebug
 > Task :capawesome-capacitor-google-sign-in:parseDebugLocalResources
 
 > Task :capacitor-android:compileDebugJavaWithJavac
@@ -735,24 +824,25 @@ Note: Recompile with -Xlint:unchecked for details.
 > Task :capawesome-capacitor-google-sign-in:generateDebugRFile
 > Task :capacitor-android:bundleLibCompileToJarDebug
 > Task :capacitor-app:compileDebugJavaWithJavac
-> Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
 > Task :capacitor-app:bundleLibCompileToJarDebug
+> Task :capacitor-cordova-android-plugins:javaPreCompileDebug
 > Task :capacitor-filesystem:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
 > Task :capacitor-cordova-android-plugins:bundleLibCompileToJarDebug
 > Task :app:processDebugResources
 > Task :capacitor-filesystem:javaPreCompileDebug
 > Task :capacitor-preferences:javaPreCompileDebug
 > Task :capacitor-share:javaPreCompileDebug
-> Task :capawesome-capacitor-google-sign-in:javaPreCompileDebug
 > Task :capacitor-preferences:compileDebugJavaWithJavac
 > Task :capacitor-preferences:bundleLibCompileToJarDebug
 > Task :capacitor-share:compileDebugJavaWithJavac
 > Task :capacitor-share:bundleLibCompileToJarDebug
-> Task :capawesome-capacitor-google-sign-in:compileDebugJavaWithJavac
-> Task :capawesome-capacitor-google-sign-in:bundleLibCompileToJarDebug
+> Task :capawesome-capacitor-google-sign-in:javaPreCompileDebug
 > Task :app:mergeDebugShaders
+> Task :capawesome-capacitor-google-sign-in:compileDebugJavaWithJavac
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
+> Task :capawesome-capacitor-google-sign-in:bundleLibCompileToJarDebug
 > Task :capacitor-android:mergeDebugShaders
 > Task :capacitor-android:compileDebugShaders NO-SOURCE
 > Task :capacitor-android:generateDebugAssets UP-TO-DATE
@@ -782,8 +872,8 @@ Note: Recompile with -Xlint:unchecked for details.
 > Task :capawesome-capacitor-google-sign-in:generateDebugAssets UP-TO-DATE
 > Task :capawesome-capacitor-google-sign-in:mergeDebugAssets
 > Task :app:mergeDebugAssets
-> Task :capacitor-preferences:bundleLibRuntimeToJarDebug
 > Task :capacitor-app:bundleLibRuntimeToJarDebug
+> Task :capacitor-preferences:bundleLibRuntimeToJarDebug
 > Task :app:compressDebugAssets
 > Task :capacitor-share:bundleLibRuntimeToJarDebug
 > Task :capawesome-capacitor-google-sign-in:bundleLibRuntimeToJarDebug
@@ -839,11 +929,11 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/filesystem/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/LegacyFilesystemImplementation.kt:66:29 Java type mismatch: inferred type is 'String?', but 'String' was expected.
 
 > Task :capacitor-filesystem:compileDebugJavaWithJavac NO-SOURCE
-> Task :capacitor-filesystem:bundleLibRuntimeToJarDebug
 > Task :capacitor-filesystem:bundleLibCompileToJarDebug
-> Task :capacitor-filesystem:processDebugJavaRes
 > Task :app:compileDebugJavaWithJavac
+> Task :capacitor-filesystem:bundleLibRuntimeToJarDebug
 > Task :app:dexBuilderDebug
+> Task :capacitor-filesystem:processDebugJavaRes
 > Task :app:mergeDebugGlobalSynthetics
 > Task :capacitor-preferences:bundleLibRuntimeToDirDebug
 > Task :capacitor-filesystem:bundleLibRuntimeToDirDebug
@@ -874,14 +964,14 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capawesome-capacitor-google-sign-in:mergeDebugJniLibFolders
 > Task :capawesome-capacitor-google-sign-in:mergeDebugNativeLibs NO-SOURCE
 > Task :capawesome-capacitor-google-sign-in:copyDebugJniLibsProjectOnly
-> Task :app:mergeDebugJavaResource
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
+> Task :app:mergeDebugJavaResource
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
-> Task :capacitor-android:checkDebugAarMetadata
 > Task :capacitor-android:stripDebugDebugSymbols NO-SOURCE
+> Task :capacitor-android:checkDebugAarMetadata
 > Task :capacitor-android:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-android:extractDebugAnnotations
 > Task :capacitor-android:extractDeepLinksForAarDebug
@@ -891,8 +981,8 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capacitor-android:mergeDebugJavaResource
 > Task :capacitor-app:checkDebugAarMetadata
 > Task :capacitor-android:prepareLintJarForPublish
-> Task :capacitor-android:syncDebugLibJars
 > Task :app:mergeLibDexDebug
+> Task :capacitor-android:syncDebugLibJars
 > Task :capacitor-android:bundleDebugAar
 > Task :capacitor-android:assembleDebug
 > Task :capacitor-app:stripDebugDebugSymbols NO-SOURCE
@@ -934,10 +1024,10 @@ w: file:///home/runner/work/Gym_Tracker/Gym_Tracker/node_modules/@capacitor/file
 > Task :capacitor-filesystem:prepareLintJarForPublish
 > Task :capacitor-filesystem:mergeDebugJavaResource
 > Task :capacitor-preferences:checkDebugAarMetadata
+> Task :capacitor-preferences:stripDebugDebugSymbols NO-SOURCE
 > Task :capacitor-filesystem:syncDebugLibJars
 > Task :capacitor-filesystem:bundleDebugAar
 > Task :capacitor-filesystem:assembleDebug
-> Task :capacitor-preferences:stripDebugDebugSymbols NO-SOURCE
 > Task :capacitor-preferences:copyDebugJniLibsProjectAndLocalJars
 > Task :capacitor-preferences:extractDebugAnnotations
 > Task :capacitor-preferences:extractDeepLinksForAarDebug
@@ -984,9 +1074,9 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 1m 49s
+BUILD SUCCESSFUL in 2m 17s
 244 actionable tasks: 244 executed
 Exit code: 0
 
 RESULT=success
-Finished: 2026-09-06T00:34:56Z
+Finished: 2026-09-06T15:39:47Z
