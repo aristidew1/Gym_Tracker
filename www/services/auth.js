@@ -72,6 +72,7 @@ async function setSession(token, user) {
 function authErrorKey({ code, message, status, context }) {
   const text = (message || '').toLowerCase();
   if (context === 'sign-in' && (code === 'INVALID_EMAIL_OR_PASSWORD' || status === 401)) return 'authInvalidCredentials';
+  if (context === 'reset-password' && (code === 'INVALID_TOKEN' || text.includes('invalid token'))) return 'authResetInvalid';
   if (code === 'USER_ALREADY_EXISTS' || code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' || text.includes('already exist')) return 'authEmailTaken';
   if (code === 'PASSWORD_TOO_SHORT' || code === 'PASSWORD_TOO_LONG' || text.includes('password') && text.includes('short')) return 'authPasswordTooShort';
   return 'authError';
@@ -121,9 +122,20 @@ export async function apiFetch(path, options = {}, { context } = {}) {
 // ============================================
 
 export async function initAuth() {
-  const fromCallback = !window.Capacitor?.isNativePlatform() && await completeFromUrl(window.location.href);
+  // A password-reset link is NOT a sign-in callback, and is deliberately left
+  // untouched here: consuming it now would both (a) race the UI, since the
+  // event completeFromUrl() dispatches fires before app.js has had a chance to
+  // listen for it, and (b) skip the session restore below, making an already
+  // signed-in user look signed out just for following a reset link. The params
+  // stay in the URL until consumePendingPasswordReset() reads them, whenever
+  // the reset screen is ready — order no longer matters.
+  const url = new URL(window.location.href);
+  const isPasswordReset = url.searchParams.has('reset_token') || url.searchParams.has('reset_error');
+  const fromCallback = !isPasswordReset
+    && !window.Capacitor?.isNativePlatform()
+    && await completeFromUrl(window.location.href);
   if (fromCallback) {
-    const url = new URL(window.location.href);
+    // Strip the magic-link/OAuth token so a page reload doesn't replay it.
     url.searchParams.delete('token');
     window.history.replaceState({}, '', url);
     return;
@@ -146,9 +158,30 @@ export async function initAuth() {
 
 // Finishes sign-in from a magic-link / web-OAuth redirect that our server's
 // /auth/complete route bounced back with a `?token=...` — see server/src/index.js.
-// Also used by the native deep-link listener (gymtracker://auth-callback?token=...).
+// Also used by the native deep-link listener (gymtracker://auth-callback?token=...)
+// in app.js's appUrlOpen handler.
+//
+// A password-reset deep link (gymtracker://auth-callback?reset_token=...),
+// bounced through our server's /auth/reset route, arrives through that same
+// listener — so this function checks for `reset_token`/`reset_error` FIRST
+// and never treats either as a session token (it isn't one; feeding a reset
+// token to get-session would fail and sign the user out). When found, it
+// dispatches `auth:password-reset-requested` on window with `{ token }` or
+// `{ error: 'invalid' }` so the UI can open the reset-password screen, and
+// returns true so the caller (here or the native listener) treats the URL as
+// consumed, same as a normal sign-in completion.
 export async function completeFromUrl(url) {
-  const token = new URL(url).searchParams.get('token');
+  const params = new URL(url).searchParams;
+  const resetToken = params.get('reset_token');
+  const resetError = params.get('reset_error');
+  if (resetToken || resetError) {
+    window.dispatchEvent(new CustomEvent('auth:password-reset-requested', {
+      detail: resetToken ? { token: resetToken } : { error: 'invalid' },
+    }));
+    return true;
+  }
+
+  const token = params.get('token');
   if (!token) return false;
   currentToken = token;
   try {
@@ -159,6 +192,24 @@ export async function completeFromUrl(url) {
     await setSession(null, null);
   }
   return true;
+}
+
+// Pull-based counterpart to the `auth:password-reset-requested` event above,
+// for the app's own startup screen-selection logic (independent of
+// initAuth()/completeFromUrl() timing — see app.js). Reads `reset_token` /
+// `reset_error` directly off the current URL and, like initAuth() does for a
+// magic-link `token`, strips them via history.replaceState so a reload
+// doesn't reopen the reset-password screen. Returns `{ token }`,
+// `{ error: 'invalid' }`, or null when neither param is present.
+export function consumePendingPasswordReset() {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get('reset_token');
+  const error = url.searchParams.get('reset_error');
+  if (!token && !error) return null;
+  url.searchParams.delete('reset_token');
+  url.searchParams.delete('reset_error');
+  window.history.replaceState({}, '', url);
+  return token ? { token } : { error: 'invalid' };
 }
 
 export function getToken() {
@@ -194,6 +245,14 @@ function completionTarget(finalTarget) {
   return `${API_BASE}/auth/complete?target=${encodeURIComponent(finalTarget)}`;
 }
 
+// Sibling of completionTarget() for the password-reset flow, routed through
+// /auth/reset instead of /auth/complete — see requestPasswordReset() below
+// and server/src/index.js for why this needs its own bounce route rather
+// than reusing completionTarget()'s.
+function resetTarget(finalTarget) {
+  return `${API_BASE}/auth/reset?target=${encodeURIComponent(finalTarget)}`;
+}
+
 export async function sendMagicLink({ email }) {
   const finalTarget = window.Capacitor?.isNativePlatform() ? 'gymtracker://auth-callback' : window.location.href;
   await apiFetch('/api/auth/sign-in/magic-link', {
@@ -202,18 +261,31 @@ export async function sendMagicLink({ email }) {
   });
 }
 
-// Unlike sendMagicLink/signInGoogle, this redirectTo does NOT go through
-// completionTarget()/`/auth/complete` — that route mirrors a *session*
-// cookie, which a password-reset request never creates. Better Auth appends
-// `?token=...` straight to redirectTo for a reset-password page to consume;
-// there's no such page in this client yet (M3), so we just point back at the
-// app's own origin for now.
+// Like sendMagicLink/signInGoogle, this redirectTo is routed through our own
+// server rather than given straight to Better Auth — but through /auth/reset
+// (resetTarget()), not completionTarget()'s /auth/complete: that route
+// mirrors a *session* cookie, which a password-reset request never creates.
+// Better Auth validates redirectTo against trustedOrigins (originCheck), so
+// the `gymtracker://auth-callback` custom scheme would be rejected if handed
+// to it directly — /auth/reset gives it our own trusted origin instead, then
+// bounces to the real target with the token renamed to `reset_token` (see
+// server/src/index.js) so completeFromUrl() can't confuse it with a
+// magic-link/OAuth session token.
 export async function requestPasswordReset({ email }) {
-  const redirectTo = window.Capacitor?.isNativePlatform() ? 'gymtracker://auth-callback' : window.location.href;
+  const finalTarget = window.Capacitor?.isNativePlatform() ? 'gymtracker://auth-callback' : window.location.href;
   await apiFetch('/api/auth/request-password-reset', {
     method: 'POST',
-    body: { email, redirectTo },
+    body: { email, redirectTo: resetTarget(finalTarget) },
   });
+}
+
+// Completes the reset: called with the `token` surfaced by
+// consumePendingPasswordReset() / the `auth:password-reset-requested` event
+// above. `context: 'reset-password'` lets authErrorKey() map Better Auth's
+// INVALID_TOKEN (expired/already-used link) to authResetInvalid without
+// colliding with other flows that reuse that same code.
+export async function resetPassword({ token, newPassword }) {
+  await apiFetch('/api/auth/reset-password', { method: 'POST', body: { newPassword, token } }, { context: 'reset-password' });
 }
 
 export async function signInGoogle() {

@@ -75,6 +75,43 @@ app.get('/auth/complete', async (request, reply) => {
   reply.redirect(`${target}${separator}token=${encodeURIComponent(token)}`);
 });
 
+// Landing route for the password-reset flow. `requestPasswordReset()`'s
+// `redirectTo` and `reset-password/:token`'s `callbackURL` both go through
+// Better Auth's originCheck (see node_modules/better-auth/dist/api/
+// middlewares/origin-check.mjs), which only accepts trustedOrigins — so the
+// client can't hand Better Auth the `gymtracker://` custom scheme directly,
+// it would get rejected as INVALID_REDIRECT_URL. Instead the client points
+// Better Auth at this route (our own trusted origin), which then bounces to
+// the real `target` (mirroring the /auth/complete pattern above, including
+// its ALLOWED_TARGETS open-redirect guard).
+//
+// Unlike /auth/complete, this route never reads a session cookie — a
+// password-reset request doesn't create one. It also renames Better Auth's
+// `token`/`error` query params to `reset_token`/`reset_error` before
+// forwarding: services/auth.js's completeFromUrl() treats a bare `?token=`
+// as a *session* token from the magic-link/OAuth flow, and would otherwise
+// wrongly try to sign the user in with the password-reset token (see
+// node_modules/better-auth/dist/api/routes/password.mjs's redirectCallback/
+// redirectError for the `token`/`error=INVALID_TOKEN` params it sends).
+app.get('/auth/reset', async (request, reply) => {
+  const target = request.query.target;
+  if (!target || !ALLOWED_TARGETS.some((allowed) => target.startsWith(allowed))) {
+    reply.code(400).send({ error: 'invalid_target' });
+    return;
+  }
+
+  const params = new URLSearchParams();
+  if (request.query.token) params.set('reset_token', request.query.token);
+  if (request.query.error) params.set('reset_error', request.query.error);
+
+  if ([...params].length === 0) {
+    reply.redirect(target);
+    return;
+  }
+  const separator = target.includes('?') ? '&' : '?';
+  reply.redirect(`${target}${separator}${params.toString()}`);
+});
+
 await app.register(syncRoutes);
 
 const port = Number(process.env.PORT || 3000);

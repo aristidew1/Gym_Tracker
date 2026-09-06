@@ -294,36 +294,13 @@
 
         <div class="settings-section" id="account-section">
           <h3 class="settings-section-title" data-i18n="account">Compte</h3>
-          <p class="settings-row-desc" data-i18n="accountDesc">Connecte-toi pour retrouver tes données sur tes autres appareils.</p>
 
-          <div class="account-form" id="account-signed-out">
-            <button type="button" class="settings-action-btn account-google-btn" id="btn-auth-google" data-i18n="authGoogle">Continuer avec Google</button>
-
-            <div class="account-divider" role="separator"><span data-i18n="authOr">ou</span></div>
-
-            <form id="auth-form" novalidate>
-              <label>
-                <span data-i18n="authEmail">Email</span>
-                <input type="email" id="auth-email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" />
-              </label>
-              <label>
-                <span data-i18n="authPassword">Mot de passe</span>
-                <div class="account-password-field">
-                  <input type="password" id="auth-password" autocomplete="current-password" />
-                  <button type="button" class="account-password-toggle" id="btn-auth-password-toggle" aria-pressed="false" data-i18n-aria-label="authShowPassword" aria-label="Afficher le mot de passe">👁</button>
-                </div>
-              </label>
-              <button type="button" class="account-link-btn" id="btn-auth-forgot-password" data-i18n="authForgotPassword">Mot de passe oublié ?</button>
-              <p class="account-error" id="auth-error" role="alert" aria-live="assertive" hidden></p>
-              <p class="account-message" id="auth-message" role="status" aria-live="polite" hidden></p>
-              <button type="submit" class="settings-action-btn" id="btn-auth-submit" data-i18n="authSignIn">Se connecter</button>
-              <button type="button" class="account-link-btn" id="btn-auth-switch-mode" data-i18n="authSwitchToSignUp">Pas de compte ? Créer un compte</button>
-            </form>
-
-            <div class="account-magic-link">
-              <p class="account-hint" data-i18n="authEmailHint">On t’enverra le lien sur cette adresse.</p>
-              <button type="button" class="account-link-btn" id="btn-auth-magic-link" data-i18n="authMagicLink">Recevoir un lien de connexion</button>
+          <div class="settings-row" id="account-signed-out">
+            <div class="settings-row-info">
+              <div class="settings-row-label" data-i18n="accountRowSignedOut">Non connecté</div>
+              <div class="settings-row-desc" data-i18n="accountDesc">Connecte-toi pour retrouver tes données sur tes autres appareils.</div>
             </div>
+            <button type="button" class="settings-action-btn" id="btn-account-open" data-i18n="accountOpen">Se connecter ou créer un compte</button>
           </div>
 
           <div class="account-signed-in" id="account-signed-in" hidden>
@@ -445,6 +422,65 @@
           <span class="settings-version">Muscu Tracker v1.2</span>
         </div>
       </div>
+    </div>
+
+    <!-- ============ AUTH SCREEN (dedicated sign-in / password-reset flow) ============ -->
+    <div class="auth-screen-overlay" id="auth-screen-overlay" aria-hidden="true">
+      <section class="auth-screen-card" role="dialog" aria-modal="true" aria-labelledby="auth-screen-title">
+        <button type="button" class="auth-screen-close" id="btn-auth-screen-close" data-i18n-aria-label="authScreenClose" aria-label="Fermer">✕</button>
+
+        <div class="account-form" id="auth-screen-signin">
+          <h2 id="auth-screen-title" data-i18n="authScreenTitle">Sauvegarde et synchronisation</h2>
+          <p class="auth-screen-subtitle" data-i18n="authScreenSubtitle">Retrouve tes séances sur tous tes appareils. L’app fonctionne très bien sans compte — c’est juste un filet de sécurité.</p>
+
+          <button type="button" class="settings-action-btn account-google-btn" id="btn-auth-google" data-i18n="authGoogle">Continuer avec Google</button>
+
+          <div class="account-divider" role="separator"><span data-i18n="authOr">ou</span></div>
+
+          <form id="auth-form" novalidate>
+            <label>
+              <span data-i18n="authEmail">Email</span>
+              <input type="email" id="auth-email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" />
+            </label>
+            <label>
+              <span data-i18n="authPassword">Mot de passe</span>
+              <div class="account-password-field">
+                <input type="password" id="auth-password" autocomplete="current-password" />
+                <button type="button" class="account-password-toggle" id="btn-auth-password-toggle" aria-pressed="false" data-i18n-aria-label="authShowPassword" aria-label="Afficher le mot de passe">👁</button>
+              </div>
+            </label>
+            <button type="button" class="account-link-btn" id="btn-auth-forgot-password" data-i18n="authForgotPassword">Mot de passe oublié ?</button>
+            <p class="account-error" id="auth-error" role="alert" aria-live="assertive" hidden></p>
+            <p class="account-message" id="auth-message" role="status" aria-live="polite" hidden></p>
+            <button type="submit" class="settings-action-btn" id="btn-auth-submit" data-i18n="authSignIn">Se connecter</button>
+            <button type="button" class="account-link-btn" id="btn-auth-switch-mode" data-i18n="authSwitchToSignUp">Pas de compte ? Créer un compte</button>
+          </form>
+
+          <div class="account-magic-link">
+            <p class="account-hint" data-i18n="authEmailHint">On t’enverra le lien sur cette adresse.</p>
+            <button type="button" class="account-link-btn" id="btn-auth-magic-link" data-i18n="authMagicLink">Recevoir un lien de connexion</button>
+          </div>
+        </div>
+
+        <div class="account-form" id="auth-screen-reset" hidden>
+          <h2 id="auth-reset-title" data-i18n="authResetTitle">Nouveau mot de passe</h2>
+          <p class="auth-screen-subtitle" data-i18n="authResetDesc">Choisis un nouveau mot de passe pour ton compte.</p>
+
+          <form id="auth-reset-form" novalidate>
+            <label>
+              <span data-i18n="authNewPassword">Nouveau mot de passe</span>
+              <input type="password" id="auth-new-password" autocomplete="new-password" />
+            </label>
+            <label>
+              <span data-i18n="authConfirmPassword">Confirme le mot de passe</span>
+              <input type="password" id="auth-confirm-password" autocomplete="new-password" />
+            </label>
+            <p class="account-error" id="auth-reset-error" role="alert" aria-live="assertive" hidden></p>
+            <p class="account-message" id="auth-reset-message" role="status" aria-live="polite" hidden></p>
+            <button type="submit" class="settings-action-btn" id="btn-auth-reset-submit" data-i18n="authResetSubmit">Enregistrer le nouveau mot de passe</button>
+          </form>
+        </div>
+      </section>
     </div>
 
     <div class="onboarding-overlay" id="onboarding-overlay" aria-hidden="true">

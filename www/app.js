@@ -46,10 +46,12 @@ import {
 import { initPrograms, openNewProgramEditor, renderPrograms } from './programs.js';
 import {
   completeFromUrl,
+  consumePendingPasswordReset,
   getCurrentUser,
   initAuth,
   onAuthChange,
   requestPasswordReset,
+  resetPassword,
   sendMagicLink,
   signInEmail,
   signInGoogle,
@@ -323,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimerLifecycle();
   initConfirmDialog();
   initSettings();
+  initAuthScreen();
   initAccountSettings();
   initBackupReminder();
   initSyncPrompt();
@@ -331,6 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initNotifications();
   initAuth();
   initSync();
+  handlePendingPasswordReset();
+  window.addEventListener('auth:password-reset-requested', (event) => {
+    const detail = event.detail || {};
+    if (detail.token) openAuthScreen({ mode: 'reset', token: detail.token });
+    else if (detail.error === 'invalid') openAuthScreen({ mode: 'auth', error: t('authResetInvalid') });
+  });
   if (window.Capacitor?.isNativePlatform()) {
     window.Capacitor.Plugins.App?.addListener('appUrlOpen', ({ url }) => {
       if (url?.startsWith('gymtracker://auth-callback')) completeFromUrl(url);
@@ -880,7 +889,7 @@ async function exportFullBackup() {
 
 function initBackupReminder() {
   document.getElementById('btn-backup-reminder-export')?.addEventListener('click', exportFullBackup);
-  document.getElementById('btn-backup-reminder-account')?.addEventListener('click', openAccountSettings);
+  document.getElementById('btn-backup-reminder-account')?.addEventListener('click', openAccountEntryPoint);
   document.getElementById('btn-backup-reminder-dismiss')?.addEventListener('click', () => {
     localStorage.setItem(EXPORT_REMINDER_SNOOZE_KEY, String(Date.now() + EXPORT_REMINDER_SNOOZE_DAYS * 24 * 60 * 60 * 1000));
     renderBackupReminder();
@@ -892,15 +901,26 @@ function initBackupReminder() {
   onSyncStatusChange(renderBackupReminder);
 }
 
-// Shared by the backup reminder, the post-first-workout sync prompt, and the
-// home sync indicator — every entry point into "go deal with your account"
-// opens Settings and scrolls straight to the Account section instead of
-// making the user hunt for it.
+// Opens Settings and scrolls straight to the Account section — used for
+// signed-in account management (sync status, sign out), which stays a
+// Settings row rather than a dedicated screen.
 function openAccountSettings() {
   document.getElementById('settings-overlay')?.classList.add('active');
   requestAnimationFrame(() => {
     document.getElementById('account-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+}
+
+// Shared by the backup reminder, the post-first-workout sync prompt, and the
+// home sync indicator — every entry point into "go deal with your account".
+// Signed out, the action on offer really is "sign in / create an account",
+// so jump straight to the dedicated screen instead of routing through
+// Settings. Signed in (the sync indicator's error/expired case), there's
+// nothing to sign into from scratch — "Synchroniser maintenant" and "Se
+// déconnecter" (then sign back in) live in Settings > Account, same as ever.
+function openAccountEntryPoint() {
+  if (getCurrentUser()) openAccountSettings();
+  else openAuthScreen();
 }
 
 // ============================================
@@ -955,7 +975,7 @@ function initSyncPrompt() {
   document.getElementById('btn-sync-prompt-accept')?.addEventListener('click', () => {
     markSyncPromptSeen();
     closeSyncPromptOverlay();
-    openAccountSettings();
+    openAccountEntryPoint();
   });
   document.getElementById('btn-sync-prompt-later')?.addEventListener('click', () => {
     markSyncPromptSeen();
@@ -1026,7 +1046,7 @@ function renderSyncIndicator() {
 function initSyncIndicator() {
   const indicator = document.getElementById('sync-indicator');
   if (!indicator) return;
-  indicator.addEventListener('click', openAccountSettings);
+  indicator.addEventListener('click', openAccountEntryPoint);
   renderSyncIndicator();
   onAuthChange(renderSyncIndicator);
   onSyncStatusChange(renderSyncIndicator);
@@ -2638,16 +2658,81 @@ function formatRestTime(seconds) {
 }
 
 // ============================================
-// SETTINGS
+// AUTH SCREEN (dedicated sign-in / password-reset overlay)
 // ============================================
-function initAccountSettings() {
+// Split out of what used to be initAccountSettings(): this owns the
+// full-screen sign-in/sign-up/reset flow, while initAccountSettings() below
+// keeps only the connected-account row in Settings. Kept as top-level
+// functions (not part of initAuthScreen()'s closure) because they're also
+// called from account entry points elsewhere (openAccountEntryPoint,
+// the "sign in" row in Settings, the startup password-reset check).
+let authScreenPreviousFocus = null;
+let pendingResetToken = null;
+
+function setAuthScreenView(view) {
+  const overlay = document.getElementById('auth-screen-overlay');
+  const signInView = document.getElementById('auth-screen-signin');
+  const resetView = document.getElementById('auth-screen-reset');
+  if (!overlay || !signInView || !resetView) return;
+  signInView.hidden = view === 'reset';
+  resetView.hidden = view !== 'reset';
+  // aria-labelledby must track whichever title is actually visible.
+  overlay.setAttribute('aria-labelledby', view === 'reset' ? 'auth-reset-title' : 'auth-screen-title');
+}
+
+function openAuthScreen({ mode = 'auth', token = null, error = null } = {}) {
+  const overlay = document.getElementById('auth-screen-overlay');
+  if (!overlay) return;
+  if (!overlay.classList.contains('active')) authScreenPreviousFocus = document.activeElement;
+  if (mode === 'reset') pendingResetToken = token;
+  setAuthScreenView(mode);
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  if (error) {
+    const errorEl = document.getElementById(mode === 'reset' ? 'auth-reset-error' : 'auth-error');
+    if (errorEl) { errorEl.textContent = error; errorEl.hidden = false; }
+  }
+  requestAnimationFrame(() => {
+    document.getElementById(mode === 'reset' ? 'auth-new-password' : 'btn-auth-google')?.focus({ preventScroll: true });
+  });
+}
+
+function closeAuthScreen() {
+  const overlay = document.getElementById('auth-screen-overlay');
+  const ownedFocus = overlay?.contains(document.activeElement);
+  overlay?.classList.remove('active');
+  overlay?.setAttribute('aria-hidden', 'true');
+  if (ownedFocus && authScreenPreviousFocus?.isConnected && typeof authScreenPreviousFocus.focus === 'function') {
+    authScreenPreviousFocus.focus({ preventScroll: true });
+  }
+  authScreenPreviousFocus = null;
+}
+
+// Checked once at startup (web: the URL carries reset_token/reset_error —
+// see consumePendingPasswordReset() in services/auth.js) so a user coming
+// back from the reset-password email lands straight in the right screen
+// instead of on the home view. The native deep-link equivalent arrives later,
+// as the `auth:password-reset-requested` event wired up in DOMContentLoaded.
+function handlePendingPasswordReset() {
+  let pending = null;
+  try {
+    pending = consumePendingPasswordReset();
+  } catch (error) {
+    console.warn('[Auth] consumePendingPasswordReset failed:', error);
+  }
+  if (!pending) return;
+  if (pending.token) openAuthScreen({ mode: 'reset', token: pending.token });
+  else if (pending.error === 'invalid') openAuthScreen({ mode: 'auth', error: t('authResetInvalid') });
+}
+
+function initAuthScreen() {
+  const overlay = document.getElementById('auth-screen-overlay');
+  if (!overlay) return;
+
   // A deliberately permissive check — this only catches typos before they hit
   // the network, Better Auth (and the server's own validation) is the real
   // source of truth for what counts as a valid email.
   const AUTH_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const signedOutView = document.getElementById('account-signed-out');
-  const signedInView = document.getElementById('account-signed-in');
-  const signedInLabel = document.getElementById('account-signed-in-label');
   const authForm = document.getElementById('auth-form');
   const emailInput = document.getElementById('auth-email');
   const passwordInput = document.getElementById('auth-password');
@@ -2659,10 +2744,6 @@ function initAccountSettings() {
   const btnForgotPassword = document.getElementById('btn-auth-forgot-password');
   const btnGoogle = document.getElementById('btn-auth-google');
   const btnMagicLink = document.getElementById('btn-auth-magic-link');
-  const btnSignOut = document.getElementById('btn-auth-sign-out');
-  const syncStatusEl = document.getElementById('account-sync-status');
-  const btnSyncNow = document.getElementById('btn-sync-now');
-  if (!signedOutView || !signedInView) return;
 
   let mode = 'sign-in';
 
@@ -2683,15 +2764,6 @@ function initAccountSettings() {
     messageEl.textContent = t(key);
     messageEl.hidden = false;
   };
-
-  const render = ({ user }) => {
-    signedOutView.hidden = !!user;
-    signedInView.hidden = !user;
-    if (user) signedInLabel.textContent = t('authSignedInAs', { email: user.email });
-  };
-
-  render({ user: getCurrentUser() });
-  onAuthChange(render);
 
   // Keeps every mode-dependent bit of UI in sync: button labels, the
   // forgot-password link (sign-in only — signing up has no password to
@@ -2796,6 +2868,113 @@ function initAccountSettings() {
     }
   });
 
+  // A successful sign-in can arrive through any path this screen offers
+  // (email/password, native Google, or a magic-link/OAuth deep link
+  // completed while the screen was left open in the background) — closing
+  // here on the shared auth-state event covers all of them at once instead
+  // of duplicating a close call after each one.
+  onAuthChange(({ user }) => { if (user) closeAuthScreen(); });
+
+  // --- Reset-password mode ---
+  const resetForm = document.getElementById('auth-reset-form');
+  const newPasswordInput = document.getElementById('auth-new-password');
+  const confirmPasswordInput = document.getElementById('auth-confirm-password');
+  const resetErrorEl = document.getElementById('auth-reset-error');
+  const resetMessageEl = document.getElementById('auth-reset-message');
+  const btnResetSubmit = document.getElementById('btn-auth-reset-submit');
+
+  const clearResetFeedback = () => {
+    resetErrorEl.hidden = true;
+    resetMessageEl.hidden = true;
+  };
+  const showResetError = (message, field) => {
+    resetMessageEl.hidden = true;
+    resetErrorEl.textContent = message;
+    resetErrorEl.hidden = false;
+    field?.focus();
+  };
+
+  resetForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const newPassword = newPasswordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    if (newPassword.length < 8) return showResetError(t('authPasswordTooShort'), newPasswordInput);
+    if (newPassword !== confirmPassword) return showResetError(t('authPasswordMismatch'), confirmPasswordInput);
+
+    clearResetFeedback();
+    const originalLabel = btnResetSubmit.textContent;
+    btnResetSubmit.disabled = true;
+    btnResetSubmit.textContent = t('authResetting');
+    try {
+      await resetPassword({ token: pendingResetToken, newPassword });
+      newPasswordInput.value = '';
+      confirmPasswordInput.value = '';
+      setAuthScreenView('auth');
+      showMessage('authResetDone');
+    } catch (error) {
+      showResetError(error.message);
+    } finally {
+      btnResetSubmit.disabled = false;
+      btnResetSubmit.textContent = originalLabel;
+    }
+  });
+
+  // --- Overlay chrome: close button, backdrop click, focus trap ---
+  document.getElementById('btn-auth-screen-close')?.addEventListener('click', closeAuthScreen);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeAuthScreen();
+  });
+  // Same keyboard-trap pattern as the onboarding overlay, filtered to the
+  // currently visible sub-view (sign-in vs reset) so Tab never lands on a
+  // hidden field from the other one.
+  overlay.addEventListener('keydown', (event) => {
+    if (!overlay.classList.contains('active')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeAuthScreen();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.closest('[hidden]'));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+// Signed-out: just a status row + a button opening the dedicated auth
+// screen (initAuthScreen above). Signed-in: account management proper
+// (sync status, sign out) stays here — there's nothing left to "sign into".
+function initAccountSettings() {
+  const signedOutRow = document.getElementById('account-signed-out');
+  const signedInView = document.getElementById('account-signed-in');
+  const signedInLabel = document.getElementById('account-signed-in-label');
+  const btnAccountOpen = document.getElementById('btn-account-open');
+  const btnSignOut = document.getElementById('btn-auth-sign-out');
+  const syncStatusEl = document.getElementById('account-sync-status');
+  const btnSyncNow = document.getElementById('btn-sync-now');
+  if (!signedOutRow || !signedInView) return;
+
+  const render = ({ user }) => {
+    signedOutRow.hidden = !!user;
+    signedInView.hidden = !user;
+    if (user) signedInLabel.textContent = t('authSignedInAs', { email: user.email });
+  };
+  render({ user: getCurrentUser() });
+  onAuthChange(render);
+
+  btnAccountOpen?.addEventListener('click', () => openAuthScreen());
   btnSignOut?.addEventListener('click', async () => {
     await signOut();
   });

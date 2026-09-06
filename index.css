@@ -4198,3 +4198,24 @@ body::before {
 .sync-prompt-actions { display: flex; flex-direction: column; gap: 8px; }
 .sync-prompt-accept { min-height: 44px; border: 0; border-radius: var(--radius-md); background: var(--accent); color: #fff; font: inherit; font-size: .92rem; font-weight: 700; cursor: pointer; }
 .sync-prompt-later { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: .82rem; padding: 8px; cursor: pointer; }
+
+/* --- Auth screen: dedicated sign-in / password-reset overlay --- */
+/* Reached from Settings (z-index 1000) and must sit above it, so it opens on
+   top rather than replacing the panel underneath; also above onboarding
+   (1200) so a password-reset deep link always wins if both were ever pending
+   at once. Below the toast/coachmark layers (2000+), which can still surface
+   over it. */
+.auth-screen-overlay { position: fixed; inset: 0; z-index: 1250; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(var(--bg-primary-rgb), .92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.auth-screen-overlay.active { display: flex; }
+:root.light-theme .auth-screen-overlay { background: rgba(229, 234, 244, .78); }
+.auth-screen-card { position: relative; width: 100%; max-width: 400px; max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 32px); overflow-y: auto; overscroll-behavior: contain; padding: 32px 22px 22px; border: 1px solid var(--border-glass); border-radius: var(--radius-xl); background: linear-gradient(150deg, var(--bg-elevated), var(--bg-elevated-2)); box-shadow: var(--shadow-lg); animation: scaleIn .3s cubic-bezier(.16, 1, .3, 1); }
+:root.light-theme .auth-screen-card { background: linear-gradient(155deg, #fff, #f3f6fc); border-color: rgba(37, 51, 82, .12); }
+.auth-screen-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border: 1px solid var(--border-glass); border-radius: 50%; background: var(--bg-glass); color: var(--text-secondary); font-size: .95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.auth-screen-close:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.auth-screen-card h2 { font-size: 1.2rem; font-weight: 800; margin: 0; padding-right: 32px; }
+.auth-screen-subtitle { margin: -4px 0 4px; color: var(--text-secondary); font-size: .84rem; line-height: 1.45; }
+
+@media (max-height: 680px), (max-width: 340px) {
+  .auth-screen-overlay { align-items: flex-start; padding: max(10px, var(--safe-area-top)) 10px max(10px, var(--safe-area-bottom)); }
+  .auth-screen-card { padding: 22px 14px 14px; border-radius: var(--radius-lg); }
+}
