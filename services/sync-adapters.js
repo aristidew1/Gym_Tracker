@@ -5,7 +5,7 @@
 
 import { DEFAULT_PROGRAM } from '../data/default-program.js';
 import { getAllWorkoutsRaw, replaceAllWorkoutsRaw } from '../storage.js';
-import { appendPrograms, getAllProgramsRaw, replaceAllProgramsRaw } from './program-storage.js';
+import { appendPrograms, clearAllProgramsRaw, getAllProgramsRaw, replaceAllProgramsRaw } from './program-storage.js';
 import { getAllCustomExercisesRaw, replaceAllCustomExercisesRaw } from './custom-exercises.js';
 import {
   getAllSupplementLogRaw,
@@ -13,9 +13,9 @@ import {
   replaceAllSupplementLogRaw,
   replaceAllSupplementsRaw,
 } from '../supplements.js';
-import { getAllSettingsRaw, applySettingsPull } from './settings-sync.js';
-import { getAllSeenTipsRaw, mergeSeenTipsRaw } from '../coachmark.js';
-import { getAllSeenProgramNotesRaw, mergeSeenProgramNotesRaw } from './program-notes.js';
+import { getAllSettingsRaw, applySettingsPull, clearSyncedSettings } from './settings-sync.js';
+import { getAllSeenTipsRaw, mergeSeenTipsRaw, resetSeenTips } from '../coachmark.js';
+import { getAllSeenProgramNotesRaw, mergeSeenProgramNotesRaw, clearSeenProgramNotes } from './program-notes.js';
 import { mergeByKey, mergeById } from './entity-meta.js';
 
 // Every program id is a per-device crypto.randomUUID() *except* the one
@@ -92,6 +92,26 @@ export function applyPull(changes) {
   const seenFlags = changes?.seenFlags || [];
   mergeSeenTipsRaw(seenFlags.filter((flag) => flag.flagType === 'coachmark'));
   mergeSeenProgramNotesRaw(seenFlags.filter((flag) => flag.flagType === 'program_note'));
+}
+
+// Wipes every synced entity off this device, used only when a *different*
+// account signs in (see services/sync.js). Without it, the previous account's
+// records would stay visible to the new one and — since a fresh cursor makes
+// the next push send everything local — would be uploaded into their account.
+// Everything removed here has already been synced to the account it belongs
+// to, so it survives there; the confirmation prompt in app.js says so before
+// this runs. Device-local state (the in-progress workout draft, export
+// bookkeeping) is deliberately left alone: it belongs to the device, not to
+// an account.
+export function clearLocalDataForAccountSwitch() {
+  replaceAllWorkoutsRaw([]);
+  clearAllProgramsRaw();
+  replaceAllCustomExercisesRaw([]);
+  replaceAllSupplementsRaw([]);
+  replaceAllSupplementLogRaw([]);
+  clearSyncedSettings();
+  resetSeenTips();
+  clearSeenProgramNotes();
 }
 
 function toPushRecord(raw) {

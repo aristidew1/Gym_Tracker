@@ -62,6 +62,17 @@ export function installSettingsSyncBridge() {
   };
 }
 
+// Sync layer only: drops every synced preference and its bookkeeping when a
+// different account signs in on this device (see services/sync-adapters.js).
+// The values themselves go too, not just the timestamps: keeping them would
+// push the previous account's theme/language into the new one on the very
+// next sync.
+export function clearSyncedSettings() {
+  for (const storageKey of TRACKED_KEYS) localStorage.removeItem(storageKey);
+  localStorage.removeItem(META_KEY);
+  emitChange();
+}
+
 function parseValue(rawValue) {
   try {
     return JSON.parse(rawValue);

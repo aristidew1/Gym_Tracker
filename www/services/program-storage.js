@@ -52,6 +52,19 @@ function writeStoredPrograms(programs) {
   localStorage.setItem(PROGRAMS_KEY, JSON.stringify(programs));
 }
 
+// Sync layer only: wipes this device back to its fresh-install program state
+// when a different account signs in (see services/sync-adapters.js). Unlike
+// restorePrograms([], null) — which skipOnboarding uses to leave the user
+// with *no* program at all — the base-program tombstone and the active
+// selection are removed rather than set, so the built-in program shows again
+// until the new account's own programs are pulled in.
+export function clearAllProgramsRaw() {
+  writeStoredPrograms([]);
+  localStorage.removeItem(BASE_PROGRAM_DELETED_KEY);
+  localStorage.removeItem(ACTIVE_PROGRAM_KEY);
+  emitChange();
+}
+
 function emitChange() {
   if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
     window.dispatchEvent(new CustomEvent('program:changed'));

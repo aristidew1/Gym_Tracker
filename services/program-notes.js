@@ -34,6 +34,12 @@ export function markProgramNoteSeen(noteKey) {
   saveSeenMap({ ...seen, [noteKey]: nowIso() });
 }
 
+// Sync layer only: drops every seen note when a different account signs in
+// on this device — see services/sync-adapters.js.
+export function clearSeenProgramNotes() {
+  localStorage.removeItem(SEEN_KEY);
+}
+
 // Sync layer only: this flagType's rows as { flagType, flagId, seenAt }.
 export function getAllSeenProgramNotesRaw() {
   return Object.entries(getSeenMap()).map(([flagId, seenAt]) => ({ flagType: FLAG_TYPE, flagId, seenAt }));

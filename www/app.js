@@ -58,7 +58,7 @@ import {
   signOut,
   signUpEmail,
 } from './services/auth.js';
-import { getSyncStatus, initSync, onSyncStatusChange, syncNow } from './services/sync.js';
+import { acceptAccountSwitch, getSyncStatus, initSync, onSyncStatusChange, syncNow } from './services/sync.js';
 import { getActiveProgram, getProgramById, restorePrograms, saveProgram, setActiveProgram } from './services/program-storage.js';
 import { getOnboardingProgramTemplate } from './data/onboarding-programs.js';
 import { getCustomExercises } from './services/custom-exercises.js';
@@ -336,6 +336,24 @@ document.addEventListener('DOMContentLoaded', () => {
   initAuth();
   initSync();
   handlePendingPasswordReset();
+  // A different account just signed in on a device that still holds the
+  // previous one's data. services/sync.js has blocked syncing until this is
+  // resolved either way — accepting wipes the old data (it stays on its own
+  // account), declining signs back out rather than leaving two accounts'
+  // records mixed on one device.
+  window.addEventListener('sync:account-switch', (event) => {
+    const { previous, next } = event.detail || {};
+    showConfirm(
+      t('accountSwitchTitle'),
+      t('accountSwitchMessage', { previous: previous?.email || '—', next: next?.email || '—' }),
+      async () => {
+        await acceptAccountSwitch(next);
+        showToast(t('accountSwitchDone'), 'success');
+      },
+      () => signOut(),
+    );
+  });
+
   window.addEventListener('auth:password-reset-requested', (event) => {
     const detail = event.detail || {};
     if (detail.token) openAuthScreen({ mode: 'reset', token: detail.token });

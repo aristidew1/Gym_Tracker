@@ -146,3 +146,39 @@ test('buildPushPayload and applyPull round-trip every M3 entity', () => {
   assert.equal(coachmark.hasSeenTip('tip_remote'), true);
   assert.equal(programNotes.hasSeenProgramNote('remote::note'), true);
 });
+
+test('an account switch wipes every synced entity but leaves device-local state alone', () => {
+  values.clear();
+  // One record in each synced entity, plus two things that belong to the
+  // device rather than to an account.
+  makeWorkout();
+  programStore.saveProgram({ ...structuredClone(DEFAULT_PROGRAM), name: 'Programme du compte A' });
+  customExercises.createCustomExercise({ name: 'Curl du compte A', muscleCategory: 'biceps' });
+  const supplement = supplements.addSupplement({ name: 'Créatine du compte A' });
+  supplements.toggleSupplementTaken(supplement.id, '2026-01-01');
+  localStorage.setItem('muscu_theme', 'light');
+  coachmark.markAllTipsSeen(['tip_a']);
+  programNotes.markProgramNoteSeen('note::a');
+  storage.saveActiveWorkoutDraft({ workoutSession: { id: 'x' }, activeSessionId: 'x' });
+  localStorage.setItem('muscu_last_export_at', '2026-01-01T00:00:00.000Z');
+
+  syncAdapters.clearLocalDataForAccountSwitch();
+
+  assert.deepEqual(storage.getAllWorkoutsRaw(), [], 'workouts must not survive an account switch');
+  assert.deepEqual(programStore.getAllProgramsRaw(), []);
+  assert.deepEqual(customExercises.getAllCustomExercisesRaw(), []);
+  assert.deepEqual(supplements.getAllSupplementsRaw(), []);
+  assert.deepEqual(supplements.getAllSupplementLogRaw(), []);
+  assert.equal(localStorage.getItem('muscu_theme'), null, 'synced preferences belong to the old account too');
+  assert.equal(coachmark.hasSeenTip('tip_a'), false);
+  assert.equal(programNotes.hasSeenProgramNote('note::a'), false);
+  // Tombstones would be pushed into the *new* account on the next sync, so
+  // the wipe has to be a real removal, not a soft delete.
+  assert.deepEqual(syncAdapters.buildPushPayload(null), {
+    workouts: [], programs: [], customExercises: [], supplements: [], supplementLog: [], settings: [], seenFlags: [],
+  });
+
+  // Device-local state is not the account's to erase.
+  assert.ok(storage.getActiveWorkoutDraft(), 'the in-progress workout draft belongs to the device');
+  assert.equal(localStorage.getItem('muscu_last_export_at'), '2026-01-01T00:00:00.000Z');
+});
