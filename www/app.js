@@ -49,6 +49,7 @@ import {
   getCurrentUser,
   initAuth,
   onAuthChange,
+  requestPasswordReset,
   sendMagicLink,
   signInEmail,
   signInGoogle,
@@ -104,6 +105,10 @@ const LAST_EXPORT_KEY = 'muscu_last_export_at';
 const EXPORT_REMINDER_SNOOZE_KEY = 'muscu_export_reminder_snoozed_until';
 const EXPORT_REMINDER_INTERVAL_DAYS = 30;
 const EXPORT_REMINDER_SNOOZE_DAYS = 14;
+// Device-local only: whether the post-first-workout account prompt has been
+// shown/dismissed. Deliberately not in settings-sync.js's TRACKED_KEYS — a
+// prompt already seen on this device should still be offered on another.
+const SYNC_PROMPT_SEEN_KEY = 'muscu_sync_prompt_seen';
 const THEME_KEY = 'muscu_theme';
 const STYLE_KEY = 'muscu_visual_style';
 const VISUAL_STYLES = ['default', 'piste', 'nothing'];
@@ -320,6 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettings();
   initAccountSettings();
   initBackupReminder();
+  initSyncPrompt();
+  initSyncIndicator();
   initSelectPicker();
   initNotifications();
   initAuth();
@@ -350,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPrograms();
     if (state.currentView === 'workout') { renderChoices(); renderExercises(); }
     updateNotification();
+    renderSyncIndicator();
   });
   window.addEventListener('program:changed', () => {
     if (state.currentView !== 'workout') {
@@ -778,6 +786,14 @@ function renderHomeDate() {
   dateElement.textContent = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+// A signed-in account with a working sync is itself a backup: nagging about
+// manual export on top of that would be a flat-out contradiction ("nothing
+// recent... to not lose anything" while everything is already saved online).
+function isSyncHealthy() {
+  const { status } = getSyncStatus();
+  return status !== 'error' && status !== 'expired';
+}
+
 // True once there's real data worth losing and no recent export to fall back
 // on. Disabling Android's auto-backup (see isPristineFirstRun's comment)
 // removed the only safety net users had, so this nudges toward the existing
@@ -785,6 +801,8 @@ function renderHomeDate() {
 function shouldShowBackupReminder() {
   const summary = getExportSummary();
   if (summary.workouts === 0 && summary.programs === 0 && summary.supplements === 0) return false;
+
+  if (getCurrentUser() && isSyncHealthy()) return false;
 
   const snoozedUntil = Number(localStorage.getItem(EXPORT_REMINDER_SNOOZE_KEY));
   if (snoozedUntil && Date.now() < snoozedUntil) return false;
@@ -799,6 +817,20 @@ function renderBackupReminder() {
   const banner = document.getElementById('backup-reminder');
   if (!banner) return;
   banner.hidden = !shouldShowBackupReminder();
+  if (banner.hidden) return;
+
+  // Signed-out is the best moment to pitch an account: there IS something to
+  // lose right now. Once signed in (but sync unhealthy) the reminder is back
+  // to a plain export nudge — offering to "create an account" would be moot.
+  const offerAccount = !getCurrentUser();
+  const descEl = banner.querySelector('.backup-reminder-text p');
+  const accountBtn = document.getElementById('btn-backup-reminder-account');
+  if (descEl) {
+    const descKey = offerAccount ? 'backupReminderDescAccount' : 'backupReminderDesc';
+    descEl.dataset.i18n = descKey;
+    descEl.textContent = t(descKey);
+  }
+  if (accountBtn) accountBtn.hidden = !offerAccount;
 }
 
 async function downloadJsonFile(data, fileName) {
@@ -848,10 +880,156 @@ async function exportFullBackup() {
 
 function initBackupReminder() {
   document.getElementById('btn-backup-reminder-export')?.addEventListener('click', exportFullBackup);
+  document.getElementById('btn-backup-reminder-account')?.addEventListener('click', openAccountSettings);
   document.getElementById('btn-backup-reminder-dismiss')?.addEventListener('click', () => {
     localStorage.setItem(EXPORT_REMINDER_SNOOZE_KEY, String(Date.now() + EXPORT_REMINDER_SNOOZE_DAYS * 24 * 60 * 60 * 1000));
     renderBackupReminder();
   });
+  // Auth/sync state directly decides whether this banner should show at all
+  // (see shouldShowBackupReminder) — re-render whenever either changes, so it
+  // doesn't linger after a sign-in.
+  onAuthChange(renderBackupReminder);
+  onSyncStatusChange(renderBackupReminder);
+}
+
+// Shared by the backup reminder, the post-first-workout sync prompt, and the
+// home sync indicator — every entry point into "go deal with your account"
+// opens Settings and scrolls straight to the Account section instead of
+// making the user hunt for it.
+function openAccountSettings() {
+  document.getElementById('settings-overlay')?.classList.add('active');
+  requestAnimationFrame(() => {
+    document.getElementById('account-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+// ============================================
+// SYNC ACCOUNT PROMPT
+// ============================================
+// Offered once, right after the first workout is ever recorded — the moment
+// the user actually has something to lose, unlike onboarding where there's
+// still nothing at stake and the prompt would just be dismissed on reflex.
+function hasSeenSyncPrompt() {
+  return localStorage.getItem(SYNC_PROMPT_SEEN_KEY) === '1';
+}
+
+function markSyncPromptSeen() {
+  localStorage.setItem(SYNC_PROMPT_SEEN_KEY, '1');
+}
+
+let syncPromptPreviousFocus = null;
+
+function openSyncPromptOverlay() {
+  const overlay = document.getElementById('sync-prompt-overlay');
+  if (!overlay) return;
+  syncPromptPreviousFocus = document.activeElement;
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => {
+    document.getElementById('btn-sync-prompt-accept')?.focus({ preventScroll: true });
+  });
+}
+
+function closeSyncPromptOverlay() {
+  const overlay = document.getElementById('sync-prompt-overlay');
+  overlay?.classList.remove('active');
+  overlay?.setAttribute('aria-hidden', 'true');
+  if (syncPromptPreviousFocus?.isConnected && typeof syncPromptPreviousFocus.focus === 'function') {
+    syncPromptPreviousFocus.focus({ preventScroll: true });
+  }
+  syncPromptPreviousFocus = null;
+}
+
+// Never shown over the summary overlay — only called from its close handler,
+// once it has already been dismissed.
+function maybeShowSyncPrompt() {
+  if (getCurrentUser() || hasSeenSyncPrompt()) return;
+  if (getWorkouts().length !== 1) return;
+  openSyncPromptOverlay();
+}
+
+function initSyncPrompt() {
+  const overlay = document.getElementById('sync-prompt-overlay');
+  if (!overlay) return;
+
+  document.getElementById('btn-sync-prompt-accept')?.addEventListener('click', () => {
+    markSyncPromptSeen();
+    closeSyncPromptOverlay();
+    openAccountSettings();
+  });
+  document.getElementById('btn-sync-prompt-later')?.addEventListener('click', () => {
+    markSyncPromptSeen();
+    closeSyncPromptOverlay();
+  });
+  overlay.addEventListener('click', (event) => {
+    if (event.target !== overlay) return;
+    markSyncPromptSeen();
+    closeSyncPromptOverlay();
+  });
+  // Same keyboard-trap pattern as the onboarding overlay: Escape dismisses
+  // (counts as "later" — the user made a choice), Tab stays inside the card.
+  overlay.addEventListener('keydown', (event) => {
+    if (!overlay.classList.contains('active')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      markSyncPromptSeen();
+      closeSyncPromptOverlay();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll('button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])')];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+}
+
+// ============================================
+// HOME SYNC INDICATOR
+// ============================================
+// Visible only while signed in — signed-out users already get the account
+// pitch from the backup reminder and the post-first-workout prompt, so this
+// stays quiet for them rather than adding a third nag.
+function renderSyncIndicator() {
+  const indicator = document.getElementById('sync-indicator');
+  if (!indicator) return;
+  const user = getCurrentUser();
+  indicator.hidden = !user;
+  if (!user) return;
+
+  const { status } = getSyncStatus();
+  indicator.classList.remove('sync-indicator--syncing', 'sync-indicator--error', 'sync-indicator--expired');
+  let label;
+  if (status === 'syncing') {
+    indicator.classList.add('sync-indicator--syncing');
+    label = t('syncStatusSyncing');
+  } else if (status === 'error') {
+    indicator.classList.add('sync-indicator--error');
+    label = t('syncStatusError');
+  } else if (status === 'expired') {
+    indicator.classList.add('sync-indicator--expired');
+    label = t('syncStatusExpired');
+  } else {
+    label = t('syncIndicatorSynced');
+  }
+  indicator.setAttribute('aria-label', label);
+  indicator.title = label;
+}
+
+function initSyncIndicator() {
+  const indicator = document.getElementById('sync-indicator');
+  if (!indicator) return;
+  indicator.addEventListener('click', openAccountSettings);
+  renderSyncIndicator();
+  onAuthChange(renderSyncIndicator);
+  onSyncStatusChange(renderSyncIndicator);
 }
 
 function renderHome() {
@@ -1114,6 +1292,10 @@ function initWorkoutControls() {
   document.getElementById('btn-summary-close').addEventListener('click', () => {
     document.getElementById('summary-overlay').classList.remove('active');
     doNavigate('home');
+    // Only ever fires right after the workout that made getWorkouts().length
+    // hit 1 — later workouts leave the count above 1, so this naturally
+    // never re-triggers once it has (or the account already exists).
+    maybeShowSyncPrompt();
   });
 }
 
@@ -2459,15 +2641,22 @@ function formatRestTime(seconds) {
 // SETTINGS
 // ============================================
 function initAccountSettings() {
+  // A deliberately permissive check — this only catches typos before they hit
+  // the network, Better Auth (and the server's own validation) is the real
+  // source of truth for what counts as a valid email.
+  const AUTH_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const signedOutView = document.getElementById('account-signed-out');
   const signedInView = document.getElementById('account-signed-in');
   const signedInLabel = document.getElementById('account-signed-in-label');
+  const authForm = document.getElementById('auth-form');
   const emailInput = document.getElementById('auth-email');
   const passwordInput = document.getElementById('auth-password');
+  const btnPasswordToggle = document.getElementById('btn-auth-password-toggle');
   const errorEl = document.getElementById('auth-error');
   const messageEl = document.getElementById('auth-message');
   const btnSubmit = document.getElementById('btn-auth-submit');
   const btnSwitchMode = document.getElementById('btn-auth-switch-mode');
+  const btnForgotPassword = document.getElementById('btn-auth-forgot-password');
   const btnGoogle = document.getElementById('btn-auth-google');
   const btnMagicLink = document.getElementById('btn-auth-magic-link');
   const btnSignOut = document.getElementById('btn-auth-sign-out');
@@ -2477,10 +2666,17 @@ function initAccountSettings() {
 
   let mode = 'sign-in';
 
-  const showError = (error) => {
+  const clearFeedback = () => {
+    errorEl.hidden = true;
     messageEl.hidden = true;
-    errorEl.textContent = error?.message || t('authError');
+  };
+  // `field` gets focus so a screen-reader user (and anyone tabbing through)
+  // lands straight on whatever needs fixing, instead of just hearing the alert.
+  const showError = (message, field) => {
+    messageEl.hidden = true;
+    errorEl.textContent = message;
     errorEl.hidden = false;
+    field?.focus();
   };
   const showMessage = (key) => {
     errorEl.hidden = true;
@@ -2497,41 +2693,106 @@ function initAccountSettings() {
   render({ user: getCurrentUser() });
   onAuthChange(render);
 
-  btnSwitchMode.addEventListener('click', () => {
-    mode = mode === 'sign-in' ? 'sign-up' : 'sign-in';
+  // Keeps every mode-dependent bit of UI in sync: button labels, the
+  // forgot-password link (sign-in only — signing up has no password to
+  // reset yet), and autocomplete so mobile keyboards offer to *generate* a
+  // password on sign-up but *fill* the saved one on sign-in.
+  const applyModeUI = () => {
     btnSubmit.textContent = t(mode === 'sign-in' ? 'authSignIn' : 'authSignUp');
     btnSwitchMode.textContent = t(mode === 'sign-in' ? 'authSwitchToSignUp' : 'authSwitchToSignIn');
+    btnForgotPassword.hidden = mode !== 'sign-in';
+    passwordInput.autocomplete = mode === 'sign-in' ? 'current-password' : 'new-password';
+  };
+  applyModeUI();
+  // These two labels are mode-dependent, so translateDocument() would reset
+  // them to their static data-i18n value (always the sign-in wording) on a
+  // language switch — re-apply the current mode after it runs.
+  window.addEventListener('language:changed', applyModeUI);
+
+  // Every network-backed action in this form funnels through here so a
+  // double-tap on a slow connection can't fire the request twice: the whole
+  // button row is disabled and the active one gets a loading label, always
+  // restored in `finally` — success or failure — never left stuck disabled.
+  const actionButtons = [btnSubmit, btnGoogle, btnMagicLink, btnForgotPassword, btnSwitchMode];
+  const setBusy = (busy) => { actionButtons.forEach((btn) => { btn.disabled = busy; }); };
+  const runAction = async (activeButton, loadingKey, action) => {
+    const originalLabel = activeButton.textContent;
+    setBusy(true);
+    activeButton.textContent = t(loadingKey);
+    try {
+      return await action();
+    } finally {
+      setBusy(false);
+      activeButton.textContent = originalLabel;
+    }
+  };
+
+  btnSwitchMode.addEventListener('click', () => {
+    mode = mode === 'sign-in' ? 'sign-up' : 'sign-in';
+    applyModeUI();
+    clearFeedback();
   });
 
-  btnSubmit.addEventListener('click', async () => {
+  authForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    if (!email || !password) return;
+    if (!email) return showError(t('authEmailRequired'), emailInput);
+    if (!AUTH_EMAIL_RE.test(email)) return showError(t('authEmailInvalid'), emailInput);
+    if (!password) return showError(t('authPasswordRequired'), passwordInput);
+    if (mode === 'sign-up' && password.length < 8) return showError(t('authPasswordTooShort'), passwordInput);
+
+    clearFeedback();
     try {
-      if (mode === 'sign-in') await signInEmail({ email, password });
-      else await signUpEmail({ email, password, name: email.split('@')[0] });
-      passwordInput.value = '';
+      await runAction(btnSubmit, mode === 'sign-in' ? 'authSigningIn' : 'authCreatingAccount', async () => {
+        if (mode === 'sign-in') await signInEmail({ email, password });
+        else await signUpEmail({ email, password, name: email.split('@')[0] });
+        passwordInput.value = '';
+      });
     } catch (error) {
-      showError(error);
+      showError(error.message);
     }
   });
 
+  btnPasswordToggle?.addEventListener('click', () => {
+    const showing = passwordInput.type === 'text';
+    passwordInput.type = showing ? 'password' : 'text';
+    btnPasswordToggle.setAttribute('aria-pressed', String(!showing));
+    const key = showing ? 'authShowPassword' : 'authHidePassword';
+    btnPasswordToggle.dataset.i18nAriaLabel = key;
+    btnPasswordToggle.setAttribute('aria-label', t(key));
+  });
+
   btnGoogle.addEventListener('click', async () => {
+    clearFeedback();
     try {
-      await signInGoogle();
+      await runAction(btnGoogle, 'authSigningIn', () => signInGoogle());
     } catch (error) {
-      showError(error);
+      showError(error.message);
     }
   });
 
   btnMagicLink.addEventListener('click', async () => {
     const email = emailInput.value.trim();
-    if (!email) return;
+    if (!email) return showError(t('authEmailRequired'), emailInput);
+    clearFeedback();
     try {
-      await sendMagicLink({ email });
+      await runAction(btnMagicLink, 'authSending', () => sendMagicLink({ email }));
       showMessage('authMagicLinkSent');
     } catch (error) {
-      showError(error);
+      showError(error.message);
+    }
+  });
+
+  btnForgotPassword.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if (!email) return showError(t('authEmailRequired'), emailInput);
+    clearFeedback();
+    try {
+      await runAction(btnForgotPassword, 'authSending', () => requestPasswordReset({ email }));
+      showMessage('authResetLinkSent');
+    } catch (error) {
+      showError(error.message);
     }
   });
 
@@ -2543,6 +2804,7 @@ function initAccountSettings() {
     if (!syncStatusEl) return;
     if (status === 'syncing') syncStatusEl.textContent = t('syncStatusSyncing');
     else if (status === 'error') syncStatusEl.textContent = t('syncStatusError');
+    else if (status === 'expired') syncStatusEl.textContent = t('syncStatusExpired');
     else if (lastSyncedAt) syncStatusEl.textContent = t('syncStatusIdle', { time: new Date(lastSyncedAt).toLocaleTimeString() });
     else syncStatusEl.textContent = t('syncStatusIdleNever');
   };

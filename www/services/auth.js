@@ -62,18 +62,43 @@ async function setSession(token, user) {
   notify();
 }
 
+// Better Auth returns raw English messages (e.g. "Invalid email or password")
+// via `code`/`message` on the error body — translate the ones our UI needs to
+// show, and fall back to the generic error otherwise rather than leaking
+// English strings into a French UI. `context: 'sign-in'` disambiguates a 401
+// from a stale/expired bearer token (which services/sync.js handles itself
+// via error.status, never reading .message) from a genuine bad-credentials
+// response on the sign-in endpoint.
+function authErrorKey({ code, message, status, context }) {
+  const text = (message || '').toLowerCase();
+  if (context === 'sign-in' && (code === 'INVALID_EMAIL_OR_PASSWORD' || status === 401)) return 'authInvalidCredentials';
+  if (code === 'USER_ALREADY_EXISTS' || code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' || text.includes('already exist')) return 'authEmailTaken';
+  if (code === 'PASSWORD_TOO_SHORT' || code === 'PASSWORD_TOO_LONG' || text.includes('password') && text.includes('short')) return 'authPasswordTooShort';
+  return 'authError';
+}
+
 // Exported for services/sync.js — same bearer-token + credentials plumbing,
-// reused rather than duplicated for the /sync endpoint.
-export async function apiFetch(path, options = {}) {
+// reused rather than duplicated for the /sync endpoint. `context` is a hint
+// for authErrorKey() only (e.g. 'sign-in') and never sent to the server.
+export async function apiFetch(path, options = {}, { context } = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (currentToken) headers.Authorization = `Bearer ${currentToken}`;
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (networkError) {
+    // fetch() itself throws (TypeError) when the network is unreachable —
+    // there's no response body to inspect, so map it straight to the key.
+    const error = new Error(t('authNetworkError'));
+    error.cause = networkError;
+    throw error;
+  }
 
   // The bearer plugin mirrors the session token here on every auth response —
   // pick it up so a web OAuth redirect (which never gives us a JSON body with
@@ -83,7 +108,7 @@ export async function apiFetch(path, options = {}) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(data?.message || data?.error || t('authError'));
+    const error = new Error(t(authErrorKey({ code: data?.code, message: data?.message || data?.error, status: response.status, context })));
     error.status = response.status;
     error.code = data?.code;
     throw error;
@@ -156,7 +181,7 @@ export async function signUpEmail({ email, password, name }) {
 }
 
 export async function signInEmail({ email, password }) {
-  const data = await apiFetch('/api/auth/sign-in/email', { method: 'POST', body: { email, password } });
+  const data = await apiFetch('/api/auth/sign-in/email', { method: 'POST', body: { email, password } }, { context: 'sign-in' });
   await setSession(data.token || currentToken, data.user);
   return data.user;
 }
@@ -174,6 +199,20 @@ export async function sendMagicLink({ email }) {
   await apiFetch('/api/auth/sign-in/magic-link', {
     method: 'POST',
     body: { email, callbackURL: completionTarget(finalTarget) },
+  });
+}
+
+// Unlike sendMagicLink/signInGoogle, this redirectTo does NOT go through
+// completionTarget()/`/auth/complete` — that route mirrors a *session*
+// cookie, which a password-reset request never creates. Better Auth appends
+// `?token=...` straight to redirectTo for a reset-password page to consume;
+// there's no such page in this client yet (M3), so we just point back at the
+// app's own origin for now.
+export async function requestPasswordReset({ email }) {
+  const redirectTo = window.Capacitor?.isNativePlatform() ? 'gymtracker://auth-callback' : window.location.href;
+  await apiFetch('/api/auth/request-password-reset', {
+    method: 'POST',
+    body: { email, redirectTo },
   });
 }
 

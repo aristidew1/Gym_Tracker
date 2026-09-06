@@ -10,7 +10,7 @@ const FOREGROUND_SYNC_MIN_INTERVAL_MS = 60_000;
 const CHANGE_DEBOUNCE_MS = 4000;
 const RETRY_DELAY_MS = 30_000;
 
-let status = 'idle'; // 'idle' | 'syncing' | 'error'
+let status = 'idle'; // 'idle' | 'syncing' | 'error' | 'expired'
 let lastSyncedAt = null;
 let inFlight = null;
 let debounceTimer = null;
@@ -62,10 +62,12 @@ export function requestSync() {
     })
     .catch((error) => {
       console.warn('[Sync] failed:', error);
-      setStatus('error');
       if (error?.status === 401) {
+        // No retry will happen until the next sign-in, so the UI must not claim one is coming.
         stopped = true; // resumes on the next sign-in, see onAuthChange below
+        setStatus('expired');
       } else {
+        setStatus('error');
         setTimeout(() => { stopped = false; requestSync(); }, RETRY_DELAY_MS);
       }
     })

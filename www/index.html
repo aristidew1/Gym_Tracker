@@ -21,6 +21,9 @@
           <p class="home-date" id="home-date" aria-hidden="true"></p>
           <h1>Muscu Tracker</h1>
         </div>
+        <button type="button" class="sync-indicator" id="sync-indicator" aria-label="État de la synchronisation" data-i18n-aria-label="syncIndicatorLabel" hidden>
+          <span class="sync-indicator-dot" aria-hidden="true"></span>
+        </button>
         <button class="btn-settings" id="btn-settings" title="Paramètres" data-i18n-title="settings">
           <svg class="icon-glyph icon-glyph--md" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
@@ -47,6 +50,7 @@
           <p data-i18n="backupReminderDesc">Aucune sauvegarde récente. Télécharge tes données pour ne rien perdre en cas de changement d’appareil.</p>
         </div>
         <div class="backup-reminder-actions">
+          <button type="button" class="backup-reminder-account" id="btn-backup-reminder-account" data-i18n="backupReminderAccount" hidden>Créer un compte</button>
           <button type="button" class="backup-reminder-export" id="btn-backup-reminder-export" data-i18n="backupReminderExport">Exporter</button>
           <button type="button" class="backup-reminder-dismiss" id="btn-backup-reminder-dismiss" aria-label="Ignorer le rappel de sauvegarde" data-i18n-aria-label="backupReminderDismiss">✕</button>
         </div>
@@ -293,21 +297,33 @@
           <p class="settings-row-desc" data-i18n="accountDesc">Connecte-toi pour retrouver tes données sur tes autres appareils.</p>
 
           <div class="account-form" id="account-signed-out">
-            <label>
-              <span data-i18n="authEmail">Email</span>
-              <input type="email" id="auth-email" autocomplete="email" />
-            </label>
-            <label>
-              <span data-i18n="authPassword">Mot de passe</span>
-              <input type="password" id="auth-password" autocomplete="current-password" />
-            </label>
-            <p class="account-error" id="auth-error" hidden></p>
-            <p class="account-message" id="auth-message" hidden></p>
-            <button type="button" class="settings-action-btn" id="btn-auth-submit" data-i18n="authSignIn">Se connecter</button>
-            <button type="button" class="account-link-btn" id="btn-auth-switch-mode" data-i18n="authSwitchToSignUp">Pas de compte ? Créer un compte</button>
-            <div class="account-divider" aria-hidden="true"></div>
-            <button type="button" class="settings-action-btn" id="btn-auth-google" data-i18n="authGoogle">Continuer avec Google</button>
-            <button type="button" class="account-link-btn" id="btn-auth-magic-link" data-i18n="authMagicLink">Recevoir un lien de connexion</button>
+            <button type="button" class="settings-action-btn account-google-btn" id="btn-auth-google" data-i18n="authGoogle">Continuer avec Google</button>
+
+            <div class="account-divider" role="separator"><span data-i18n="authOr">ou</span></div>
+
+            <form id="auth-form" novalidate>
+              <label>
+                <span data-i18n="authEmail">Email</span>
+                <input type="email" id="auth-email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" />
+              </label>
+              <label>
+                <span data-i18n="authPassword">Mot de passe</span>
+                <div class="account-password-field">
+                  <input type="password" id="auth-password" autocomplete="current-password" />
+                  <button type="button" class="account-password-toggle" id="btn-auth-password-toggle" aria-pressed="false" data-i18n-aria-label="authShowPassword" aria-label="Afficher le mot de passe">👁</button>
+                </div>
+              </label>
+              <button type="button" class="account-link-btn" id="btn-auth-forgot-password" data-i18n="authForgotPassword">Mot de passe oublié ?</button>
+              <p class="account-error" id="auth-error" role="alert" aria-live="assertive" hidden></p>
+              <p class="account-message" id="auth-message" role="status" aria-live="polite" hidden></p>
+              <button type="submit" class="settings-action-btn" id="btn-auth-submit" data-i18n="authSignIn">Se connecter</button>
+              <button type="button" class="account-link-btn" id="btn-auth-switch-mode" data-i18n="authSwitchToSignUp">Pas de compte ? Créer un compte</button>
+            </form>
+
+            <div class="account-magic-link">
+              <p class="account-hint" data-i18n="authEmailHint">On t’enverra le lien sur cette adresse.</p>
+              <button type="button" class="account-link-btn" id="btn-auth-magic-link" data-i18n="authMagicLink">Recevoir un lien de connexion</button>
+            </div>
           </div>
 
           <div class="account-signed-in" id="account-signed-in" hidden>
@@ -456,6 +472,18 @@
           <button type="button" class="onboarding-option" data-onboarding-action="import"><strong data-i18n="onboardingImport">Importer un programme</strong></button>
         </div>
         <button type="button" class="onboarding-skip" id="btn-onboarding-skip" data-i18n="onboardingSkip">Plus tard</button>
+      </section>
+    </div>
+
+    <!-- ============ SYNC ACCOUNT PROMPT (shown once, after the first recorded workout) ============ -->
+    <div class="sync-prompt-overlay" id="sync-prompt-overlay" aria-hidden="true">
+      <section class="sync-prompt-card" role="dialog" aria-modal="true" aria-labelledby="sync-prompt-title">
+        <h2 id="sync-prompt-title" data-i18n="syncPromptTitle">Sauvegarde tes séances</h2>
+        <p data-i18n="syncPromptDesc">Crée un compte pour garder tes données à l’abri et les retrouver sur tes autres appareils.</p>
+        <div class="sync-prompt-actions">
+          <button type="button" class="sync-prompt-accept" id="btn-sync-prompt-accept" data-i18n="syncPromptAccept">Créer un compte</button>
+          <button type="button" class="sync-prompt-later" id="btn-sync-prompt-later" data-i18n="syncPromptLater">Plus tard</button>
+        </div>
       </section>
     </div>
 
